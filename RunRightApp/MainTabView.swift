@@ -139,6 +139,7 @@ struct CustomTabBar: View {
         .background(AppTheme.tabBarBg)
         .padding(.bottom, 0)
         .ignoresSafeArea(edges: .bottom)
+        .offset(y: 10)
     }
 }
 
