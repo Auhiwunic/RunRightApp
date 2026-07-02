@@ -35,7 +35,6 @@ struct MainTabView: View {
                     runningBanner
                 }
                 CustomTabBar(selectedTab: $selectedTab)
-                    .offset(y: 10)
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -114,7 +113,7 @@ struct CustomTabBar: View {
     var body: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(Color.white.opacity(0.14))
+                .fill(Color.white.opacity(0.08))
                 .frame(height: 1)
 
             HStack(spacing: 0) {
@@ -133,11 +132,10 @@ struct CustomTabBar: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, -10)
-            .padding(.bottom, 16)
-            .offset(y: 20)
+            .padding(.top, 12)
+            .padding(.bottom, 22)
         }
-        .background(AppTheme.tabBarBg)
+        .background(Color(hex: "#111315"))
         .padding(.bottom, 0)
         .ignoresSafeArea(edges: .bottom)
     }
