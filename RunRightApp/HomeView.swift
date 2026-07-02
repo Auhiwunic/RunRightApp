@@ -14,9 +14,9 @@ enum LastRunMetric {
 struct HomeView: View {
     var onOpenCoach: () -> Void = {}
     private let accentLime = Color(hex: "#00CED1")
-    private let backgroundColor = Color(hex: "#33393E")
+    private let backgroundColor = Color(hex: "#30353A")
     private let cardBackground = Color(hex: "#33393E")
-    private let cardBackgroundSoft = Color(hex: "#33393E")
+    private let cardBackgroundSoft = Color(hex: "#30353A")
     @StateObject private var vm = HomeViewModel()
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
@@ -227,7 +227,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor.opacity(0.65))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 10, x: 5, y: 7, lightOpacity: 0.18, darkOpacity: 0.38)
+        .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
     }
     
     private var workoutsBox: some View {
@@ -445,7 +445,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6, lightOpacity: 0.18, darkOpacity: 0.36)
+        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
     }
 
     // MARK: - Shoe Wear Status (compact green card)
@@ -464,7 +464,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6, lightOpacity: 0.18, darkOpacity: 0.36)
+        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
     }
     
     // MARK: - Weekly Goal Progress Card
@@ -543,17 +543,10 @@ private struct HomeRaisedSurface: ViewModifier {
                 shape
                     .fill(fill)
                     .softOuterShadow(
-                        darkShadow: Color(hex: "#1C1919").opacity(darkOpacity),
-                        lightShadow: Color.white.opacity(lightOpacity),
+                        darkShadow: Color(hex: "#17191C").opacity(darkOpacity),
+                        lightShadow: Color(hex: "#647079").opacity(lightOpacity),
                         offset: max(x, y),
                         radius: shadowRadius
-                    )
-                    .softInnerShadow(
-                        shape,
-                        darkShadow: Color(hex: "#1C1919").opacity(darkOpacity * 0.26),
-                        lightShadow: Color.white.opacity(lightOpacity * 0.7),
-                        spread: 0.03,
-                        radius: max(2, shadowRadius * 0.16)
                     )
             )
     }
@@ -563,11 +556,11 @@ extension View {
     func homeRaisedSurface(
         fill: Color,
         cornerRadius: CGFloat,
-        shadowRadius: CGFloat = 22,
-        x: CGFloat = 12,
-        y: CGFloat = 12,
-        lightOpacity: Double = 0.20,
-        darkOpacity: Double = 0.86
+        shadowRadius: CGFloat = 10,
+        x: CGFloat = 6,
+        y: CGFloat = 6,
+        lightOpacity: Double = 0.12,
+        darkOpacity: Double = 0.56
     ) -> some View {
         modifier(
             HomeRaisedSurface(
