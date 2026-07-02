@@ -19,11 +19,12 @@ import QuartzCore
 import Combine
 
 private extension Font {
-    static let analyzeSection: Font = .system(size: 14, weight: .heavy)
-    static let analyzeButton: Font = .system(size: 17, weight: .semibold)
+    static let analyzeHero: Font = .system(size: 50, weight: .black)
+    static let analyzeSection: Font = .system(size: 15, weight: .black)
+    static let analyzeButton: Font = .system(size: 18, weight: .heavy)
     static let analyzeBody: Font = .system(size: 14, weight: .regular)
     static let analyzeCaption: Font = .system(size: 13, weight: .regular)
-    static let analyzeMetric: Font = .system(size: 15, weight: .bold)
+    static let analyzeMetric: Font = .system(size: 18, weight: .black)
     static let analyzeMeta: Font = .system(size: 11, weight: .bold)
     static let analyzeTiny: Font = .system(size: 9, weight: .bold)
 }
@@ -302,11 +303,14 @@ struct AnalyzeView: View {
     /// Scorecard in its own separate gray box, to the right of the action card.
     private var analyzeScorecardCard: some View {
         Button(action: { showScorecard = true }) {
-            VStack(spacing: 7) {
-                Text("Scorecard")
-                    .font(.analyzeButton)
-                    .foregroundColor(.white)
-                Text("Open")
+            VStack(spacing: 8) {
+                VStack(spacing: -1) {
+                    Text("SCORE")
+                    Text("CARD")
+                }
+                .font(.analyzeButton)
+                .foregroundColor(.white)
+                Text("OPEN")
                     .font(.analyzeMeta)
                     .foregroundColor(AppTheme.formRed)
             }
@@ -494,13 +498,12 @@ struct AnalyzeView: View {
 
     private var analyzeReportEmptyCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("YOUR FORM REPORT")
+            Text("FORM REPORT")
                 .font(.analyzeSection)
                 .foregroundColor(.white)
-            Text("Upload or record a run.")
-                .font(.analyzeCaption)
-                .foregroundColor(.white.opacity(0.78))
-                .fixedSize(horizontal: false, vertical: true)
+            Text("NO VIDEO YET")
+                .font(.analyzeMeta)
+                .foregroundColor(AppTheme.formRed.opacity(0.85))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .analyzeHomeWidgetChrome(padding: 18)
@@ -696,13 +699,13 @@ struct AnalyzeView: View {
 
     private var analyzeNewRunContent: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("NEW ANALYSIS")
+            Text("ANALYZE")
                 .font(.analyzeSection)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             PhotosPicker(selection: $selectedItem, matching: .videos) {
-                Text("Upload")
+                Text("UPLOAD")
                     .font(.analyzeButton)
                     .foregroundColor(AppTheme.onAccentPrimary)
                     .frame(maxWidth: .infinity)
@@ -719,7 +722,7 @@ struct AnalyzeView: View {
                     cameraUnavailableAlert = true
                 }
             }) {
-                Text("Record")
+                Text("RECORD")
                     .font(.analyzeButton)
                     .foregroundColor(.white.opacity(0.9))
                     .frame(maxWidth: .infinity)
@@ -762,7 +765,7 @@ struct AnalyzeView: View {
         return VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("SHOE HEAT GRID")
+                    Text("SHOE GRID")
                         .font(.analyzeSection)
                         .foregroundColor(.white)
                     if hasScan {
@@ -921,27 +924,29 @@ struct AnalyzeView: View {
 
     // MARK: - Hero header (dashboard)
     private var analyzeHeroHeader: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text("Form ")
-                        .foregroundColor(.white)
-                    Text("Analysis")
-                        .foregroundColor(.white)
-                }
-                .font(.largeTitle.weight(.bold))
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: -5) {
+                Text("FORM")
+                    .font(.analyzeHero)
+                    .tracking(-1.5)
+                    .foregroundColor(.white)
+                Text("ANALYSIS")
+                    .font(.analyzeHero)
+                    .tracking(-1.5)
+                    .foregroundColor(AppTheme.formRed)
             }
             Spacer(minLength: 8)
             Button(action: { showingSettings = true }) {
-                Text("Settings")
+                Text("SETTINGS")
                     .font(.analyzeMeta)
                     .foregroundColor(AppTheme.formRed)
             }
             .buttonStyle(.plain)
+            .padding(.top, 20)
         }
         .padding(.horizontal, AppTheme.screenPadding)
-        .padding(.top, 12)
-        .padding(.bottom, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
     }
     
     private func computeEfficiencyScore(series: MetricSeries?) -> Int? {
