@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Gaita</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleName</key>
+	<string>$(PRODUCT_NAME)</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.610163382557-9r5m80eo0u9vk6516hou4k9hambr0u36</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Gaita uses the camera to capture shoe-sole photos and running videos you choose for form analysis.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Gaita reads steps, active energy, exercise minutes, walking/running distance, heart rate, and running workouts to show your activity, stats, and run history.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Gaita uses your location while you run to calculate distance, pace, route maps, and local weather.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Gaita may use the microphone for voice features during runs when you choose to enable them.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Gaita uses device motion only to help you hold the phone level while scanning your shoe sole.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Gaita saves processed running-form videos to your photo library only when you tap Save.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Gaita uses photo library access so you can choose shoe photos or running videos for analysis.</string>
+	<key>NSSiriUsageDescription</key>
+	<string>Gaita uses Siri shortcuts for run controls and pace checks when you choose to use voice features.</string>
+	<!-- OpenAI key removed — it must never ship in the app binary. The shoe scanner
+	     calls the Firebase analyzeShoe Cloud Function, which verifies Firebase Auth
+	     and holds the key server-side. -->
+	<key>SHOE_ANALYSIS_ENDPOINT</key>
+	<string>https://us-central1-corsa-51d8f.cloudfunctions.net/analyzeShoe</string>
+	<!-- Coach chat proxy. Deploy a coachChat Firebase function (mirror analyzeShoe:
+	     verify the Firebase ID token, hold the OpenAI key server-side). Expects
+	     {message, context, history} and returns {reply}. -->
+	<key>COACH_CHAT_ENDPOINT</key>
+	<string>https://us-central1-corsa-51d8f.cloudfunctions.net/coachChat</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>audio</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict/>
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>

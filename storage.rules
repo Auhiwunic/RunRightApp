@@ -1,0 +1,18 @@
+rules_version = '2';
+
+// Corsa Firebase Storage security rules.
+// Shoe-scan images live under users/{uid}/scans/... — a signed-in user may only
+// read or write files inside their own folder.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Deny everything else by default.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

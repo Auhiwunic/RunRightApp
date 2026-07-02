@@ -1,0 +1,16 @@
+{
+  "name": "runright-firebase-functions",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.11.0",
+    "firebase-functions": "^6.0.0"
+  }
+}
+

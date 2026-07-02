@@ -1,0 +1,7 @@
+platform :ios, '16.0'
+
+target 'SkeletonAnalysisPackage' do
+  use_frameworks!
+  pod 'MediaPipeTasksVision'
+end
+

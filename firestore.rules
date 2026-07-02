@@ -1,0 +1,45 @@
+rules_version = '2';
+
+// Corsa Firestore security rules.
+// Every document lives under users/{uid}/... — a signed-in user may only ever
+// read or write their own subtree. Nothing is world-readable or writable.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Defense-in-depth size guard: reject writes with an absurd number of fields
+    // (a compromised client trying to bloat a document). The cap is far above any
+    // legitimate Corsa document. Deletes carry no resource data, so they are
+    // allowed separately below.
+    function validWrite() {
+      return request.resource.data.keys().size() <= 200;
+    }
+
+    match /users/{userId} {
+      allow read:           if isOwner(userId);
+      allow delete:         if isOwner(userId);
+      allow create, update: if isOwner(userId) && validWrite();
+
+      // All subcollections (runs, scans, shoes, plans, settings, …).
+      match /{document=**} {
+        allow read:           if isOwner(userId);
+        allow delete:         if isOwner(userId);
+        allow create, update: if isOwner(userId) && validWrite();
+      }
+    }
+
+    // Server-only rate-limit records (written by Cloud Functions via the Admin
+    // SDK, which bypasses these rules). Clients can never read or write them.
+    match /rateLimits/{userId} {
+      allow read, write: if false;
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

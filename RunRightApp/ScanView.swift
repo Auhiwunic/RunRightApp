@@ -1,0 +1,1287 @@
+//
+//  ScanView.swift
+//  RunRightApp
+//
+//  Pixel-perfect match to HTML prototype with OpenAIService backend
+
+import SwiftUI
+import FirebaseAuth
+import PhotosUI
+
+struct ScanView: View {
+    /// Which shoe the guided camera is currently capturing.
+    private enum CameraSide: String, Identifiable {
+        case left, right
+        var id: String { rawValue }
+    }
+
+    // Persisted so the chosen shoe survives tab switches and app relaunches.
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("scan.selectedShoe") private var selectedShoe = ""
+
+    // Shoe list loaded from Firestore
+    @State private var shoes: [String] = []
+    @State private var isLoadingShoes = true   // true until first Firestore fetch completes
+    @State private var showAddShoeAlert = false
+    @State private var newShoeName = ""
+
+    // Separate state for left and right shoe
+    @State private var cameraSide: CameraSide?
+    // Take Photo vs Choose from Library
+    @State private var chooseSide: CameraSide?
+    @State private var showLibrary = false
+    @State private var libraryItem: PhotosPickerItem?
+    @State private var librarySide: CameraSide?
+    @State private var isAnalyzingLeft = false
+    @State private var isAnalyzingRight = false
+    @State private var leftStatus  = ""   // step label shown inside button while analyzing
+    @State private var rightStatus = ""
+    @State private var leftError: String?
+    @State private var rightError: String?
+    @State private var currentPage = 0   // selected page in the wear-pattern history carousel
+    @State private var scrollOffset: CGFloat = 0   // drives the header fade
+    @ObservedObject private var scanVM = ScanViewModel.shared
+
+    private let accentLime = Color(hex: "#00FF7F")
+    private let backgroundColor = Color(hex: "#1A1A1C")
+    private let cardBackground = Color(hex: "#2A2A2E")
+    private let cardBackgroundSoft = Color(hex: "#242428")
+    
+    var body: some View {
+        ZStack {
+            backgroundColor.ignoresSafeArea()
+            
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    ScrollOffsetReader(space: "scanScroll")
+
+                    // Header — fades out as the page scrolls down
+                    scanHeader
+                        .opacity(scrollFadeOpacity(scrollOffset))
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                    
+                    // ── Shoe-required banner ─────────────────────────────
+                    if isLoadingShoes {
+                        HStack(spacing: 8) {
+                            ProgressView().tint(accentLime).scaleEffect(0.8)
+                            Text("Loading your shoes…")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(cardBackground)
+                        .cornerRadius(14)
+                        .padding(.horizontal, 20)
+                    } else if selectedShoe.isEmpty {
+                        // No shoe selected / none saved yet — block scanning
+                        VStack(spacing: 10) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundColor(accentLime)
+                                Text("Select a shoe to start scanning")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            Text("Use the \"Wear Pattern\" dropdown above to choose a shoe, or add one first.")
+                                .font(.system(size: 12))
+                                .foregroundColor(.white.opacity(0.5))
+                                .multilineTextAlignment(.center)
+                            Button(action: { showAddShoeAlert = true }) {
+                                Label("Add New Shoe", systemImage: "plus.circle.fill")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.black)
+                                    .padding(.horizontal, 20)
+                                    .padding(.vertical, 10)
+                                    .background(accentLime)
+                                    .cornerRadius(12)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(16)
+                        .background(cardBackground)
+                        .cornerRadius(16)
+                        .padding(.horizontal, 20)
+                    }
+
+                    // ── Two scan buttons ──────────────────────────────────
+                    // Checkmark reflects the currently-viewed day's scan, so it
+                    // persists across tab switches (driven by the shared history).
+                    let canScan = !selectedShoe.isEmpty && !isLoadingShoes
+                    let leftScanned  = currentHistoryPage?.left != nil
+                    let rightScanned = currentHistoryPage?.right != nil
+                    HStack(spacing: 12) {
+                        Button(action: { chooseSide = .left }) {
+                            VStack(spacing: 3) {
+                                HStack(spacing: 6) {
+                                    if isAnalyzingLeft {
+                                        ProgressView()
+                                            .tint(backgroundColor)
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: leftScanned ? "checkmark.circle.fill" : "camera.fill")
+                                            .font(.system(size: 13))
+                                    }
+                                    Text("Left Shoe")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                if isAnalyzingLeft && !leftStatus.isEmpty {
+                                    Text(leftStatus)
+                                        .font(.system(size: 10, weight: .medium))
+                                        .opacity(0.75)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
+                            }
+                            .foregroundColor(canScan ? backgroundColor : .white.opacity(0.4))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(canScan ? (leftScanned ? accentLime.opacity(0.7) : accentLime)
+                                                : cardBackgroundSoft)
+                            .cornerRadius(16)
+                        }
+                        .disabled(isAnalyzingLeft || !canScan)
+
+                        Button(action: { chooseSide = .right }) {
+                            VStack(spacing: 3) {
+                                HStack(spacing: 6) {
+                                    if isAnalyzingRight {
+                                        ProgressView()
+                                            .tint(backgroundColor)
+                                            .scaleEffect(0.8)
+                                    } else {
+                                        Image(systemName: rightScanned ? "checkmark.circle.fill" : "camera.fill")
+                                            .font(.system(size: 13))
+                                    }
+                                    Text("Right Shoe")
+                                        .font(.system(size: 14, weight: .semibold))
+                                }
+                                if isAnalyzingRight && !rightStatus.isEmpty {
+                                    Text(rightStatus)
+                                        .font(.system(size: 10, weight: .medium))
+                                        .opacity(0.75)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
+                            }
+                            .foregroundColor(canScan ? backgroundColor : .white.opacity(0.4))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(canScan ? (rightScanned ? accentLime.opacity(0.7) : accentLime)
+                                                : cardBackgroundSoft)
+                            .cornerRadius(16)
+                        }
+                        .disabled(isAnalyzingRight || !canScan)
+                    }
+                    .padding(.horizontal, 20)
+
+                    // ── Per-shoe error cards ──────────────────────────────
+                    if let error = leftError {
+                        errorCard(title: "Left Shoe Failed", message: error)
+                    }
+                    if let error = rightError {
+                        errorCard(title: "Right Shoe Failed", message: error)
+                    }
+                    
+                    // Wear Pattern Card — custom header with dropdown
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack {
+                            Text("Wear Pattern")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                            Spacer()
+                            Menu {
+                                ForEach(shoes, id: \.self) { shoe in
+                                    Button(shoe) { selectedShoe = shoe }
+                                }
+                                Divider()
+                                Button(action: { showAddShoeAlert = true }) {
+                                    Label("Add New Shoe", systemImage: "plus")
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Text(selectedShoe.isEmpty ? "Select Shoe" : selectedShoe)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundColor(selectedShoe.isEmpty ? .white.opacity(0.4) : .white)
+                                    Image(systemName: "chevron.down")
+                                        .font(.system(size: 9))
+                                        .foregroundColor(.white.opacity(0.5))
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(cardBackgroundSoft)
+                                .cornerRadius(10)
+                            }
+                        }
+                        heatmapContainer
+                    }
+                    .padding(16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(cardBackground)
+                    .cornerRadius(20)
+                    .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+                    .padding(.horizontal, 20)
+                    
+                    // Wear Analysis — follows whichever date is selected in the carousel
+                    if let page = currentHistoryPage, page.left != nil || page.right != nil {
+                        scanCard(title: "Wear Analysis") {
+                            VStack(alignment: .leading, spacing: 14) {
+                                if let left = page.left {
+                                    shoeAnalysisSection(snapshot: left, label: "Left")
+                                }
+                                if let right = page.right {
+                                    if page.left != nil {
+                                        Rectangle()
+                                            .fill(Color.white.opacity(0.08))
+                                            .frame(height: 1)
+                                    }
+                                    shoeAnalysisSection(snapshot: right, label: "Right")
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                    
+                    // Gait Metrics Card
+                    scanCard(title: "Gait Metrics") {
+                        statsRow
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Wear Trend Card
+                    scanCard(title: "Wear Trend") {
+                        trendContainer
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Bottom padding for tab bar
+                    Spacer().frame(height: AppTheme.tabBarHeight + 24)
+                }
+            }
+            .coordinateSpace(name: "scanScroll")
+            .onPreferenceChange(ScrollOffsetKey.self) { scrollOffset = $0 }
+        }
+        .fullScreenCover(item: $cameraSide) { side in
+            ShoeCameraView(side: side.rawValue) { image in
+                runScan(image: image, side: side.rawValue)
+            }
+        }
+        .confirmationDialog(
+            "Add \(chooseSide?.rawValue ?? "") sole photo",
+            isPresented: Binding(get: { chooseSide != nil }, set: { if !$0 { chooseSide = nil } }),
+            titleVisibility: .visible
+        ) {
+            Button("Take Photo") { let s = chooseSide; chooseSide = nil; cameraSide = s }
+            Button("Choose from Library") { librarySide = chooseSide; chooseSide = nil; showLibrary = true }
+            Button("Cancel", role: .cancel) { chooseSide = nil }
+        }
+        .photosPicker(isPresented: $showLibrary, selection: $libraryItem, matching: .images)
+        .onChange(of: libraryItem) { _, item in
+            guard let item, let side = librarySide else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = UIImage(data: data) {
+                    await MainActor.run { runScan(image: img, side: side.rawValue) }
+                }
+                await MainActor.run { libraryItem = nil; librarySide = nil }
+            }
+        }
+        .task {
+            await loadShoes()
+            guard !selectedShoe.isEmpty else { return }
+            // If the shared view model already holds this shoe's history (e.g. we
+            // just came back from another tab), reuse it — reloading would briefly
+            // empty the carousel and could wipe a scan still saving in the background.
+            if scanVM.loadedShoe != selectedShoe || scanVM.historyPages.isEmpty {
+                await scanVM.loadScanData(for: selectedShoe)
+            }
+            currentPage = max(scanVM.historyPages.count - 1, 0)   // open on most recent
+        }
+        .onChange(of: selectedShoe) { _, newValue in
+            Task {
+                await scanVM.loadScanData(for: newValue)
+                currentPage = max(scanVM.historyPages.count - 1, 0)
+            }
+        }
+        .onChange(of: scanVM.historyPages.count) { _, newCount in
+            // Background refresh can shrink/grow the list — keep the index valid.
+            if currentPage > newCount - 1 { currentPage = max(newCount - 1, 0) }
+        }
+        .alert("Add New Shoe", isPresented: $showAddShoeAlert) {
+            TextField("e.g. Nike Pegasus 40", text: $newShoeName)
+                .autocorrectionDisabled()
+            Button("Add") {
+                let name = newShoeName.trimmingCharacters(in: .whitespaces)
+                guard !name.isEmpty else { return }
+                // ── Optimistic update — instant UI, no Firestore wait ──
+                if !shoes.contains(name) { shoes.append(name) }
+                selectedShoe = name
+                newShoeName = ""
+                // ── Persist to Firestore in background ────────────────
+                Task {
+                    guard let uid = FirebaseAuth.Auth.auth().currentUser?.uid else { return }
+                    do { try await ScanRepository.shared.ensureShoeExists(uid: uid, shoeName: name) }
+                    catch { debugLog("[Scan] ensureShoeExists failed: \(error)") }
+                    await loadShoes()   // refresh ordering; keeps selectedShoe if present
+                }
+            }
+            Button("Cancel", role: .cancel) { newShoeName = "" }
+        } message: {
+            Text("Enter a name for your shoe.")
+        }
+    }
+
+    // MARK: - Scan Pipeline
+
+    /// Full analyze-and-save pipeline for one shoe photo. The AI result hits the
+    /// screen as soon as it's ready; Firestore + Storage persistence runs in the
+    /// background and never blocks the UI.
+    @MainActor
+    private func runScan(image: UIImage, side: String) {
+        Task {
+            if side == "left" {
+                leftError = nil;  isAnalyzingLeft = true;  leftStatus = "Sending to AI…"
+            } else {
+                rightError = nil; isAnalyzingRight = true; rightStatus = "Sending to AI…"
+            }
+            do {
+                guard let uid = Auth.auth().currentUser?.uid else {
+                    throw NSError(domain: "ScanView", code: 1,
+                        userInfo: [NSLocalizedDescriptionKey: "Not signed in. Please sign in and try again."])
+                }
+                let shoeName = selectedShoe.trimmingCharacters(in: .whitespaces)
+                guard !shoeName.isEmpty else {
+                    throw NSError(domain: "ScanView", code: 3,
+                        userInfo: [NSLocalizedDescriptionKey: "Please select or add a shoe before scanning."])
+                }
+
+                let scanId = UUID().uuidString
+                debugLog("[Scan] \(side) shoe — uid=\(uid) shoe=\(shoeName) scanId=\(scanId)")
+
+                // Most recent saved zones for this side — anchors the AI so wear
+                // can only progress between scans, never regress.
+                let previousZones: WearZoneData? = scanVM.historyPages.reversed().compactMap {
+                    side == "left" ? $0.left?.zones : $0.right?.zones
+                }.first
+
+                // Save the sole image locally for the scorecard's gait panel right away
+                // — it must appear even if the cloud wear-analysis backend is offline.
+                if let soleJpeg = image.jpegData(compressionQuality: 0.85) {
+                    ScorecardDataStore.shared.saveGait(image: soleJpeg, gaitType: nil, strikePattern: nil)
+                }
+
+                // ── Step 1: Analyze via OpenAI (UIImage → base64, no Storage needed) ──
+                if side == "left" { leftStatus = "AI analyzing… (10-20s)" }
+                else              { rightStatus = "AI analyzing… (10-20s)" }
+                let result = try await ShoeAnalysisService.shared.analyzeSingleShoe(
+                    imageUrl: "",
+                    side: side,
+                    fallbackImage: image,
+                    previousZones: previousZones
+                )
+                debugLog("[Scan] \(side) shoe analysis done — gaitType=\(result.gaitType)")
+                ScorecardDataStore.shared.saveGait(image: nil, gaitType: result.gaitType, strikePattern: result.strikePattern)
+                ScorecardDataStore.shared.resetWearZonesIfShoeChanged(to: shoeName)
+                ScorecardDataStore.shared.saveWearZones(side: side, zones: result.wearZones)
+
+                // ── Step 2: Show the heatmap NOW — nothing else gates the result ──
+                if side == "left" {
+                    isAnalyzingLeft = false;  leftStatus = ""
+                } else {
+                    isAnalyzingRight = false; rightStatus = ""
+                }
+                scanVM.mergeLiveScan(side: side, snapshot: ScanSnapshot(result: result))
+                currentPage = max(scanVM.historyPages.count - 1, 0)   // jump to today
+
+                // ── Step 3: Persist scan + image in background (fire-and-forget).
+                // Firestore awaits a server ack with no timeout, so it must never
+                // sit between the AI result and the screen.
+                let safeShoeName = shoeName.replacingOccurrences(of: " ", with: "_")
+                let storagePath  = "users/\(uid)/scans/\(safeShoeName)/\(scanId)_\(side).jpg"
+                Task.detached(priority: .background) {
+                    do {
+                        try await ScanRepository.shared.saveSingleShoeScan(
+                            uid: uid, scanId: scanId, shoeName: shoeName,
+                            side: side, result: result, imageDownloadURL: ""
+                        )
+                        await scanVM.loadScanData(for: shoeName)
+                        if let jpegData = image.jpegData(compressionQuality: 0.8) {
+                            _ = try await FirebaseStorageService.shared
+                                .uploadImageData(jpegData, path: storagePath)
+                        }
+                    } catch {
+                        // The heatmap already rendered from the local result; tell
+                        // the user the cloud copy failed instead of dropping it.
+                        debugLog("[Scan] cloud sync failed for \(side): \(error)")
+                        await MainActor.run {
+                            if side == "left" { leftStatus = "Saved on device. Cloud sync failed." }
+                            else { rightStatus = "Saved on device. Cloud sync failed." }
+                        }
+                    }
+                }
+            } catch {
+                debugLog("[Scan] \(side) shoe error: \(error)")
+                if side == "left" {
+                    leftError = friendlyError(error);  isAnalyzingLeft = false;  leftStatus = ""
+                } else {
+                    rightError = friendlyError(error); isAnalyzingRight = false; rightStatus = ""
+                }
+            }
+        }
+    }
+
+    /// Converts raw errors into readable messages.
+    /// OpenAI errors come back as JSON: {"error":{"message":"...","type":"...","code":"..."}}
+    private func friendlyError(_ error: Error) -> String {
+        let raw = error.localizedDescription
+        // Try to extract the OpenAI "message" field from the JSON blob
+        if let data = raw.data(using: .utf8),
+           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           let errObj = json["error"] as? [String: Any],
+           let msg = errObj["message"] as? String {
+            // Surface auth errors clearly
+            if let code = errObj["code"] as? String, code == "invalid_api_key" {
+                return "Shoe analysis backend is not configured. Deploy analyzeShoe with a valid OPENAI_API_KEY secret and set SHOE_ANALYSIS_ENDPOINT."
+            }
+            return msg
+        }
+        // OpenAI wraps the JSON in "API Error: {...}" — strip the prefix
+        if raw.hasPrefix("API Error: ") {
+            let jsonPart = String(raw.dropFirst("API Error: ".count))
+            if let data = jsonPart.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                let errObj = json["error"] as? [String: Any],
+               let msg = errObj["message"] as? String {
+                if let code = errObj["code"] as? String, code == "invalid_api_key" {
+                    return "Shoe analysis backend is not configured. Deploy analyzeShoe with a valid OPENAI_API_KEY secret and set SHOE_ANALYSIS_ENDPOINT."
+                }
+                return msg
+            }
+        }
+        return raw
+    }
+
+    private func loadShoes() async {
+        isLoadingShoes = true
+        defer { isLoadingShoes = false }
+        guard let uid = FirebaseAuth.Auth.auth().currentUser?.uid else { return }
+        let fetched = (try? await ScanRepository.shared.fetchShoeNames(uid: uid)) ?? []
+        shoes = fetched
+        // Auto-select the first shoe if nothing is selected yet
+        if selectedShoe.isEmpty, let first = fetched.first {
+            selectedShoe = first
+        }
+    }
+    
+    
+    private func errorCard(title: String, message: String) -> some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color(hex: "#FF8C00"))
+            Text(message)
+                .font(.system(size: 12))
+                .foregroundColor(.white.opacity(0.6))
+                .multilineTextAlignment(.center)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(cardBackground)
+        .cornerRadius(14)
+        .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Header
+    private var scanHeader: some View {
+        HStack {
+            Text("Gait Analysis")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.white)
+            Spacer()
+            Button(action: { dismiss() }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.7))
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(Color.white.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+        }
+    }
+    
+    // MARK: - Card wrapper
+    private func scanCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+            content()
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(cardBackground)
+        .cornerRadius(20)
+        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+    }
+    
+    // MARK: - Heatmap History Carousel
+
+    /// The page currently shown in the carousel (clamped to valid range).
+    private var currentHistoryPage: ScanHistoryPage? {
+        let pages = scanVM.historyPages
+        guard !pages.isEmpty else { return nil }
+        return pages[min(max(currentPage, 0), pages.count - 1)]
+    }
+
+    private var heatmapContainer: some View {
+        VStack(spacing: 14) {
+            if scanVM.historyPages.isEmpty {
+                // Empty state — placeholder grids, no scans yet for this shoe
+                HStack(spacing: 30) {
+                    FootHeatmapView(isLeft: true, wearZones: nil)
+                    FootHeatmapView(isLeft: false, wearZones: nil)
+                }
+                .frame(maxWidth: .infinity)
+
+                Text("No scans yet. Scan each shoe above to see its wear pattern.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.white.opacity(0.4))
+                    .multilineTextAlignment(.center)
+            } else {
+                // Date of the scan being viewed
+                Text(dateLabel(for: currentHistoryPage?.date))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(accentLime)
+                    .frame(maxWidth: .infinity)
+                    .animation(nil, value: currentPage)
+
+                // Swipeable pages with arrows on either side
+                ZStack {
+                    TabView(selection: $currentPage) {
+                        ForEach(scanVM.historyPages.indices, id: \.self) { index in
+                            let page = scanVM.historyPages[index]
+                            HStack(spacing: 30) {
+                                FootHeatmapView(isLeft: true, wearZones: page.left?.zones)
+                                FootHeatmapView(isLeft: false, wearZones: page.right?.zones)
+                            }
+                            .tag(index)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                    .frame(height: 240)
+
+                    HStack {
+                        carouselArrow("chevron.left", enabled: currentPage > 0) {
+                            withAnimation(.easeInOut) { currentPage -= 1 }
+                        }
+                        Spacer()
+                        carouselArrow("chevron.right", enabled: currentPage < scanVM.historyPages.count - 1) {
+                            withAnimation(.easeInOut) { currentPage += 1 }
+                        }
+                    }
+                }
+            }
+
+        }
+    }
+
+    private func carouselArrow(_ systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(enabled ? .white.opacity(0.85) : .white.opacity(0.15))
+                .frame(width: 32, height: 32)
+                .background(cardBackgroundSoft.opacity(enabled ? 1 : 0.4))
+                .clipShape(Circle())
+        }
+        .disabled(!enabled)
+    }
+
+    private func dateLabel(for date: Date?) -> String {
+        guard let date else { return "" }
+        if Calendar.current.isDateInToday(date) { return "Today" }
+        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, yyyy"
+        return formatter.string(from: date)
+    }
+    
+    // MARK: - Stats Row
+    private var statsRow: some View {
+        let page = currentHistoryPage
+        let pronationType = page?.left?.gaitType.capitalized ?? page?.right?.gaitType.capitalized ?? "—"
+        let symmetryValue: String = {
+            guard let left = page?.left?.zones,
+                  let right = page?.right?.zones else {
+                return "—"
+            }
+            // Numeric score comparison for smoother symmetry %
+            let leftZones = [left.bigToe, left.lesserToes, left.medialBall, left.centralBall, left.lateralBall, left.medialMidfoot, left.lateralMidfoot, left.medialHeel, left.centralHeel, left.lateralHeel]
+            let rightZones = [right.bigToe, right.lesserToes, right.medialBall, right.centralBall, right.lateralBall, right.medialMidfoot, right.lateralMidfoot, right.medialHeel, right.centralHeel, right.lateralHeel]
+            var totalDiff: Double = 0
+            for i in 0..<10 {
+                totalDiff += abs(wearScore(leftZones[i]) - wearScore(rightZones[i]))
+            }
+            let avgDiff = totalDiff / 10.0
+            let symmetry = Int((1.0 - avgDiff) * 100)
+            return "\(max(symmetry, 0))%"
+        }()
+        
+        // Any pronation/supination is a flag — color it; neutral stays clean.
+        let pronationColor: Color = {
+            switch pronationType.lowercased() {
+            case "neutral", "—": return .white
+            case "overpronation": return Color(hex: "#E83030")   // red
+            default:              return Color(hex: "#E89830")   // orange
+            }
+        }()
+
+        return HStack(spacing: 10) {
+            ScanStatCard(
+                label: "Pronation",
+                value: pronationType,
+                valueColor: pronationColor,
+                cardBg: cardBackgroundSoft
+            )
+
+            ScanStatCard(
+                icon: "arrow.left.and.right",
+                label: "Symmetry",
+                value: symmetryValue,
+                isSymmetry: true,
+                accent: accentLime,
+                cardBg: cardBackgroundSoft
+            )
+        }
+    }
+    
+    // MARK: - Trend Container
+    private var trendContainer: some View {
+        VStack(spacing: 12) {
+            if scanVM.hasTrend {
+                TrendChartView(dataPoints: scanVM.trendPoints, accent: accentLime, bg: backgroundColor)
+                    .frame(height: 80)
+
+                // First & last scan dates at the ends of the line.
+                HStack {
+                    if let first = scanVM.trendLabels.first {
+                        Text(first)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                    Spacer()
+                    if let last = scanVM.trendLabels.last {
+                        Text(last)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(.white.opacity(0.4))
+                    }
+                }
+            } else {
+                // Not enough scans yet to draw a line.
+                Text("No trend yet")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(.white.opacity(0.3))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 80)
+            }
+        }
+    }
+    
+    // MARK: - Structured Analysis Section
+    
+    @ViewBuilder
+    private func shoeAnalysisSection(snapshot shoe: ScanSnapshot, label: String) -> some View {
+        let health = shoeHealthPercent(zones: shoe.zones)
+        let strikeText = (shoe.strikePattern?.isEmpty == false) ? ", \(shoe.strikePattern!.lowercased()) strike" : ""
+
+        // The heatmap above is the read. This is just a one line summary plus a
+        // comfort first note. Coaching now lives in the Analyze FOCUS list.
+        VStack(alignment: .leading, spacing: 6) {
+            Text("\(label): \(shoe.gaitType.capitalized)\(strikeText)")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(accentLime)
+
+            if let h = health {
+                Text("Tread health \(h)%. Replace shoes based on how they feel, not a number.")
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundColor(.white.opacity(0.5))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+    
+    private func analysisRow(label: String, value: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(accentLime.opacity(0.8))
+                .frame(width: 60, alignment: .leading)
+            Text(value)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundColor(.white.opacity(0.85))
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+    
+    // MARK: - On-Device Computed Stats
+    
+    /// Score a color string: green=1.0, yellow=0.45, orange=0.15, red=0.0
+    private func wearScore(_ color: String) -> Double {
+        switch color.lowercased() {
+        case "green": return 1.0
+        case "yellow": return 0.45
+        case "orange": return 0.15
+        case "red": return 0.0
+        default: return 1.0
+        }
+    }
+    
+    /// Compute shoe health % from wear zone data (0-100). Returns nil if no zones.
+    private func shoeHealthPercent(zones: WearZoneData?) -> Int? {
+        guard let z = zones else { return nil }
+        let scores = [
+            wearScore(z.bigToe), wearScore(z.lesserToes),
+            wearScore(z.medialBall), wearScore(z.centralBall), wearScore(z.lateralBall),
+            wearScore(z.medialMidfoot), wearScore(z.lateralMidfoot),
+            wearScore(z.medialHeel), wearScore(z.centralHeel), wearScore(z.lateralHeel)
+        ]
+        let avg = scores.reduce(0, +) / Double(scores.count)
+        return Int(avg * 100)
+    }
+    
+    
+}
+
+// MARK: - Foot Heatmap View
+struct FootHeatmapView: View {
+    let isLeft: Bool
+    var wearZones: WearZoneData?
+    
+    private let columns = 16
+    private let rows = 33
+    private let cellSize: CGFloat = 5
+    private let cornerRadius: CGFloat = 1.5
+    private let blendRadius = 3          // wider neighborhood → smoother gradient
+    private let blendPasses = 3          // more passes → softer color transitions
+    private let greenWearSensitivity: CGFloat = 1.2   // gentle; don't over-redden
+    private let wornWearSensitivity: CGFloat = 1.6    // softened so worn != instant red
+    
+    private struct RGBA {
+        var r: CGFloat
+        var g: CGFloat
+        var b: CGFloat
+        var a: CGFloat
+    }
+    
+    // Shoe shape data - pre-computed for performance
+    // 1 = shoe cell, 0 = empty
+    private let shoeShapeData: [[Int]] = [
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0],
+        [0,0,0,0,0,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,1,1,1,1,1,1,1,1,1,1,1,1,0,0],
+        [0,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0],
+        [0,0,0,0,1,1,1,1,1,1,1,1,0,0,0,0],
+        [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+    ]
+    
+    var body: some View {
+        let displayGrid = buildDisplayColorGrid()
+        
+        VStack(spacing: 8) {
+            Text(isLeft ? "Left" : "Right")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundColor(.white)
+                .textCase(.uppercase)
+                .tracking(0.5)
+            
+            // Simple VStack + HStack grid (more reliable than LazyVGrid)
+            VStack(spacing: 1) {
+                ForEach(0..<rows, id: \.self) { row in
+                    HStack(spacing: 1) {
+                        ForEach(0..<columns, id: \.self) { col in
+                            RoundedRectangle(cornerRadius: cornerRadius)
+                                .fill(displayGrid[row][col])
+                                .frame(width: cellSize, height: cellSize)
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Maps a cell (row, col) to one of the 10 biomechanical gait zones.
+    /// SOLE view — matches the scan photo (sole facing you, toe at top).
+    /// Flipping a shoe over mirrors it: a LEFT sole's medial (big toe/arch) edge
+    /// is on the LEFT of the image; a RIGHT sole's medial edge is on the RIGHT.
+    private func zoneForCell(row: Int, col: Int) -> String {
+        let medialSide: Bool
+        if isLeft {
+            medialSide = col < columns / 2   // left half = medial for left sole
+        } else {
+            medialSide = col >= columns / 2  // right half = medial for right sole
+        }
+
+        // For 3-way splits (ball, heel): inner third, middle third, outer third
+        let innerThird: Bool
+        let outerThird: Bool
+        if isLeft {
+            innerThird = col < columns / 3       // cols 0-4 = medial for left sole
+            outerThird = col >= columns * 2 / 3  // cols 10-15 = lateral for left sole
+        } else {
+            innerThird = col >= columns * 2 / 3  // cols 10-15 = medial for right sole
+            outerThird = col < columns / 3       // cols 0-4 = lateral for right sole
+        }
+        
+        // TOES: rows 0-5
+        if row <= 5 {
+            return medialSide ? "bigToe" : "lesserToes"
+        }
+        
+        // BALL (metatarsal heads): rows 6-12 — 3-way split
+        if row <= 12 {
+            if innerThird {
+                return "medialBall"
+            } else if outerThird {
+                return "lateralBall"
+            } else {
+                return "centralBall"
+            }
+        }
+        
+        // MIDFOOT (arch): rows 13-24 — 2-way split
+        if row <= 24 {
+            return medialSide ? "medialMidfoot" : "lateralMidfoot"
+        }
+        
+        // HEEL: rows 25-32 — 3-way split
+        if innerThird {
+            return "medialHeel"
+        } else if outerThird {
+            return "lateralHeel"
+        } else {
+            return "centralHeel"
+        }
+    }
+    
+    /// Converts a color string ("green", "yellow", "orange", "red") to a SwiftUI Color
+    private func colorFromString(_ colorStr: String) -> Color {
+        switch colorStr.lowercased() {
+        case "red": return Color(hex: "#E83030")
+        case "orange": return Color(hex: "#E89830")
+        case "yellow": return Color(hex: "#E8D44A")
+        default: return Color(hex: "#5ECC3A")
+        }
+    }
+    
+    private func buildDisplayColorGrid() -> [[Color]] {
+        let baseGrid = buildBaseColorGrid()
+
+        // No scan data: neutral placeholder grid — no blending needed.
+        guard wearZones != nil else {
+            return baseGrid
+        }
+
+        return buildBlendedColorGrid(from: baseGrid)
+    }
+
+    private func buildBaseColorGrid() -> [[Color]] {
+        var grid = Array(
+            repeating: Array(repeating: Color.clear, count: columns),
+            count: rows
+        )
+
+        // Dim neutral cells when there's no scan yet — shows the shoe outline only.
+        let placeholder = Color.white.opacity(0.08)
+
+        for row in 0..<rows {
+            for col in 0..<columns {
+                guard isShoeCell(row: row, col: col) else {
+                    continue
+                }
+
+                if let zones = wearZones {
+                    grid[row][col] = colorFromString(zones.color(for: zoneForCell(row: row, col: col)))
+                } else {
+                    grid[row][col] = placeholder
+                }
+            }
+        }
+
+        return grid
+    }
+    
+    private func buildBlendedColorGrid(from baseGrid: [[Color]]) -> [[Color]] {
+        var currentGrid = baseGrid
+        
+        for _ in 0..<blendPasses {
+            var nextGrid = currentGrid
+            
+            for row in 0..<rows {
+                for col in 0..<columns {
+                    guard isShoeCell(row: row, col: col) else {
+                        nextGrid[row][col] = .clear
+                        continue
+                    }
+                    nextGrid[row][col] = blendedColor(row: row, col: col, baseGrid: currentGrid)
+                }
+            }
+            
+            currentGrid = nextGrid
+        }
+        
+        return currentGrid
+    }
+    
+    private func blendedColor(row: Int, col: Int, baseGrid: [[Color]]) -> Color {
+        var totalWeight: CGFloat = 0
+        var sumR: CGFloat = 0
+        var sumG: CGFloat = 0
+        var sumB: CGFloat = 0
+        var sumA: CGFloat = 0
+        
+        for dRow in -blendRadius...blendRadius {
+            for dCol in -blendRadius...blendRadius {
+                let nRow = row + dRow
+                let nCol = col + dCol
+                
+                guard nRow >= 0, nRow < rows, nCol >= 0, nCol < columns,
+                      isShoeCell(row: nRow, col: nCol) else {
+                    continue
+                }
+                
+                let weight = kernelWeight(dRow: dRow, dCol: dCol)
+                let rgba = rgba(from: baseGrid[nRow][nCol])
+                
+                totalWeight += weight
+                sumR += rgba.r * weight
+                sumG += rgba.g * weight
+                sumB += rgba.b * weight
+                sumA += rgba.a * weight
+            }
+        }
+        
+        guard totalWeight > 0 else {
+            return baseGrid[row][col]
+        }
+        
+        let averaged = RGBA(
+            r: sumR / totalWeight,
+            g: sumG / totalWeight,
+            b: sumB / totalWeight,
+            a: sumA / totalWeight
+        )
+        
+        // Post-process sensitivity curve: mildly boost early wear and aggressively boost
+        // already-worn regions so red/orange emerges faster where tread is degraded.
+        let adjusted = applyWearSensitivity(to: averaged)
+        return color(from: adjusted)
+    }
+    
+    private func kernelWeight(dRow: Int, dCol: Int) -> CGFloat {
+        // Smooth Gaussian falloff by true distance → continuous gradient instead of
+        // the old 3-tier step weighting (which left visible color banding).
+        let distSq = CGFloat(dRow * dRow + dCol * dCol)
+        let sigma = CGFloat(blendRadius) / 1.5
+        return exp(-distSq / (2 * sigma * sigma))
+    }
+    
+    private func isShoeCell(row: Int, col: Int) -> Bool {
+        guard row >= 0, row < rows, col >= 0, col < columns else {
+            return false
+        }
+        
+        // Sole view: flipping a shoe over mirrors its outline, so the LEFT sole
+        // uses the raw shape and the RIGHT sole is mirrored.
+        let actualCol = isLeft ? col : (columns - 1 - col)
+        return row < shoeShapeData.count &&
+               actualCol < shoeShapeData[row].count &&
+               shoeShapeData[row][actualCol] == 1
+    }
+    
+    private func rgba(from color: Color) -> RGBA {
+        let uiColor = UIColor(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        if uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+            return RGBA(r: red, g: green, b: blue, a: alpha)
+        }
+        
+        return RGBA(r: 0, g: 0, b: 0, a: 0)
+    }
+    
+    private func color(from rgba: RGBA) -> Color {
+        Color(
+            uiColor: UIColor(
+                red: rgba.r,
+                green: rgba.g,
+                blue: rgba.b,
+                alpha: rgba.a
+            )
+        )
+    }
+    
+    private func applyWearSensitivity(to rgba: RGBA) -> RGBA {
+        let score = wearScore(for: rgba)
+        let adjustedScore = adjustedWearScore(from: score)
+        return rgbaForWearScore(adjustedScore)
+    }
+    
+    private func adjustedWearScore(from score: CGFloat) -> CGFloat {
+        let greenBoundary: CGFloat = 1.0 / 3.0
+        
+        if score <= greenBoundary {
+            return clamp(score * greenWearSensitivity, min: 0, max: 1)
+        }
+        
+        let boostedTail = greenBoundary + (score - greenBoundary) * wornWearSensitivity
+        return clamp(boostedTail, min: 0, max: 1)
+    }
+    
+    private func wearScore(for rgba: RGBA) -> CGFloat {
+        let stops = wearPaletteStops
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        var bestScore: CGFloat = 0
+        
+        for index in 0..<(stops.count - 1) {
+            let start = stops[index]
+            let end = stops[index + 1]
+            
+            let segment = (
+                r: end.color.r - start.color.r,
+                g: end.color.g - start.color.g,
+                b: end.color.b - start.color.b
+            )
+            let point = (
+                r: rgba.r - start.color.r,
+                g: rgba.g - start.color.g,
+                b: rgba.b - start.color.b
+            )
+            
+            let segLenSq = segment.r * segment.r + segment.g * segment.g + segment.b * segment.b
+            guard segLenSq > 0 else { continue }
+            
+            let projection = clamp(
+                (point.r * segment.r + point.g * segment.g + point.b * segment.b) / segLenSq,
+                min: 0,
+                max: 1
+            )
+            
+            let projected = RGBA(
+                r: start.color.r + segment.r * projection,
+                g: start.color.g + segment.g * projection,
+                b: start.color.b + segment.b * projection,
+                a: 1
+            )
+            
+            let distance = colorDistanceSquared(a: rgba, b: projected)
+            if distance < bestDistance {
+                bestDistance = distance
+                bestScore = start.t + (end.t - start.t) * projection
+            }
+        }
+        
+        return clamp(bestScore, min: 0, max: 1)
+    }
+    
+    private func rgbaForWearScore(_ score: CGFloat) -> RGBA {
+        let t = clamp(score, min: 0, max: 1)
+        let stops = wearPaletteStops
+        
+        for index in 0..<(stops.count - 1) {
+            let start = stops[index]
+            let end = stops[index + 1]
+            
+            if t >= start.t && t <= end.t {
+                let localT = (t - start.t) / (end.t - start.t)
+                return lerp(a: start.color, b: end.color, t: localT)
+            }
+        }
+        
+        return stops.last?.color ?? RGBA(r: 0, g: 0, b: 0, a: 1)
+    }
+    
+    private var wearPaletteStops: [(t: CGFloat, color: RGBA)] {
+        [
+            (0.0, RGBA(r: 94.0 / 255.0,  g: 204.0 / 255.0, b: 58.0 / 255.0,  a: 1)),
+            (1.0 / 3.0, RGBA(r: 232.0 / 255.0, g: 212.0 / 255.0, b: 74.0 / 255.0,  a: 1)),
+            (2.0 / 3.0, RGBA(r: 232.0 / 255.0, g: 152.0 / 255.0, b: 48.0 / 255.0,  a: 1)),
+            (1.0, RGBA(r: 232.0 / 255.0, g: 48.0 / 255.0,  b: 48.0 / 255.0,  a: 1))
+        ]
+    }
+    
+    private func lerp(a: RGBA, b: RGBA, t: CGFloat) -> RGBA {
+        RGBA(
+            r: a.r + (b.r - a.r) * t,
+            g: a.g + (b.g - a.g) * t,
+            b: a.b + (b.b - a.b) * t,
+            a: a.a + (b.a - a.a) * t
+        )
+    }
+    
+    private func colorDistanceSquared(a: RGBA, b: RGBA) -> CGFloat {
+        let dr = a.r - b.r
+        let dg = a.g - b.g
+        let db = a.b - b.b
+        return dr * dr + dg * dg + db * db
+    }
+    
+    private func clamp(_ value: CGFloat, min lower: CGFloat, max upper: CGFloat) -> CGFloat {
+        Swift.max(lower, Swift.min(upper, value))
+    }
+}
+
+// MARK: - Scan Stat Card
+struct ScanStatCard: View {
+    var icon: String? = nil          // optional — omit for an icon-less card
+    let label: String
+    let value: String
+    var isSymmetry: Bool = false
+    var accent: Color = Color(hex: "#00FF7F")
+    var valueColor: Color = .white   // color the value (e.g. red/orange for pronation)
+    var cardBg: Color = Color(hex: "#242428")
+
+    var body: some View {
+        VStack(spacing: 8) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(accent)
+            }
+
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.white.opacity(0.5))
+
+            Text(value)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(valueColor)
+        }
+        .frame(maxWidth: .infinity, minHeight: 90)
+        .padding(.vertical, 14)
+        .background(cardBg)
+        .cornerRadius(14)
+    }
+}
+
+// MARK: - Trend Chart View
+struct TrendChartView: View {
+    var dataPoints: [CGFloat]
+    var accent: Color = Color(hex: "#00FF7F")
+    var bg: Color = Color(hex: "#1A1A1C")
+    
+    var body: some View {
+        GeometryReader { geometry in
+            let width = geometry.size.width
+            let height = geometry.size.height
+            let stepX = dataPoints.count >= 2 ? width / CGFloat(dataPoints.count - 1) : width
+            
+            ZStack {
+                // Grid lines
+                ForEach([0.25, 0.5, 0.75], id: \.self) { y in
+                    Path { path in
+                        path.move(to: CGPoint(x: 0, y: height * (1 - y)))
+                        path.addLine(to: CGPoint(x: width, y: height * (1 - y)))
+                    }
+                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                }
+                
+                // Area fill
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: height))
+                    for (index, value) in dataPoints.enumerated() {
+                        let x = CGFloat(index) * stepX
+                        let y = height * (1 - value)
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                    path.addLine(to: CGPoint(x: width, y: height))
+                    path.closeSubpath()
+                }
+                .fill(
+                    LinearGradient(
+                        colors: [accent.opacity(0.3), accent.opacity(0.02)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                
+                // Line (smooth, no dots)
+                Path { path in
+                    guard dataPoints.count >= 2 else {
+                        path.move(to: CGPoint(x: 0, y: height))
+                        path.addLine(to: CGPoint(x: width, y: height))
+                        return
+                    }
+                    for (index, value) in dataPoints.enumerated() {
+                        let x = CGFloat(index) * stepX
+                        let y = height * (1 - value)
+                        if index == 0 {
+                            path.move(to: CGPoint(x: x, y: y))
+                        } else {
+                            path.addLine(to: CGPoint(x: x, y: y))
+                        }
+                    }
+                }
+                .stroke(accent.opacity(0.8), style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+            }
+        }
+    }
+}
+
+// MARK: - Section Header
+struct ScanSectionHeader: View {
+    let title: String
+    
+    var body: some View {
+        Text(title)
+            .font(.system(size: 16, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+    }
+}
+
+// MARK: - Section Divider
+struct ScanSectionDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(Color.white.opacity(0.06))
+            .frame(height: 1)
+    }
+}
+
+#Preview {
+    ScanView()
+}

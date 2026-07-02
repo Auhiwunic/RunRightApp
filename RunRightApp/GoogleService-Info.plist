@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>610163382557-9r5m80eo0u9vk6516hou4k9hambr0u36.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.610163382557-9r5m80eo0u9vk6516hou4k9hambr0u36</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDvvDjE81l_mkt9erpY_WybIDIuC209UE4</string>
+	<key>GCM_SENDER_ID</key>
+	<string>610163382557</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.runright.app</string>
+	<key>PROJECT_ID</key>
+	<string>corsa-51d8f</string>
+	<key>STORAGE_BUCKET</key>
+	<string>corsa-51d8f.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:610163382557:ios:ef82686e0af4c41120a9f4</string>
+</dict>
+</plist>

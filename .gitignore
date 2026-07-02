@@ -1,0 +1,32 @@
+# Xcode / Swift build products
+.derivedData/
+DerivedData/
+build/
+*.xcresult
+
+# User-local Xcode state
+*.xcuserstate
+xcuserdata/
+
+# CocoaPods generated dependencies can be restored with pod install.
+Pods/
+
+# Node dependencies can be restored with npm install.
+node_modules/
+
+# Packaged archives/backups are generated outputs.
+*.zip
+*.ipa
+*.xcarchive
+*.bak
+
+# Local secrets and environment files
+.env
+.env.*
+*.local
+secrets/
+service-account*.json
+firebase-debug.log
+
+# macOS
+.DS_Store
