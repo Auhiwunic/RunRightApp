@@ -14,9 +14,9 @@ enum LastRunMetric {
 struct HomeView: View {
     var onOpenCoach: () -> Void = {}
     private let accentLime = Color(hex: "#00CED1")
-    private let backgroundColor = Color(hex: "#15181B")
-    private let cardBackground = Color(hex: "#20252A")
-    private let cardBackgroundSoft = Color(hex: "#15181B")
+    private let backgroundColor = Color(hex: "#111417")
+    private let cardBackground = Color(hex: "#23292F")
+    private let cardBackgroundSoft = Color(hex: "#171B1F")
     @StateObject private var vm = HomeViewModel()
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
@@ -543,8 +543,8 @@ private struct HomeRaisedSurface: ViewModifier {
                 shape
                     .fill(fill)
                     .softOuterShadow(
-                        darkShadow: Color(hex: "#050607").opacity(darkOpacity),
-                        lightShadow: Color(hex: "#323A42").opacity(lightOpacity),
+                        darkShadow: Color(hex: "#000000").opacity(darkOpacity),
+                        lightShadow: Color(hex: "#4A5660").opacity(lightOpacity),
                         offset: max(x, y),
                         radius: shadowRadius
                     )
@@ -556,11 +556,11 @@ extension View {
     func homeRaisedSurface(
         fill: Color,
         cornerRadius: CGFloat,
-        shadowRadius: CGFloat = 10,
-        x: CGFloat = 6,
-        y: CGFloat = 6,
-        lightOpacity: Double = 0.12,
-        darkOpacity: Double = 0.56
+        shadowRadius: CGFloat = 14,
+        x: CGFloat = 8,
+        y: CGFloat = 8,
+        lightOpacity: Double = 0.18,
+        darkOpacity: Double = 0.70
     ) -> some View {
         modifier(
             HomeRaisedSurface(
