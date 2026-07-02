@@ -132,10 +132,11 @@ struct CustomTabBar: View {
                 }
             }
             .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 22)
+            .padding(.top, 6)
+            .padding(.bottom, 4)
+            .offset(y: 8)
         }
-        .background(Color(hex: "#0D0F11"))
+        .background(AppTheme.tabBarBg)
         .padding(.bottom, 0)
         .ignoresSafeArea(edges: .bottom)
     }
@@ -155,7 +156,7 @@ struct TabBarItem: View {
                 .frame(width: 52, height: 32)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(isSelected ? color.opacity(0.16) : Color.clear)
+                        .fill(isSelected ? color.opacity(0.22) : Color.clear)
                 )
 
             Text(label)

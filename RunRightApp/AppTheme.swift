@@ -59,7 +59,7 @@ struct AppTheme {
     static let darkerAccent = Color(hex: "#003333")     // Very dark teal
     static let primaryText = Color.white
     static let secondaryText = Color(hex: "#7A7A7A")
-    static let tabBarBg = Color(hex: "#0D0F11")
+    static let tabBarBg = Color(hex: "#20262B")
     static let cardBg = Color(hex: "#252B31")
     static let cardBgAlt = Color(hex: "#181D21")
     static let dividerColor = Color.white.opacity(0.08)
