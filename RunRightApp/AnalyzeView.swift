@@ -281,6 +281,7 @@ struct AnalyzeView: View {
                 analyzeNewRunWidgetCard
                 analyzeScorecardCard
             }
+            analyzeShoeHeatGridCard
             analyzeFormReport
             analyzeRecentFullCard
         }
@@ -732,11 +733,118 @@ struct AnalyzeView: View {
                 Button(action: { subscriptions.isPremium ? (showScan = true) : (showPaywall = true) }) {
                     Text("SCAN SHOES")
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundColor(Color(hex: "#00FF7F"))
+                        .foregroundColor(AppTheme.formRed)
                 }
                 .buttonStyle(.plain)
             }
             .frame(maxWidth: .infinity, alignment: .center)
+        }
+    }
+
+    private var analyzeShoeHeatGridCard: some View {
+        let leftZones = ScorecardDataStore.shared.loadWearZones(side: "left")
+        let rightZones = ScorecardDataStore.shared.loadWearZones(side: "right")
+        let gaitType = ScorecardDataStore.shared.loadGaitType()
+        let strikePattern = ScorecardDataStore.shared.loadGaitStrike()
+        let hasScan = leftZones != nil || rightZones != nil
+        let health = analyzeCombinedShoeHealth(left: leftZones, right: rightZones)
+
+        return VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SHOE HEAT GRID")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundColor(.white)
+                    Text(hasScan ? analyzeShoeSummary(gaitType: gaitType, strikePattern: strikePattern) : "Scan shoes once. The heat grid stays here.")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(.white.opacity(0.48))
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 8)
+
+                Button(action: { subscriptions.isPremium ? (showScan = true) : (showPaywall = true) }) {
+                    Text(hasScan ? "RESCAN" : "SCAN")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundColor(AppTheme.formRed)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(AppTheme.formRed.opacity(0.14)))
+                        .overlay(Capsule().stroke(AppTheme.formRed.opacity(0.42), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(alignment: .center, spacing: 14) {
+                HStack(alignment: .center, spacing: 12) {
+                    FootHeatmapView(isLeft: true, wearZones: leftZones)
+                    FootHeatmapView(isLeft: false, wearZones: rightZones)
+                }
+                .frame(maxWidth: .infinity)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    analyzeShoeMetric(label: "GAIT", value: gaitType?.uppercased() ?? "--")
+                    analyzeShoeMetric(label: "STRIKE", value: strikePattern?.uppercased() ?? "--")
+                    analyzeShoeMetric(label: "HEALTH", value: health.map { "\($0)%" } ?? "--")
+                }
+                .frame(width: 86, alignment: .leading)
+            }
+
+            if !hasScan {
+                Text("No shoe scan yet")
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(AppTheme.formRed)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
+            }
+        }
+        .analyzeHomeWidgetChrome(padding: 18)
+    }
+
+    private func analyzeShoeMetric(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+            Text(label)
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundColor(AppTheme.formRed.opacity(0.8))
+        }
+    }
+
+    private func analyzeShoeSummary(gaitType: String?, strikePattern: String?) -> String {
+        let gait = gaitType?.uppercased() ?? "GAIT READY"
+        guard let strikePattern, !strikePattern.isEmpty else { return gait }
+        return "\(gait) · \(strikePattern.uppercased()) STRIKE"
+    }
+
+    private func analyzeCombinedShoeHealth(left: WearZoneData?, right: WearZoneData?) -> Int? {
+        let values = [left, right].compactMap(analyzeShoeHealthPercent)
+        guard !values.isEmpty else { return nil }
+        return Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
+    }
+
+    private func analyzeShoeHealthPercent(zones: WearZoneData?) -> Int? {
+        guard let z = zones else { return nil }
+        let scores = [
+            analyzeWearScore(z.bigToe), analyzeWearScore(z.lesserToes),
+            analyzeWearScore(z.medialBall), analyzeWearScore(z.centralBall), analyzeWearScore(z.lateralBall),
+            analyzeWearScore(z.medialMidfoot), analyzeWearScore(z.lateralMidfoot),
+            analyzeWearScore(z.medialHeel), analyzeWearScore(z.centralHeel), analyzeWearScore(z.lateralHeel)
+        ]
+        let avg = scores.reduce(0, +) / Double(scores.count)
+        return Int((avg * 100).rounded())
+    }
+
+    private func analyzeWearScore(_ color: String) -> Double {
+        switch color.lowercased() {
+        case "green": return 1.0
+        case "yellow": return 0.45
+        case "orange": return 0.15
+        case "red": return 0.0
+        default: return 1.0
         }
     }
 
