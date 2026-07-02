@@ -14,9 +14,9 @@ enum LastRunMetric {
 struct HomeView: View {
     var onOpenCoach: () -> Void = {}
     private let accentLime = Color(hex: "#00CED1")
-    private let backgroundColor = Color(hex: "#30353A")
-    private let cardBackground = Color(hex: "#33393E")
-    private let cardBackgroundSoft = Color(hex: "#30353A")
+    private let backgroundColor = Color(hex: "#252A2E")
+    private let cardBackground = Color(hex: "#2B3035")
+    private let cardBackgroundSoft = Color(hex: "#252A2E")
     @StateObject private var vm = HomeViewModel()
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
@@ -543,8 +543,8 @@ private struct HomeRaisedSurface: ViewModifier {
                 shape
                     .fill(fill)
                     .softOuterShadow(
-                        darkShadow: Color(hex: "#17191C").opacity(darkOpacity),
-                        lightShadow: Color(hex: "#647079").opacity(lightOpacity),
+                        darkShadow: Color(hex: "#111315").opacity(darkOpacity),
+                        lightShadow: Color(hex: "#4B555D").opacity(lightOpacity),
                         offset: max(x, y),
                         radius: shadowRadius
                     )
