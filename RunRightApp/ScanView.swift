@@ -752,6 +752,7 @@ struct ScanView: View {
 struct FootHeatmapView: View {
     let isLeft: Bool
     var wearZones: WearZoneData?
+    var labelDesign: Font.Design = .monospaced
     
     private let columns = 16
     private let rows = 33
@@ -812,7 +813,7 @@ struct FootHeatmapView: View {
         
         VStack(spacing: 8) {
             Text(isLeft ? "Left" : "Right")
-                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .font(.system(size: 13, weight: .bold, design: labelDesign))
                 .foregroundColor(.white)
                 .textCase(.uppercase)
                 .tracking(0.5)

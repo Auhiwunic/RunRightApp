@@ -18,6 +18,16 @@ import UniformTypeIdentifiers
 import QuartzCore
 import Combine
 
+private extension Font {
+    static let analyzeSection: Font = .system(size: 14, weight: .heavy)
+    static let analyzeButton: Font = .system(size: 17, weight: .semibold)
+    static let analyzeBody: Font = .system(size: 14, weight: .regular)
+    static let analyzeCaption: Font = .system(size: 13, weight: .regular)
+    static let analyzeMetric: Font = .system(size: 15, weight: .bold)
+    static let analyzeMeta: Font = .system(size: 11, weight: .bold)
+    static let analyzeTiny: Font = .system(size: 9, weight: .bold)
+}
+
 // MARK: - Analysis history (local, on-device)
 
 /// One completed form analysis — the three component scores plus when it ran.
@@ -292,13 +302,13 @@ struct AnalyzeView: View {
     /// Scorecard in its own separate gray box, to the right of the action card.
     private var analyzeScorecardCard: some View {
         Button(action: { showScorecard = true }) {
-            VStack(spacing: 6) {
+            VStack(spacing: 7) {
                 Text("Scorecard")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.analyzeButton)
                     .foregroundColor(.white)
-                Text("VIEW · SHARE")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.4))
+                Text("Open")
+                    .font(.analyzeMeta)
+                    .foregroundColor(AppTheme.formRed)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -372,11 +382,11 @@ struct AnalyzeView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 8) {
                 Text("FOCUS")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .font(.analyzeSection)
                     .foregroundColor(.white)
-                Text("form + shoe combined")
-                    .font(.system(size: 11, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.4))
+                Text("FORM + SHOE")
+                    .font(.analyzeMeta)
+                    .foregroundColor(AppTheme.formRed.opacity(0.85))
             }
             .padding(.horizontal, 18)
             .padding(.top, 16)
@@ -390,13 +400,13 @@ struct AnalyzeView: View {
                     HStack(spacing: 8) {
                         corroborationBadge(insight.corroboration)
                         Text(insight.title)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.analyzeBody.weight(.semibold))
                             .foregroundColor(.white)
                         Spacer(minLength: 0)
                     }
                     Text(insight.detail)
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.white.opacity(0.6))
+                        .font(.analyzeCaption)
+                        .foregroundColor(.white.opacity(0.72))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 18)
@@ -409,7 +419,7 @@ struct AnalyzeView: View {
                     Image(systemName: "figure.strengthtraining.functional")
                         .font(.system(size: 11, weight: .bold))
                     Text("SEE DRILLS")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .font(.analyzeMeta)
                 }
                 .foregroundColor(AppTheme.formRed)
                 .frame(maxWidth: .infinity)
@@ -474,10 +484,10 @@ struct AnalyzeView: View {
     private func analyzeMetricChip(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .font(.analyzeMetric)
                 .foregroundColor(.white)
             Text(label)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.analyzeTiny)
                 .foregroundColor(.white.opacity(0.45))
         }
     }
@@ -485,11 +495,11 @@ struct AnalyzeView: View {
     private var analyzeReportEmptyCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("YOUR FORM REPORT")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.analyzeSection)
                 .foregroundColor(.white)
-            Text("Upload or record a side-on running clip to get your form grade and a focus list of what to work on.")
-                .font(.system(size: 13, weight: .regular))
-                .foregroundColor(.white.opacity(0.55))
+            Text("Upload or record a run.")
+                .font(.analyzeCaption)
+                .foregroundColor(.white.opacity(0.78))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -517,7 +527,7 @@ struct AnalyzeView: View {
     private var analyzeRecentFullCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("RECENT")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.analyzeSection)
                 .foregroundColor(.white)
                 .padding(.horizontal, 18)
                 .padding(.top, 16)
@@ -525,9 +535,9 @@ struct AnalyzeView: View {
 
             let recent = Array(history.records.prefix(3))
             if recent.isEmpty {
-                Text("Your past analyses will appear here.")
-                    .font(.system(size: 13, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white)
+                Text("No analyses yet.")
+                    .font(.analyzeCaption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.78))
                     .padding(.horizontal, 18)
                     .padding(.bottom, 18)
             } else {
@@ -626,7 +636,7 @@ struct AnalyzeView: View {
     private func recentFullRow(_ record: AnalysisRecord) -> some View {
         HStack(spacing: 12) {
             Text(Self.recentDateFormatter.string(from: record.date))
-                .font(.system(size: 13, weight: .medium, design: .monospaced))
+                .font(.analyzeCaption.weight(.medium))
                 .foregroundColor(.white)
             Spacer()
             if hasExport(for: record.id) {
@@ -635,7 +645,7 @@ struct AnalyzeView: View {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 11, weight: .semibold))
                         Text("Data")
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .font(.analyzeMeta)
                     }
                     .foregroundColor(.white.opacity(0.85))
                     .padding(.horizontal, 10)
@@ -646,7 +656,7 @@ struct AnalyzeView: View {
                 .buttonStyle(.plain)
             }
             Text(record.overall.map(String.init) ?? "—")
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .font(.analyzeMetric)
                 .foregroundColor(AppTheme.formRed)
         }
         .padding(.horizontal, 18)
@@ -687,13 +697,13 @@ struct AnalyzeView: View {
     private var analyzeNewRunContent: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("NEW ANALYSIS")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.analyzeSection)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             PhotosPicker(selection: $selectedItem, matching: .videos) {
                 Text("Upload")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.analyzeButton)
                     .foregroundColor(AppTheme.onAccentPrimary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
@@ -710,7 +720,7 @@ struct AnalyzeView: View {
                 }
             }) {
                 Text("Record")
-                    .font(.subheadline.weight(.medium))
+                    .font(.analyzeButton)
                     .foregroundColor(.white.opacity(0.9))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 13)
@@ -725,14 +735,14 @@ struct AnalyzeView: View {
 
             HStack(spacing: 18) {
                 Button(action: { showingInstructions = true }) {
-                    Text("SEE INSTRUCTIONS")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    Text("GUIDE")
+                        .font(.analyzeMeta)
                         .foregroundColor(AppTheme.formRed)
                 }
                 .buttonStyle(.plain)
                 Button(action: { subscriptions.isPremium ? (showScan = true) : (showPaywall = true) }) {
                     Text("SCAN SHOES")
-                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .font(.analyzeMeta)
                         .foregroundColor(AppTheme.formRed)
                 }
                 .buttonStyle(.plain)
@@ -753,19 +763,21 @@ struct AnalyzeView: View {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("SHOE HEAT GRID")
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .font(.analyzeSection)
                         .foregroundColor(.white)
-                    Text(hasScan ? analyzeShoeSummary(gaitType: gaitType, strikePattern: strikePattern) : "Scan shoes once. The heat grid stays here.")
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.48))
-                        .lineLimit(2)
+                    if hasScan {
+                        Text(analyzeShoeSummary(gaitType: gaitType, strikePattern: strikePattern))
+                            .font(.analyzeMeta)
+                            .foregroundColor(AppTheme.formRed.opacity(0.85))
+                            .lineLimit(1)
+                    }
                 }
 
                 Spacer(minLength: 8)
 
                 Button(action: { subscriptions.isPremium ? (showScan = true) : (showPaywall = true) }) {
                     Text(hasScan ? "RESCAN" : "SCAN")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .font(.analyzeMeta)
                         .foregroundColor(AppTheme.formRed)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -777,8 +789,8 @@ struct AnalyzeView: View {
 
             HStack(alignment: .center, spacing: 14) {
                 HStack(alignment: .center, spacing: 12) {
-                    FootHeatmapView(isLeft: true, wearZones: leftZones)
-                    FootHeatmapView(isLeft: false, wearZones: rightZones)
+                    FootHeatmapView(isLeft: true, wearZones: leftZones, labelDesign: .default)
+                    FootHeatmapView(isLeft: false, wearZones: rightZones, labelDesign: .default)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -791,8 +803,8 @@ struct AnalyzeView: View {
             }
 
             if !hasScan {
-                Text("No shoe scan yet")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                Text("SCAN TO BEGIN")
+                    .font(.analyzeMeta)
                     .foregroundColor(AppTheme.formRed)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 2)
@@ -804,12 +816,12 @@ struct AnalyzeView: View {
     private func analyzeShoeMetric(label: String, value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(value)
-                .font(.system(size: 15, weight: .bold, design: .monospaced))
+                .font(.analyzeMetric)
                 .foregroundColor(.white)
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
             Text(label)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(.analyzeTiny)
                 .foregroundColor(AppTheme.formRed.opacity(0.8))
         }
     }
@@ -851,7 +863,7 @@ struct AnalyzeView: View {
     private func analyzePostAnalysisContent(processedURL: URL?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("ANALYSIS COMPLETE")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.analyzeSection)
                 .foregroundColor(.white)
 
             // Act on this result (Snapshot/Download need the processed video).
@@ -868,7 +880,7 @@ struct AnalyzeView: View {
             // … then a quiet text link to start over (matches SEE INSTRUCTIONS).
             Button(action: { resetProcessor() }) {
                 Text("NEW ANALYSIS")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(.analyzeMeta)
                     .foregroundColor(AppTheme.formRed)
             }
             .buttonStyle(.plain)
@@ -880,7 +892,7 @@ struct AnalyzeView: View {
     /// Plain text-only secondary button matching the icon-free Analyze dashboard.
     private func analyzeSecondaryButton(_ title: String) -> some View {
         Text(title)
-            .font(.subheadline.weight(.medium))
+            .font(.analyzeButton)
             .foregroundColor(.white.opacity(0.9))
             .frame(maxWidth: .infinity)
             .padding(.vertical, 13)
@@ -921,9 +933,9 @@ struct AnalyzeView: View {
             }
             Spacer(minLength: 8)
             Button(action: { showingSettings = true }) {
-                Text("SETTINGS")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                Text("Settings")
+                    .font(.analyzeMeta)
+                    .foregroundColor(AppTheme.formRed)
             }
             .buttonStyle(.plain)
         }
