@@ -430,7 +430,7 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
     }
     
     // MARK: - Calendar Card
@@ -448,7 +448,7 @@ struct ProfileView: View {
             MonthlyHeatmapView(runsByDay: monthlyRunsByDay, dailyGoalMiles: dailyGoalMiles)
         }
         .padding(16)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     // MARK: - Weekly Mileage Chart
@@ -507,7 +507,7 @@ struct ProfileView: View {
             .frame(height: 110)
         }
         .padding(16)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     // MARK: - Settings
@@ -551,7 +551,7 @@ struct ProfileView: View {
             }
         }
         .padding(16)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     private func settingsRow<Content: View>(label: String, icon: String, @ViewBuilder trailing: () -> Content) -> some View {

@@ -173,8 +173,7 @@ struct RunHistoryView: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
-        .background(cardBackground)
-        .cornerRadius(14)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 14, shadowRadius: 9, x: 5, y: 5)
         .padding(.horizontal, 16)
     }
 

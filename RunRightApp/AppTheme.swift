@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Neumorphic
 
 // MARK: - Debug-only logging
 // Logs in DEBUG builds only — keeps PII (emails, uids, tokens) and noise out of
@@ -151,6 +152,79 @@ struct AppTheme {
     static let tabBarHeight: CGFloat = 90
 }
 
+// MARK: - Shared Neumorphic Surface
+struct AppRaisedSurface: ViewModifier {
+    let fill: Color
+    let cornerRadius: CGFloat
+    let shadowRadius: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+    let lightOpacity: Double
+    let darkOpacity: Double
+
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                shape
+                    .fill(fill)
+                    .softOuterShadow(
+                        darkShadow: Color(hex: "#000000").opacity(darkOpacity),
+                        lightShadow: Color(hex: "#56636E").opacity(lightOpacity),
+                        offset: max(x, y),
+                        radius: shadowRadius
+                    )
+            )
+    }
+}
+
+extension View {
+    func appRaisedSurface(
+        fill: Color = AppTheme.cardBg,
+        cornerRadius: CGFloat = AppTheme.cardCornerRadius,
+        shadowRadius: CGFloat = 14,
+        x: CGFloat = 8,
+        y: CGFloat = 8,
+        lightOpacity: Double = 0.18,
+        darkOpacity: Double = 0.70
+    ) -> some View {
+        modifier(
+            AppRaisedSurface(
+                fill: fill,
+                cornerRadius: cornerRadius,
+                shadowRadius: shadowRadius,
+                x: x,
+                y: y,
+                lightOpacity: lightOpacity,
+                darkOpacity: darkOpacity
+            )
+        )
+    }
+
+    func appInsetSurface(
+        fill: Color = AppTheme.cardBgAlt,
+        cornerRadius: CGFloat = AppTheme.buttonCornerRadius,
+        shadowRadius: CGFloat = 6,
+        x: CGFloat = 3,
+        y: CGFloat = 4,
+        lightOpacity: Double = 0.04,
+        darkOpacity: Double = 0.34
+    ) -> some View {
+        appRaisedSurface(
+            fill: fill,
+            cornerRadius: cornerRadius,
+            shadowRadius: shadowRadius,
+            x: x,
+            y: y,
+            lightOpacity: lightOpacity,
+            darkOpacity: darkOpacity
+        )
+    }
+}
+
 // MARK: - Noise Texture Overlay
 struct NoiseTexture: View {
     var opacity: Double = 0.12
@@ -178,8 +252,7 @@ struct CardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(16)
-            .background(AppTheme.cardGradient)
-            .cornerRadius(AppTheme.cardCornerRadius)
+            .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: AppTheme.cardCornerRadius)
     }
 }
 

@@ -6329,7 +6329,7 @@ private extension View {
         return self
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: AppTheme.homeWidgetCornerRadius)
+            .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: AppTheme.homeWidgetCornerRadius)
     }
 }
 

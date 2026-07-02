@@ -222,8 +222,7 @@ struct PastRunCard: View {
         }
         .padding(12)
         .frame(width: 174, alignment: .leading)
-        .background(Color(hex: "#2A2A2E"))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20, shadowRadius: 9, x: 5, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .stroke(Color.white.opacity(0.06), lineWidth: 1)

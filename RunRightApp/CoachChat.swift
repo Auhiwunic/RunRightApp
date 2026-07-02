@@ -123,7 +123,7 @@ struct CoachChatView: View {
         Group {
             if embedded {
                 chatContent
-                    .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 22)
+                    .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 22)
             } else {
                 ZStack {
                     AppTheme.bgColor.ignoresSafeArea()
@@ -307,11 +307,11 @@ struct CoachHomeCard: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .homeRaisedSurface(fill: AppTheme.cardBgAlt, cornerRadius: 18, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
+                .appRaisedSurface(fill: AppTheme.cardBgAlt, cornerRadius: 18, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
             }
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20)
+            .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20)
         }
         .buttonStyle(.plain)
     }
@@ -349,7 +349,7 @@ struct TrainingZonesCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20)
+        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20)
     }
 
     private func zoneBar(name: String, bpm: String, percent: CGFloat, color: Color) -> some View {
@@ -426,7 +426,7 @@ struct CoachTabView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
+        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -454,7 +454,7 @@ struct CoachTabView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
+        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
     }
 
     private func recommendedDrills(for insights: [CombinedInsight]) -> [Drill] {
@@ -525,6 +525,6 @@ struct CoachTabView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
+        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
     }
 }

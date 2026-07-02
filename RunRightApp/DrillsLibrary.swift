@@ -99,8 +99,7 @@ struct DrillsView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
-        .background(Color(hex: "#2A2A2E"))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18, shadowRadius: 9, x: 5, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.white.opacity(0.06), lineWidth: 1)

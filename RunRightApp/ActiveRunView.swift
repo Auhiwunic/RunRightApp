@@ -393,8 +393,7 @@ struct ActiveRunView: View {
                             }
                         }
                     }
-                    .background(cardBackground)
-                    .cornerRadius(16)
+                    .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
                     .padding(.horizontal, 20)
                 }
             }
@@ -523,8 +522,7 @@ struct ActiveRunView: View {
                             }
                         }
                         .padding(20)
-                        .background(cardBackground)
-                        .cornerRadius(20)
+                        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
                         .padding(.horizontal, 16)
                         .padding(.top, 24)
                     }
@@ -542,8 +540,7 @@ struct ActiveRunView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
-                            .background(cardBackground)
-                            .cornerRadius(27)
+                            .appRaisedSurface(fill: cardBackground, cornerRadius: 27, shadowRadius: 9, x: 5, y: 5)
                     }
                     
                     Button(action: {

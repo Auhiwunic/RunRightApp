@@ -71,8 +71,7 @@ struct ScanView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(12)
-                        .background(cardBackground)
-                        .cornerRadius(14)
+                        .appRaisedSurface(fill: cardBackground, cornerRadius: 14, shadowRadius: 9, x: 5, y: 5)
                         .padding(.horizontal, 20)
                     } else if selectedShoe.isEmpty {
                         // No shoe selected / none saved yet — block scanning
@@ -100,8 +99,7 @@ struct ScanView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(16)
-                        .background(cardBackground)
-                        .cornerRadius(16)
+                        .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
                         .padding(.horizontal, 20)
                     }
 
@@ -218,9 +216,7 @@ struct ScanView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(cardBackground)
-                    .cornerRadius(20)
-                    .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+                    .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
                     .padding(.horizontal, 20)
                     
                     // Wear Analysis — follows whichever date is selected in the carousel
@@ -487,8 +483,7 @@ struct ScanView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(cardBackground)
-        .cornerRadius(14)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 14, shadowRadius: 9, x: 5, y: 5)
         .padding(.horizontal, 20)
     }
     
@@ -521,9 +516,7 @@ struct ScanView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     // MARK: - Heatmap History Carousel

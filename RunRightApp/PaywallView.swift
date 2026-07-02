@@ -54,8 +54,7 @@ struct PaywallView: View {
                         }
                     }
                     .padding(16)
-                    .background(Color(hex: "#2A2A2E"))
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18, shadowRadius: 9, x: 5, y: 5)
 
                     planRow(id: PremiumProduct.annual, title: "Annual", fallbackPrice: "$59.99", period: "year", badge: "BEST VALUE")
                     planRow(id: PremiumProduct.monthly, title: "Monthly", fallbackPrice: "$7.99", period: "month", badge: nil)
@@ -119,8 +118,7 @@ struct PaywallView: View {
                 Spacer()
             }
             .padding(16)
-            .background(Color(hex: "#2A2A2E"))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
             .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(selected ? green : Color.clear, lineWidth: 1.5))
         }

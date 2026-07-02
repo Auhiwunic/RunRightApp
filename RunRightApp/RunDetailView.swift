@@ -96,8 +96,7 @@ struct RunDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
-        .background(cardBackground)
-        .cornerRadius(20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
 
     // MARK: - Stats Grid
@@ -127,8 +126,7 @@ struct RunDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
-        .background(cardBackground)
-        .cornerRadius(14)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 14, shadowRadius: 9, x: 5, y: 5)
     }
 
     // MARK: - Pace card
@@ -164,8 +162,7 @@ struct RunDetailView: View {
             }
         }
         .padding(16)
-        .background(cardBackground)
-        .cornerRadius(20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
 
     // MARK: - Shoe card
@@ -193,8 +190,7 @@ struct RunDetailView: View {
             Spacer()
         }
         .padding(16)
-        .background(cardBackground)
-        .cornerRadius(16)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
     }
 
     // MARK: - Timestamp card
@@ -222,8 +218,7 @@ struct RunDetailView: View {
             Spacer()
         }
         .padding(16)
-        .background(cardBackground)
-        .cornerRadius(16)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
     }
 
     // MARK: - Formatters

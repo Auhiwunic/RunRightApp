@@ -5,7 +5,6 @@
 //  Pixel-perfect match to HTML prototype
 
 import SwiftUI
-import Neumorphic
 
 enum LastRunMetric {
     case pace, heartRate
@@ -14,7 +13,7 @@ enum LastRunMetric {
 struct HomeView: View {
     var onOpenCoach: () -> Void = {}
     private let accentLime = Color(hex: "#00CED1")
-    private let backgroundColor = AppTheme.bgColor
+    private let backgroundColor = AppTheme.cardBgAlt
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
     @StateObject private var vm = HomeViewModel()
@@ -108,7 +107,7 @@ struct HomeView: View {
                                 .foregroundColor(.white.opacity(0.3))
                         }
                         .padding(16)
-                        .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6)
+                        .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6)
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 20)
@@ -214,7 +213,7 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
-        .homeRaisedSurface(fill: cardBackgroundSoft, cornerRadius: 12, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
+        .appRaisedSurface(fill: cardBackgroundSoft, cornerRadius: 12, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
     }
     
     private var runButtonBox: some View {
@@ -227,7 +226,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor.opacity(0.65))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
+        .appRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
     }
     
     private var workoutsBox: some View {
@@ -445,7 +444,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
+        .appRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
     }
 
     // MARK: - Shoe Wear Status (compact green card)
@@ -464,7 +463,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
+        .appRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
     }
     
     // MARK: - Weekly Goal Progress Card
@@ -518,63 +517,12 @@ struct HomeView: View {
             }
         }
         .padding(16)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
 
     
 }
 
-private struct HomeRaisedSurface: ViewModifier {
-    let fill: Color
-    let cornerRadius: CGFloat
-    let shadowRadius: CGFloat
-    let x: CGFloat
-    let y: CGFloat
-    let lightOpacity: Double
-    let darkOpacity: Double
-
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-    }
-
-    func body(content: Content) -> some View {
-        content
-            .background(
-                shape
-                    .fill(fill)
-                    .softOuterShadow(
-                        darkShadow: Color(hex: "#000000").opacity(darkOpacity),
-                        lightShadow: Color(hex: "#56636E").opacity(lightOpacity),
-                        offset: max(x, y),
-                        radius: shadowRadius
-                    )
-            )
-    }
-}
-
-extension View {
-    func homeRaisedSurface(
-        fill: Color,
-        cornerRadius: CGFloat,
-        shadowRadius: CGFloat = 14,
-        x: CGFloat = 8,
-        y: CGFloat = 8,
-        lightOpacity: Double = 0.18,
-        darkOpacity: Double = 0.70
-    ) -> some View {
-        modifier(
-            HomeRaisedSurface(
-                fill: fill,
-                cornerRadius: cornerRadius,
-                shadowRadius: shadowRadius,
-                x: x,
-                y: y,
-                lightOpacity: lightOpacity,
-                darkOpacity: darkOpacity
-            )
-        )
-    }
-}
 
 // MARK: - Dashboard Card
 struct DashboardCard<Content: View>: View {
@@ -585,7 +533,7 @@ struct DashboardCard<Content: View>: View {
         content
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .homeRaisedSurface(fill: background, cornerRadius: 20)
+            .appRaisedSurface(fill: background, cornerRadius: 20)
     }
 }
 
@@ -764,8 +712,7 @@ struct HomeSectionCard<Content: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppTheme.cardGradient)
-        .cornerRadius(14)
+        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 14, shadowRadius: 9, x: 5, y: 6)
     }
 }
 

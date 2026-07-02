@@ -234,7 +234,7 @@ struct RunView: View {
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
 
     // MARK: - START button (tall, sits to the right of the map)
@@ -249,7 +249,7 @@ struct RunView: View {
             .foregroundColor(.black)
             .frame(width: 76)
             .frame(maxHeight: .infinity)
-            .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
+            .appRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
         }
     }
 
@@ -348,7 +348,7 @@ struct RunView: View {
         .frame(maxWidth: .infinity)
         .frame(height: 64)
         .padding(.horizontal, 18)
-        .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
+        .appRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 18)
@@ -390,7 +390,7 @@ struct RunView: View {
                     .foregroundColor(.white.opacity(0.35))
             }
             .padding(16)
-            .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+            .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
         }
     }
     
@@ -472,7 +472,7 @@ struct RunView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
         .animation(.easeInOut(duration: 0.25), value: todaysRunEnabled)
     }
 
@@ -505,7 +505,7 @@ struct RunView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     // MARK: - Formatting
@@ -956,7 +956,7 @@ struct WeeklyPlannerSheet: View {
             }
         }
         .padding(.horizontal, 16)
-        .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
     }
     
     // MARK: - Apply Preset
@@ -1330,7 +1330,7 @@ struct DiagnosticRunSheet: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
+            .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
         }
     }
 
@@ -1454,7 +1454,7 @@ struct DiagnosticRunSheet: View {
                         paceRow(name: "Repetition", pace: paces.repetition, color: "#FF5050", desc: "Speed & form")
             }
             .padding(16)
-                    .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
+                    .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
                     .padding(.horizontal, 20)
                 }
                 
