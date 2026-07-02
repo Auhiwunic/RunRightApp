@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C0D0E0012FEEAA0000B1047C /* Neumorphic in Frameworks */ = {isa = PBXBuildFile; productRef = C0D0E0022FEEAA0000B1047C /* Neumorphic */; };
 		068086E02FEE093100B1047C /* MuscleMap in Frameworks */ = {isa = PBXBuildFile; productRef = 068086DF2FEE093100B1047C /* MuscleMap */; };
 		143F8B49F0F7B8BC689097D1 /* CoachTTSConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1025D171D9606F73B94A903 /* CoachTTSConfig.swift */; };
 		23447C4B23CB87AEA46322F4 /* WeeklyPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55F5F8A2E3021002B52B86CF /* WeeklyPlanView.swift */; };
@@ -187,6 +188,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0D0E0012FEEAA0000B1047C /* Neumorphic in Frameworks */,
 				068086E02FEE093100B1047C /* MuscleMap in Frameworks */,
 				2BF80303E1FF6715E7B2945F /* Pods_RunRightApp.framework in Frameworks */,
 				AE000001 /* HealthKit.framework in Frameworks */,
@@ -384,6 +386,7 @@
 			);
 			mainGroup = A5000001;
 			packageReferences = (
+				C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */,
 				068086DE2FEE093100B1047C /* XCRemoteSwiftPackageReference "MuscleMap" */,
 			);
 			productRefGroup = A5000003 /* Products */;
@@ -751,6 +754,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/costachung/neumorphic.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.5;
+			};
+		};
 		068086DE2FEE093100B1047C /* XCRemoteSwiftPackageReference "MuscleMap" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/melihcolpan/MuscleMap.git";
@@ -762,6 +773,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		C0D0E0022FEEAA0000B1047C /* Neumorphic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */;
+			productName = Neumorphic;
+		};
 		068086DF2FEE093100B1047C /* MuscleMap */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 068086DE2FEE093100B1047C /* XCRemoteSwiftPackageReference "MuscleMap" */;

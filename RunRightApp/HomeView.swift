@@ -5,6 +5,7 @@
 //  Pixel-perfect match to HTML prototype
 
 import SwiftUI
+import Neumorphic
 
 enum LastRunMetric {
     case pace, heartRate
@@ -13,9 +14,9 @@ enum LastRunMetric {
 struct HomeView: View {
     var onOpenCoach: () -> Void = {}
     private let accentLime = Color(hex: "#00CED1")
-    private let backgroundColor = Color(hex: "#222328")
-    private let cardBackground = Color(hex: "#292A2F")
-    private let cardBackgroundSoft = Color(hex: "#24252A")
+    private let backgroundColor = Color(hex: "#33393E")
+    private let cardBackground = Color(hex: "#33393E")
+    private let cardBackgroundSoft = Color(hex: "#33393E")
     @StateObject private var vm = HomeViewModel()
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
@@ -532,17 +533,28 @@ private struct HomeRaisedSurface: ViewModifier {
     let lightOpacity: Double
     let darkOpacity: Double
 
+    private var shape: RoundedRectangle {
+        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+    }
+
     func body(content: Content) -> some View {
         content
             .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                shape
                     .fill(fill)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(Color.white.opacity(0.045), lineWidth: 1)
+                    .softOuterShadow(
+                        darkShadow: Color(hex: "#1C1919").opacity(darkOpacity),
+                        lightShadow: Color.white.opacity(lightOpacity),
+                        offset: max(x, y),
+                        radius: shadowRadius
                     )
-                    .shadow(color: Color.white.opacity(lightOpacity), radius: shadowRadius, x: -x, y: -y)
-                    .shadow(color: Color.black.opacity(darkOpacity), radius: shadowRadius + 2, x: x, y: y)
+                    .softInnerShadow(
+                        shape,
+                        darkShadow: Color(hex: "#1C1919").opacity(darkOpacity * 0.26),
+                        lightShadow: Color.white.opacity(lightOpacity * 0.7),
+                        spread: 0.03,
+                        radius: max(2, shadowRadius * 0.16)
+                    )
             )
     }
 }
@@ -551,11 +563,11 @@ extension View {
     func homeRaisedSurface(
         fill: Color,
         cornerRadius: CGFloat,
-        shadowRadius: CGFloat = 12,
-        x: CGFloat = 7,
-        y: CGFloat = 8,
-        lightOpacity: Double = 0.055,
-        darkOpacity: Double = 0.46
+        shadowRadius: CGFloat = 22,
+        x: CGFloat = 12,
+        y: CGFloat = 12,
+        lightOpacity: Double = 0.20,
+        darkOpacity: Double = 0.86
     ) -> some View {
         modifier(
             HomeRaisedSurface(
