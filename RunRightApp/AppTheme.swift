@@ -48,7 +48,7 @@ extension Color {
 // MARK: - App Theme
 struct AppTheme {
     // MARK: - Colors (cyan/spring green accent scheme)
-    static let bgColor = Color(hex: "#121212")
+    static let bgColor = Color(hex: "#121518")
     static let accentColor = Color(hex: "#00CED1")      // Cyan
     static let accentGreen = Color(hex: "#00FF7F")      // Spring green
     static let fitnessGreen = Color(hex: "#B7F75C")     // Apple Fitness+ green
@@ -58,9 +58,9 @@ struct AppTheme {
     static let darkerAccent = Color(hex: "#003333")     // Very dark teal
     static let primaryText = Color.white
     static let secondaryText = Color(hex: "#7A7A7A")
-    static let tabBarBg = Color(hex: "#1C1C1E")
-    static let cardBg = Color(hex: "#0e0e0e")
-    static let cardBgAlt = Color(hex: "#0a0a0a")
+    static let tabBarBg = Color(hex: "#0D0F11")
+    static let cardBg = Color(hex: "#252B31")
+    static let cardBgAlt = Color(hex: "#181D21")
     static let dividerColor = Color.white.opacity(0.08)
     static let subtleBorder = Color.white.opacity(0.15)
     /// Text/icons drawn on top of a solid accent fill — high contrast (used by Analyze dashboard).
@@ -113,7 +113,7 @@ struct AppTheme {
     
     /// Card gradient (dark but not pitch black)
     static let cardGradient = LinearGradient(
-        colors: [Color(hex: "#0e0e0e"), Color(hex: "#0a0a0a")],
+        colors: [Color(hex: "#252B31"), Color(hex: "#181D21")],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -188,4 +188,3 @@ extension View {
         modifier(CardStyle())
     }
 }
-

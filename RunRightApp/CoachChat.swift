@@ -123,19 +123,14 @@ struct CoachChatView: View {
         Group {
             if embedded {
                 chatContent
-                    .background(Color(hex: "#202024"))
-                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                    )
+                    .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 22)
             } else {
                 ZStack {
-                    Color(hex: "#1A1A1C").ignoresSafeArea()
+                    AppTheme.bgColor.ignoresSafeArea()
                     chatContent
                 }
                 .presentationDragIndicator(.visible)
-                .presentationBackground(Color(hex: "#1A1A1C"))
+                .presentationBackground(AppTheme.bgColor)
             }
         }
     }
@@ -180,7 +175,7 @@ struct CoachChatView: View {
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.white.opacity(0.5))
                                     .padding(.horizontal, 16).padding(.vertical, 10)
-                                    .background(Color(hex: "#2A2A2E"))
+                                    .background(AppTheme.cardBg)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 Spacer(minLength: 40)
                             }
@@ -276,7 +271,7 @@ struct CoachChatView: View {
                 .foregroundColor(m.role == .user ? .black : .white.opacity(0.85))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(m.role == .user ? Color(hex: "#00FF7F") : Color(hex: "#2A2A2E"))
+                .background(m.role == .user ? Color(hex: "#00FF7F") : AppTheme.cardBg)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .fixedSize(horizontal: false, vertical: true)
             if m.role == .coach { Spacer(minLength: 40) }
@@ -312,11 +307,11 @@ struct CoachHomeCard: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .homeRaisedSurface(fill: Color(hex: "#171B1F"), cornerRadius: 18, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
+                .homeRaisedSurface(fill: AppTheme.cardBgAlt, cornerRadius: 18, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
             }
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .homeRaisedSurface(fill: Color(hex: "#23292F"), cornerRadius: 20)
+            .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20)
         }
         .buttonStyle(.plain)
     }
@@ -354,9 +349,7 @@ struct TrainingZonesCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "#2A2A2E"))
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20)
     }
 
     private func zoneBar(name: String, bpm: String, percent: CGFloat, color: Color) -> some View {
@@ -384,7 +377,7 @@ struct CoachTabView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#1A1A1C").ignoresSafeArea()
+            AppTheme.bgColor.ignoresSafeArea()
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -433,8 +426,7 @@ struct CoachTabView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "#2A2A2E"))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -462,8 +454,7 @@ struct CoachTabView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "#2A2A2E"))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
     }
 
     private func recommendedDrills(for insights: [CombinedInsight]) -> [Drill] {
@@ -534,11 +525,6 @@ struct CoachTabView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "#2A2A2E"))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
-        )
+        .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18)
     }
 }

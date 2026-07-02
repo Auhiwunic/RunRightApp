@@ -29,9 +29,9 @@ struct RunView: View {
     @State private var planError: String?
 
     private let accentLime = Color(hex: "#FF8C00")
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
-    private let cardBackgroundSoft = Color(hex: "#242428")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
+    private let cardBackgroundSoft = AppTheme.cardBgAlt
     
     var body: some View {
         ZStack {
@@ -233,8 +233,8 @@ struct RunView: View {
             isTracking: false
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(cardBackground)
-        .cornerRadius(20)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
 
     // MARK: - START button (tall, sits to the right of the map)
@@ -249,8 +249,7 @@ struct RunView: View {
             .foregroundColor(.black)
             .frame(width: 76)
             .frame(maxHeight: .infinity)
-            .background(accentLime)
-            .cornerRadius(20)
+            .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
         }
     }
 
@@ -349,8 +348,7 @@ struct RunView: View {
         .frame(maxWidth: .infinity)
         .frame(height: 64)
         .padding(.horizontal, 18)
-        .background(accentLime)
-        .cornerRadius(20)
+        .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
         .contentShape(Rectangle())
         .gesture(
             DragGesture(minimumDistance: 18)
@@ -392,8 +390,7 @@ struct RunView: View {
                     .foregroundColor(.white.opacity(0.35))
             }
             .padding(16)
-            .background(cardBackground)
-            .cornerRadius(20)
+            .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
         }
     }
     
@@ -475,8 +472,7 @@ struct RunView: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
-        .cornerRadius(20)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
         .animation(.easeInOut(duration: 0.25), value: todaysRunEnabled)
     }
 
@@ -509,9 +505,7 @@ struct RunView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(cardBackground)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.12), radius: 5, x: 0, y: 2)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     // MARK: - Formatting
@@ -670,9 +664,9 @@ struct WeeklyPlannerSheet: View {
     @State private var saveError: String?
     
     private let accentLime = Color(hex: "#FF8C00")
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
-    private let cardBackgroundSoft = Color(hex: "#242428")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
+    private let cardBackgroundSoft = AppTheme.cardBgAlt
     
     private let runTypes = ["Easy", "Tempo", "Intervals", "Long Run", "Recovery", "Rest"]
     
@@ -962,9 +956,7 @@ struct WeeklyPlannerSheet: View {
             }
         }
         .padding(.horizontal, 16)
-        .background(cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.15), radius: 6, x: 0, y: 3)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
     }
     
     // MARK: - Apply Preset
@@ -1081,9 +1073,9 @@ struct DiagnosticRunSheet: View {
     @State private var calculatedPaces: TrainingPaces? = nil
     
     private let accentLime = Color(hex: "#FF8C00")
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
-    private let cardBackgroundSoft = Color(hex: "#242428")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
+    private let cardBackgroundSoft = AppTheme.cardBgAlt
     private let metersPerMile: Double = 1609.344
     
     var body: some View {
@@ -1338,8 +1330,7 @@ struct DiagnosticRunSheet: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(cardBackground)
-            .cornerRadius(16)
+            .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
         }
     }
 
@@ -1463,8 +1454,7 @@ struct DiagnosticRunSheet: View {
                         paceRow(name: "Repetition", pace: paces.repetition, color: "#FF5050", desc: "Speed & form")
             }
             .padding(16)
-                    .background(cardBackground)
-                    .cornerRadius(20)
+                    .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
                     .padding(.horizontal, 20)
                 }
                 

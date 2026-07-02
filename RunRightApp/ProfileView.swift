@@ -36,9 +36,9 @@ struct ProfileView: View {
     @State private var showScorecard = false
 
     private let accentLime = Color(hex: "#FFFFFF")
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
-    private let cardBackgroundSoft = Color(hex: "#242428")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
+    private let cardBackgroundSoft = AppTheme.cardBgAlt
     
     var body: some View {
         NavigationStack {
@@ -430,9 +430,7 @@ struct ProfileView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .background(cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.2), radius: 6, x: 0, y: 3)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
     }
     
     // MARK: - Calendar Card
@@ -450,9 +448,7 @@ struct ProfileView: View {
             MonthlyHeatmapView(runsByDay: monthlyRunsByDay, dailyGoalMiles: dailyGoalMiles)
         }
         .padding(16)
-        .background(cardBackground)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     // MARK: - Weekly Mileage Chart
@@ -511,9 +507,7 @@ struct ProfileView: View {
             .frame(height: 110)
         }
         .padding(16)
-        .background(cardBackground)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     // MARK: - Settings
@@ -557,9 +551,7 @@ struct ProfileView: View {
             }
         }
         .padding(16)
-        .background(cardBackground)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
     
     private func settingsRow<Content: View>(label: String, icon: String, @ViewBuilder trailing: () -> Content) -> some View {

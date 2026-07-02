@@ -142,7 +142,7 @@ struct AnalyzeView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "#1A1A1C").ignoresSafeArea()
+            AppTheme.bgColor.ignoresSafeArea()
 
             analyzeHomeScroll
 
@@ -1149,7 +1149,7 @@ struct AnalyzeView: View {
                 }
             }
             .padding(24)
-            .background(Color(hex: "#1A1A1C"))
+            .background(AppTheme.bgColor)
             .cornerRadius(20)
             .padding(.horizontal, 40)
             .onAppear {
@@ -1571,7 +1571,7 @@ private struct AnalyzeSecondaryButtonLabel: View {
         .foregroundColor(.white.opacity(0.85))
         .frame(maxWidth: .infinity)
         .frame(height: 44)
-        .background(Color(hex: "#2A2A2E"))
+        .background(AppTheme.cardBg)
         .overlay(
             RoundedRectangle(cornerRadius: AppTheme.buttonCornerRadius)
                 .stroke(AppTheme.subtleBorder, lineWidth: 1)
@@ -1594,7 +1594,7 @@ private struct AnalyzeActionChip: View {
         .foregroundColor(.white.opacity(0.7))
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Color(hex: "#2A2A2E"))
+        .background(AppTheme.cardBg)
         .overlay(
             Capsule()
                 .stroke(AppTheme.subtleBorder, lineWidth: 1)
@@ -1678,7 +1678,7 @@ struct AnalyzePreviewView: View {
     
     var body: some View {
         ZStack {
-            Color(hex: "#1A1A1C").ignoresSafeArea()
+            AppTheme.bgColor.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 previewHeader
@@ -1687,7 +1687,7 @@ struct AnalyzePreviewView: View {
                     .frame(height: 220)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius, style: .continuous))
                     .padding(4)
-                    .background(Color(hex: "#2A2A2E"))
+                    .background(AppTheme.cardBg)
                     .clipShape(RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius + 2, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: AppTheme.cardCornerRadius + 2, style: .continuous)
@@ -1975,7 +1975,7 @@ struct AnalyzePreviewView: View {
             previewActionStrip
         }
         .padding(.bottom, 10)
-        .background(Color(hex: "#1A1A1C"))
+        .background(AppTheme.bgColor)
     }
 
     private var previewEngineChipLabel: String {
@@ -4023,7 +4023,7 @@ private struct InfoSheet: View {
             }
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(hex: "#1A1A1C"))
+            .background(AppTheme.bgColor)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -6276,7 +6276,7 @@ struct SnapshotView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(hex: "#1A1A1C").ignoresSafeArea()
+                AppTheme.bgColor.ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -6326,18 +6326,10 @@ struct SnapshotView: View {
 // MARK: - Analyze dashboard widget chrome (iOS-style)
 private extension View {
     func analyzeHomeWidgetChrome(padding: CGFloat = 20) -> some View {
-        let shape = RoundedRectangle(cornerRadius: AppTheme.homeWidgetCornerRadius, style: .continuous)
         return self
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background {
-                shape.fill(Color(hex: "#2A2A2E"))
-            }
-            .clipShape(shape)
-            .overlay {
-                shape.stroke(Color.white.opacity(0.06), lineWidth: 1)
-            }
-            .shadow(color: .black.opacity(0.25), radius: 10, x: 0, y: 4)
+            .homeRaisedSurface(fill: AppTheme.cardBg, cornerRadius: AppTheme.homeWidgetCornerRadius)
     }
 }
 
@@ -6572,7 +6564,7 @@ private struct AnalysisHistorySheet: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#1A1A1C").ignoresSafeArea()
+            AppTheme.bgColor.ignoresSafeArea()
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text("HISTORY")
@@ -6598,7 +6590,7 @@ private struct AnalysisHistorySheet: View {
             }
         }
         .presentationDragIndicator(.visible)
-        .presentationBackground(Color(hex: "#1A1A1C"))
+        .presentationBackground(AppTheme.bgColor)
     }
 
     private func row(_ record: AnalysisRecord) -> some View {
