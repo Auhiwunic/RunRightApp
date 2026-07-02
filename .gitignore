@@ -19,6 +19,8 @@ node_modules/
 *.ipa
 *.xcarchive
 *.bak
+ziNt9Xod
+SkeletonAnalysisStandalone/SkeletonAnalysisStandalone/
 
 # Local secrets and environment files
 .env
