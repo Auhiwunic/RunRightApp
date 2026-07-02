@@ -312,14 +312,11 @@ struct CoachHomeCard: View {
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .background(Color.white.opacity(0.06))
-                .clipShape(Capsule())
+                .homeRaisedSurface(fill: Color(hex: "#24252A"), cornerRadius: 18, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
             }
             .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .background(Color(hex: "#2A2A2E"))
-            .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+            .homeRaisedSurface(fill: Color(hex: "#292A2F"), cornerRadius: 20)
         }
         .buttonStyle(.plain)
     }

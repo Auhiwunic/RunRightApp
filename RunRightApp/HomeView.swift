@@ -13,9 +13,9 @@ enum LastRunMetric {
 struct HomeView: View {
     var onOpenCoach: () -> Void = {}
     private let accentLime = Color(hex: "#00CED1")
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
-    private let cardBackgroundSoft = Color(hex: "#242428")
+    private let backgroundColor = Color(hex: "#222328")
+    private let cardBackground = Color(hex: "#292A2F")
+    private let cardBackgroundSoft = Color(hex: "#24252A")
     @StateObject private var vm = HomeViewModel()
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
@@ -107,8 +107,7 @@ struct HomeView: View {
                                 .foregroundColor(.white.opacity(0.3))
                         }
                         .padding(16)
-                        .background(cardBackground)
-                        .cornerRadius(16)
+                        .homeRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6)
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 20)
@@ -214,8 +213,7 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
-        .background(cardBackgroundSoft)
-        .cornerRadius(10)
+        .homeRaisedSurface(fill: cardBackgroundSoft, cornerRadius: 12, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
     }
     
     private var runButtonBox: some View {
@@ -228,8 +226,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor.opacity(0.65))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(accentLime)
-        .cornerRadius(20)
+        .homeRaisedSurface(fill: accentLime, cornerRadius: 20, shadowRadius: 10, x: 5, y: 7, lightOpacity: 0.18, darkOpacity: 0.38)
     }
     
     private var workoutsBox: some View {
@@ -447,8 +444,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(accentLime)
-        .cornerRadius(16)
+        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6, lightOpacity: 0.18, darkOpacity: 0.36)
     }
 
     // MARK: - Shoe Wear Status (compact green card)
@@ -467,8 +463,7 @@ struct HomeView: View {
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(accentLime)
-        .cornerRadius(16)
+        .homeRaisedSurface(fill: accentLime, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6, lightOpacity: 0.18, darkOpacity: 0.36)
     }
     
     // MARK: - Weekly Goal Progress Card
@@ -522,12 +517,58 @@ struct HomeView: View {
             }
         }
         .padding(16)
-        .background(cardBackground)
-        .cornerRadius(20)
-        .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+        .homeRaisedSurface(fill: cardBackground, cornerRadius: 20)
     }
 
     
+}
+
+private struct HomeRaisedSurface: ViewModifier {
+    let fill: Color
+    let cornerRadius: CGFloat
+    let shadowRadius: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+    let lightOpacity: Double
+    let darkOpacity: Double
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(fill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .stroke(Color.white.opacity(0.045), lineWidth: 1)
+                    )
+                    .shadow(color: Color.white.opacity(lightOpacity), radius: shadowRadius, x: -x, y: -y)
+                    .shadow(color: Color.black.opacity(darkOpacity), radius: shadowRadius + 2, x: x, y: y)
+            )
+    }
+}
+
+extension View {
+    func homeRaisedSurface(
+        fill: Color,
+        cornerRadius: CGFloat,
+        shadowRadius: CGFloat = 12,
+        x: CGFloat = 7,
+        y: CGFloat = 8,
+        lightOpacity: Double = 0.055,
+        darkOpacity: Double = 0.46
+    ) -> some View {
+        modifier(
+            HomeRaisedSurface(
+                fill: fill,
+                cornerRadius: cornerRadius,
+                shadowRadius: shadowRadius,
+                x: x,
+                y: y,
+                lightOpacity: lightOpacity,
+                darkOpacity: darkOpacity
+            )
+        )
+    }
 }
 
 // MARK: - Dashboard Card
@@ -539,9 +580,7 @@ struct DashboardCard<Content: View>: View {
         content
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(background)
-            .cornerRadius(20)
-            .shadow(color: Color.black.opacity(0.25), radius: 10, x: 0, y: 6)
+            .homeRaisedSurface(fill: background, cornerRadius: 20)
     }
 }
 
