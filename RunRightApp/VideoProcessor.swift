@@ -1484,6 +1484,27 @@ class VideoProcessor: ObservableObject {
         let foundWindow: Bool
         let hiddenCoreJointCount: Int
         let flagged: Bool
+
+        /// v2 named cause: turns the generic "hard to read" into an actionable
+        /// reason, so the user knows WHAT to fix. Priority cascade, most specific
+        /// first. Only uses signals validated on real clips (occlusion, window,
+        /// duration, clean ratio) — off-angle / motion-blur / dark are left to a
+        /// later pass that needs a luma signal + single-cause test footage.
+        /// nil when the clip is not flagged.
+        var cause: String? {
+            guard flagged else { return nil }
+            if hiddenCoreJointCount >= 1 {
+                return "Keep your whole body in the shot, with no one else in frame."
+            }
+            if !foundWindow {
+                return "Film side on with your whole body in frame."
+            }
+            if cleanSeconds < scanQualityMinCleanSeconds {
+                return "Film a longer clip, about 10 to 15 seconds."
+            }
+            // cleanRatio below floor: tracked, but most of the clip was noisy.
+            return "Film in steadier light with the camera held still."
+        }
     }
 
     static func scanQualitySignals(
@@ -1863,9 +1884,7 @@ class VideoProcessor: ObservableObject {
         await MainActor.run {
             self.analysisMetrics = computed.0
             self.metricSeries = computed.1
-            self.scanQualityWarning = quality.flagged
-                ? "Hard to read clearly. Retake following the filming tips."
-                : nil
+            self.scanQualityWarning = quality.cause
         }
 
         // Encrypt the processed running video at rest (it depicts the user — health

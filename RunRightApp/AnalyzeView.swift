@@ -397,12 +397,14 @@ struct AnalyzeView: View {
                     // Scan-quality disclosure: non blocking, the scorecard still
                     // shows. Tap opens the filming instructions for a retake.
                     .overlay(alignment: .bottomLeading) {
-                        if processor.scanQualityWarning != nil {
+                        if let warning = processor.scanQualityWarning {
                             Button(action: { showingInstructions = true }) {
                                 HStack(spacing: 5) {
                                     Image(systemName: "exclamationmark.triangle.fill")
                                         .font(AppTheme.meta(9))
-                                    Text("HARD TO READ. TAP FOR FILMING TIPS")
+                                    // Named cause + tap affordance (v2). The cause
+                                    // tells the user exactly what to fix.
+                                    Text("\(warning) Tap for tips.")
                                         .font(AppTheme.meta(9))
                                         .lineLimit(2)
                                         .multilineTextAlignment(.leading)
@@ -414,6 +416,7 @@ struct AnalyzeView: View {
                             }
                             .buttonStyle(.plain)
                             .padding(10)
+                            .accessibilityLabel("Scan quality warning. \(warning) Double tap for filming tips.")
                         }
                     }
                 HStack(spacing: 8) {
