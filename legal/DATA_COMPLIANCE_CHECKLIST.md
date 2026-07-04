@@ -6,17 +6,17 @@ Prioritized, Gaita-specific gaps found in an audit of the app's actual data flow
 
 ## 🔴 CRITICAL — fix before any submission
 
-### 1. Revoke the hardcoded OpenAI API key (security incident) ✅ VERIFIED PRESENT
-- A **live OpenAI key (`sk-proj-…`) is hardcoded in `RunRightApp/Info.plist` (line 49).** It compiles into the shipped binary and is trivially extractable from the IPA → anyone can run up your OpenAI bill, and it defeats any "processor" posture for the shoe-photo data flow.
+### 1. Revoke the hardcoded OpenAI API key (security incident) — ✅ KEY REMOVED FROM APP (2026-07-02); REVOCATION AT platform.openai.com STILL UNVERIFIED
+- ~~A live OpenAI key was hardcoded in `RunRightApp/Info.plist`.~~ **Fixed in code:** the key is gone from Info.plist and from all git history (verified 2026-07-02); the shoe scanner now calls the `analyzeShoe` Firebase function which verifies the Firebase ID token and holds the key as a server-side secret. **Still open (user action): confirm the old key is revoked in the OpenAI dashboard.**
 - **Do now:** (a) **revoke that key** at platform.openai.com/api-keys (only you can do this — I won't handle credentials), (b) issue a new key, (c) **never ship it in the app** — route the shoe-photo call through a server-side proxy (mirror the ElevenLabs Cloudflare Worker pattern; you already reference a `SHOE_ANALYSIS_ENDPOINT`), (d) scrub the key from git history if it was ever committed.
 - *Note:* the `AIzaSy…` key in `GoogleService-Info.plist` is a Firebase project identifier — **normal to ship**, protected by Security Rules, not a secret. Leave it.
 
-### 2. In-app account deletion (Apple Guideline 5.1.1(v))
-- **Mandatory** for any app with account creation. Today `ProfileView.swift` only calls `auth.signOut()` → hard rejection.
+### 2. In-app account deletion (Apple Guideline 5.1.1(v)) — ✅ DONE (2026-07-01)
+- ~~Today `ProfileView.swift` only calls `auth.signOut()`~~ **Done:** `FirebaseAuthManager.deleteAccount()` wipes Firestore subcollections (runs/scans/shoes/plans/settings), Storage `users/{uid}`, and the Auth user with reauth; ProfileView exposes Delete Account + Export My Data.
 - Implement a **Delete Account** flow: `Auth user.delete()` (with reauthentication) **plus** a full wipe of Firestore/Storage data (profile, runs, synced HealthKit workouts, shoe photos, videos). Must be easy to find and cover server-side data. Also satisfies GDPR Art. 17 erasure + CCPA right to delete.
 
-### 3. iOS Privacy Manifest (`PrivacyInfo.xcprivacy`)
-- **Required for App Store submission since May 1, 2024.** No app-target manifest exists (only inside Pods) → rejection.
+### 3. iOS Privacy Manifest (`PrivacyInfo.xcprivacy`) — ✅ DONE (updated 2026-07-02)
+- ~~No app-target manifest exists~~ **Done:** `RunRightApp/PrivacyInfo.xcprivacy` declares Email, Name, Health, Fitness, Photos/Videos, User ID, Other User Content (coach chat), Other Data (DOB/consent) plus required-reason APIs (UserDefaults CA92.1, FileTimestamp C617.1, DiskSpace E174.1, SystemBootTime 35F9.1). Keep in sync with App Store Connect answers.
 - Add one declaring `NSPrivacyCollectedDataTypes` and `NSPrivacyAccessedAPITypes` with reason codes for the required-reason APIs Gaita uses: **UserDefaults (CA92.1)**, File Timestamp, System Boot Time, Disk Space.
 
 ### 4. Publish a GDPR/CCPA-grade privacy policy + surface it in-app and in App Store Connect
@@ -28,7 +28,7 @@ Prioritized, Gaita-specific gaps found in an audit of the app's actual data flow
 
 ## 🟠 HIGH — required for EU/UK launch and sensitive data
 
-### 5. Explicit, granular consent layer + age gate
+### 5. Explicit, granular consent layer + age gate — ✅ DONE IN APP (consent gate + DOB age gate); GDPR record-keeping review still open
 - iOS permission prompts are **not** a GDPR lawful basis. Add explicit consent, recorded with timestamps, for: **HealthKit/health data (Art. 9(2)(a) explicit consent)**, **background GPS**, and **run video** (health/biometric-adjacent).
 - Add an **age gate** blocking under-13 (under-16 in parts of the EU) at signup — prevents COPPA "actual knowledge" (amended COPPA Rule compliance deadline **April 22, 2026**).
 

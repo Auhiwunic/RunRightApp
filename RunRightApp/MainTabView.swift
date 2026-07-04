@@ -28,7 +28,10 @@ struct MainTabView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-            // Custom tab bar pinned to the very bottom
+            // Custom tab bar pinned to the very bottom. Only the BAR ignores the
+            // keyboard (so it doesn't ride up) — putting the modifier on the whole
+            // ZStack killed keyboard avoidance app-wide and left the Coach chat
+            // input buried under the keyboard.
             VStack(spacing: 0) {
                 Spacer()
                 if run.isActive && !run.isPresented {
@@ -36,8 +39,8 @@ struct MainTabView: View {
                 }
                 CustomTabBar(selectedTab: $selectedTab)
             }
+            .ignoresSafeArea(.keyboard)
         }
-        .ignoresSafeArea(.keyboard)
         // The live run lives above every tab, so it keeps tracking + coaching when
         // minimized or when the user switches tabs.
         .fullScreenCover(isPresented: $run.isPresented) {
@@ -103,7 +106,7 @@ struct CustomTabBar: View {
 
     // Per-tab accent — matches each screen's theme color.
     private let tabColors: [Color] = [
-        Color(hex: "#FF2D2D"),  // Analyze — neon red
+        AppTheme.analyzePink,   // Analyze — hot pink
         Color(hex: "#00FF7F"),  // Coach — green (Z2)
         Color(hex: "#00CED1"),  // Home — blue (Z1)
         Color(hex: "#FF8C00"),  // Run — orange (Z4)
@@ -166,18 +169,6 @@ struct TabBarItem: View {
         }
         .frame(maxWidth: .infinity)
         .animation(.easeInOut(duration: 0.18), value: isSelected)
-    }
-}
-
-struct VisualEffectBlur: UIViewRepresentable {
-    let blurStyle: UIBlurEffect.Style
-    
-    func makeUIView(context: Context) -> UIVisualEffectView {
-        UIVisualEffectView(effect: UIBlurEffect(style: blurStyle))
-    }
-    
-    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
-        uiView.effect = UIBlurEffect(style: blurStyle)
     }
 }
 

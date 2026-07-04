@@ -25,12 +25,19 @@ enum BodySide {
 }
 
 /// Side-view facing: nose lateral offset vs shoulder midpoint (2D screen space).
-func detectFacingSide(from points: [PoseJoint: CGPoint]) -> BodySide? {
+/// `minMarginFraction` gates out ambiguous frames (nose near the shoulder
+/// centre, e.g. head bob) so they don't cast a flickering vote.
+func detectFacingSide(from points: [PoseJoint: CGPoint], minMarginFraction: CGFloat = 0) -> BodySide? {
     guard let nose = points[.nose],
           let ls = points[.leftShoulder],
           let rs = points[.rightShoulder] else { return nil }
     let midX = (ls.x + rs.x) / 2
-    return nose.x >= midX ? .right : .left
+    let offset = nose.x - midX
+    if minMarginFraction > 0 {
+        let shoulderWidth = abs(ls.x - rs.x)
+        if shoulderWidth <= 0 || abs(offset) < shoulderWidth * minMarginFraction { return nil }
+    }
+    return offset >= 0 ? .right : .left
 }
 
 func majoritySide(_ votes: [BodySide]) -> BodySide? {
@@ -40,6 +47,12 @@ func majoritySide(_ votes: [BodySide]) -> BodySide? {
 }
 
 private let sideDetectionVoteThreshold = 8
+
+// Scan-quality v1 thresholds — PROVISIONAL, tuned via the per-analysis
+// calibration log (Documents/scan_quality_log.csv in DEBUG builds), biased to
+// under-trigger until enough real clips have been measured.
+private let scanQualityMinCleanRatio = 0.4
+private let scanQualityMinCleanSeconds = 2.0
 
 enum ShinStrideBand: String {
     case unknown
@@ -1216,19 +1229,28 @@ private enum FormCueRanges {
 }
 
 class VideoProcessor: ObservableObject {
+    /// One instance for the whole app: the pose model load is heavy, and a
+    /// per-view instance meant every Analyze tab visit reloaded it — and a
+    /// tab switch mid-analysis destroyed the run entirely.
+    static let shared = VideoProcessor()
+
     @Published var progress: Double = 0
     @Published var isProcessing = false
     @Published var processedVideoURL: URL?
     @Published var error: String?
     @Published var poseEngineName: String = ""
     @Published var usingBlazePose: Bool = false
-    
+    /// Set when the finished scan's tracking-quality signals say the clip was
+    /// hard to read (bad framing/lighting/occlusion). Distinct from `error`:
+    /// processing SUCCEEDED, but the result shouldn't be fully trusted. The UI
+    /// shows a non-blocking banner pointing at the filming instructions.
+    @Published var scanQualityWarning: String?
+
     init() {
-        // Initialize engine name on startup
-        // PoseDetectorFactory.make() always returns a detector (BlazePose if available, Vision as fallback)
-        let detector = PoseDetectorFactory.make(preferBlazePose: true)
-        poseEngineName = detector.engineName
-        usingBlazePose = detector.isBlazePose
+        // Read engine info off the single stored detector — creating a second
+        // detector here doubled the model load time.
+        poseEngineName = poseDetector.engineName
+        usingBlazePose = poseDetector.isBlazePose
     }
     @Published var analysisMetrics: AnalysisMetrics?
     @Published var metricSeries: MetricSeries?
@@ -1251,6 +1273,10 @@ class VideoProcessor: ObservableObject {
     private var previousPoints: [PoseJoint: CGPoint] = [:]
     private var missingFrameCount: [PoseJoint: Int] = [:]
     private let maxMissingFrames: Int = 5
+
+    // Corrects BlazePose's left/right label flips (side-view legs scissoring)
+    // by temporal continuity, BEFORE any downstream logic trusts the labels.
+    private let identityStabilizer = PoseIdentityStabilizer()
     
     // Blip detection - permanently hide joints that teleport too often
     private var blipCount: [PoseJoint: Int] = [:]
@@ -1317,6 +1343,7 @@ class VideoProcessor: ObservableObject {
             isProcessing = true
             progress = 0
             error = nil
+            scanQualityWarning = nil
             processedVideoURL = nil
             analysisMetrics = nil
             metricSeries = nil
@@ -1353,6 +1380,7 @@ class VideoProcessor: ObservableObject {
         }
 
         poseDetector.reset()
+        identityStabilizer.reset()
         previousPoints = [:]
         missingFrameCount = [:]
         blipCount = [:]
@@ -1363,7 +1391,13 @@ class VideoProcessor: ObservableObject {
         do {
             let outputURL = try await processVideoFrames(inputURL: url)
             await publishProgress(1.0, force: true)
+            // Temp hygiene: the imported copy is done with, and the previous
+            // processed clip would otherwise sit in tmp/ forever (one per analysis).
+            try? FileManager.default.removeItem(at: url)
             await MainActor.run {
+                if let old = processedVideoURL, old != outputURL {
+                    try? FileManager.default.removeItem(at: old)
+                }
                 processedVideoURL = outputURL
                 isProcessing = false
                 progress = 1.0
@@ -1383,7 +1417,127 @@ class VideoProcessor: ObservableObject {
         }
         return poseFrames[index]
     }
-    
+
+    /// Drop per-clip buffers once the analysis is discarded — poseFrames alone
+    /// holds every landmark of every frame and otherwise lives until the next run.
+    func releaseAnalysisBuffers() {
+        poseFrames = []
+        previousPoints = [:]
+        missingFrameCount = [:]
+        blipCount = [:]
+        permanentlyHidden = []
+    }
+
+    /// The longest contiguous run of frames where the near-side lower-limb chain
+    /// (hip/knee/ankle) AND the nose are all present — i.e. the runner is fully,
+    /// accurately framed. Brief dropouts (<= ~0.15s) are bridged. Only measure
+    /// from THIS window so entry/exit garbage and the tracking-lost tail (which
+    /// flatlined the graphs and threw outlier angles) never enter the analysis.
+    /// Falls back to the whole clip when no window reaches ~2s so short clips
+    /// still analyse — `foundWindow: false` marks that fallback explicitly,
+    /// because the fallback range covers everything and would otherwise read as
+    /// a "perfect" clip to any quality check built on the ratio alone.
+    static func cleanWindowRange(_ frames: [PoseFrame], frameRate: Double) -> (range: Range<Int>, foundWindow: Bool) {
+        let n = frames.count
+        guard n > 10 else { return (0..<n, false) }
+        func wellFramed(_ f: PoseFrame) -> Bool {
+            let right = f.facingRight
+            let hip: PoseJoint = right ? .rightHip : .leftHip
+            let knee: PoseJoint = right ? .rightKnee : .leftKnee
+            let ankle: PoseJoint = right ? .rightAnkle : .leftAnkle
+            return f.points[.nose] != nil && f.points[hip] != nil
+                && f.points[knee] != nil && f.points[ankle] != nil
+        }
+        let flags = frames.map(wellFramed)
+        let maxGap = max(2, Int((frameRate * 0.15).rounded()))
+        var bestStart = 0, bestEnd = -1   // inclusive
+        var i = 0
+        while i < n {
+            if !flags[i] { i += 1; continue }
+            var j = i, gap = 0, lastGood = i
+            while j < n {
+                if flags[j] { lastGood = j; gap = 0 }
+                else { gap += 1; if gap > maxGap { break } }
+                j += 1
+            }
+            if lastGood - i > bestEnd - bestStart { bestStart = i; bestEnd = lastGood }
+            i = max(lastGood + 1, i + 1)
+        }
+        let minFrames = Int((frameRate * 2.0).rounded())
+        if bestEnd >= bestStart, (bestEnd - bestStart + 1) >= minFrames {
+            return (bestStart..<(bestEnd + 1), true)
+        }
+        return (0..<n, false)
+    }
+
+    // MARK: - Scan quality (v1 gate)
+
+    /// Whole-clip quality verdict from the tracking signals the pipeline already
+    /// produces. v1 deliberately uses ONE OR'd signal family and a single generic
+    /// message; per-cause attribution (dark/off-angle/left-frame) is a later
+    /// stage once these thresholds are calibrated against real clips.
+    struct ScanQualitySignals {
+        let totalFrames: Int
+        let cleanFrames: Int
+        let cleanRatio: Double
+        let cleanSeconds: Double
+        let foundWindow: Bool
+        let hiddenCoreJointCount: Int
+        let flagged: Bool
+    }
+
+    static func scanQualitySignals(
+        totalFrames: Int,
+        cleanFrames: Int,
+        foundWindow: Bool,
+        fps: Double,
+        permanentlyHidden: Set<PoseJoint>
+    ) -> ScanQualitySignals {
+        let ratio = totalFrames > 0 ? Double(cleanFrames) / Double(totalFrames) : 0
+        let seconds = fps > 0 ? Double(cleanFrames) / fps : 0
+        let core: Set<PoseJoint> = [.leftHip, .rightHip, .leftKnee, .rightKnee,
+                                    .leftAnkle, .rightAnkle, .nose]
+        let hiddenCore = permanentlyHidden.intersection(core).count
+        // Provisional thresholds, biased to UNDER-trigger (a false "retake" on a
+        // good clip costs more trust than a missed disclosure). The calibration
+        // log below exists to tune these against real clips before trusting them.
+        let flagged = !foundWindow
+            || ratio < scanQualityMinCleanRatio
+            || seconds < scanQualityMinCleanSeconds
+            || hiddenCore >= 1
+        return ScanQualitySignals(
+            totalFrames: totalFrames,
+            cleanFrames: cleanFrames,
+            cleanRatio: ratio,
+            cleanSeconds: seconds,
+            foundWindow: foundWindow,
+            hiddenCoreJointCount: hiddenCore,
+            flagged: flagged
+        )
+    }
+
+    /// DEBUG-only calibration log: one CSV row per analysis in Documents, so
+    /// thresholds can be derived from real clips instead of guessed.
+    private func logScanQuality(_ q: ScanQualitySignals, clip: String) {
+#if DEBUG
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let file = dir.appendingPathComponent("scan_quality_log.csv")
+        let header = "date,clip,totalFrames,cleanFrames,cleanRatio,cleanSeconds,foundWindow,hiddenCore,flagged\n"
+        let row = "\(Date().timeIntervalSince1970),\(clip),\(q.totalFrames),\(q.cleanFrames),"
+            + String(format: "%.3f", q.cleanRatio) + ","
+            + String(format: "%.2f", q.cleanSeconds) + ","
+            + "\(q.foundWindow),\(q.hiddenCoreJointCount),\(q.flagged)\n"
+        if !FileManager.default.fileExists(atPath: file.path) {
+            try? (header + row).write(to: file, atomically: true, encoding: .utf8)
+        } else if let handle = try? FileHandle(forWritingTo: file) {
+            handle.seekToEndOfFile()
+            handle.write(Data(row.utf8))
+            try? handle.close()
+        }
+        debugLog("[ScanQuality] \(clip) ratio=\(q.cleanRatio) secs=\(q.cleanSeconds) found=\(q.foundWindow) hiddenCore=\(q.hiddenCoreJointCount) flagged=\(q.flagged)")
+#endif
+    }
+
     private func processVideoFrames(inputURL: URL) async throws -> URL {
         let asset = AVURLAsset(url: inputURL)
         
@@ -1470,8 +1624,9 @@ class VideoProcessor: ObservableObject {
         await publishProgress(Self.progressFramesStart, force: true)
         
         var sideVotes: [BodySide] = []
+        var lastActiveSide: BodySide? = nil
         var framesSinceYield = 0
-        
+
         // Process frames
         while reader.status == .reading {
             if !writerInput.isReadyForMoreMediaData {
@@ -1489,12 +1644,14 @@ class VideoProcessor: ObservableObject {
             autoreleasepool {
                     // Detect pose (BlazePose if available, Vision fallback)
                     let timestampMs = Int(presentationTime.seconds * 1000)
-                    let observation = self.poseDetector.detectPose(
-                        pixelBuffer: pixelBuffer,
-                        orientation: visionOrientation,
-                        timestampMs: timestampMs
+                    let observation = self.identityStabilizer.stabilize(
+                        self.poseDetector.detectPose(
+                            pixelBuffer: pixelBuffer,
+                            orientation: visionOrientation,
+                            timestampMs: timestampMs
+                        )
                     )
-                    
+
                     // Convert normalized coordinates to pixels and apply filtering/smoothing
                     var bodyPoints: [PoseJoint: CGPoint] = [:]
                     var bodyPoints3D: [PoseJoint: SIMD3<Double>] = observation.points3D
@@ -1550,14 +1707,20 @@ class VideoProcessor: ObservableObject {
                             }
                         }
                     
-                    if videoMode == .side, selectedSide == nil, let vote = detectFacingSide(from: bodyPoints) {
+                    if videoMode == .side, selectedSide == nil,
+                       let vote = detectFacingSide(from: bodyPoints, minMarginFraction: 0.06) {
                         sideVotes.append(vote)
                         if sideVotes.count >= sideDetectionVoteThreshold {
                             selectedSide = majoritySide(sideVotes) ?? .right
                         }
                     }
-                    
-                    let activeSide = selectedSide ?? detectFacingSide(from: bodyPoints) ?? .right
+
+                    // The side that governs which leg we keep + draw. Before the
+                    // lock, use the RUNNING MAJORITY (not this frame's noisy nose
+                    // vote) so the skeleton never flickers between legs, and hold
+                    // the last decision if a frame is momentarily ambiguous.
+                    let activeSide = selectedSide ?? majoritySide(sideVotes) ?? lastActiveSide ?? .right
+                    lastActiveSide = activeSide
                     
                     // Hide far-side forearm (visible side faces camera).
                     let forearmToHide: BodySide = activeSide == .right ? .left : .right
@@ -1679,11 +1842,30 @@ class VideoProcessor: ObservableObject {
         }
         
         let fps = frameRate > 0 ? Double(frameRate) : 30
+        // Restrict analysis to the longest contiguous window of accurate framing
+        // (runner fully tracked). This drops the entry/exit garbage and the
+        // tracking-lost tail that produced flatlined graphs and outlier angles.
+        // Slice self.poseFrames itself so getPoseFrame (snapshot) and the metric
+        // series share ONE index space.
+        let (cleanRange, foundWindow) = Self.cleanWindowRange(poseFrames, frameRate: fps)
+        // Scan-quality signals — read BEFORE the slice destroys the denominator.
+        let quality = Self.scanQualitySignals(
+            totalFrames: poseFrames.count,
+            cleanFrames: cleanRange.count,
+            foundWindow: foundWindow,
+            fps: fps,
+            permanentlyHidden: permanentlyHidden
+        )
+        logScanQuality(quality, clip: inputURL.lastPathComponent)
+        poseFrames = Array(poseFrames[cleanRange])
         let computed = computeMetrics(frames: poseFrames, renderSize: CGSize(width: renderWidth, height: renderHeight), frameRate: fps)
         await publishProgress(0.98, force: true)
         await MainActor.run {
             self.analysisMetrics = computed.0
             self.metricSeries = computed.1
+            self.scanQualityWarning = quality.flagged
+                ? "Hard to read clearly. Retake following the filming tips."
+                : nil
         }
 
         // Encrypt the processed running video at rest (it depicts the user — health
@@ -2563,6 +2745,9 @@ class VideoProcessor: ObservableObject {
         let rightYVel = emaSmoothSeries(removeOutliers(rightYVelRaw), alpha: 0.2)
         
         func detectHeelStrikes(ySeries: [Double], vRelSeries: [Double], yVelSeries: [Double]) -> [Int] {
+            // The scan loop needs i in 4..<(count-4); anything shorter builds an
+            // invalid Range and traps (seen with 6-7 pose frames from a sub-second clip).
+            guard ySeries.count >= 9 else { return [] }
             let yValid = ySeries.filter { !$0.isNaN }
             guard yValid.count > 4 else { return [] }
 
@@ -2848,23 +3033,31 @@ class VideoProcessor: ObservableObject {
             return emaSmoothSeries(raw, alpha: 0.15)
         }
         
-        // EMA smoother with delta clamping
+        // EMA smoother with delta clamping. NaN samples stay NaN in the output
+        // (a gap is a gap) but must not poison the running state — before this,
+        // one missing foot sample turned the whole rest of the series NaN.
         func emaSmoothSeries(_ values: [Double], alpha: Double) -> [Double] {
             guard values.count > 1 else { return values }
-            var smoothed = Array(repeating: 0.0, count: values.count)
-            smoothed[0] = values[0]
-            for i in 1..<values.count {
-                // EMA: new = alpha * current + (1 - alpha) * previous
+            var smoothed = Array(repeating: Double.nan, count: values.count)
+            var state = Double.nan
+            for i in 0..<values.count {
                 let raw = values[i]
-                let prev = smoothed[i - 1]
-                var newVal = alpha * raw + (1 - alpha) * prev
+                if raw.isNaN { continue }
+                if state.isNaN {
+                    smoothed[i] = raw
+                    state = raw
+                    continue
+                }
+                // EMA: new = alpha * current + (1 - alpha) * previous
+                var newVal = alpha * raw + (1 - alpha) * state
                 // Clamp delta to prevent extreme jumps (max 10 units per frame)
                 let maxDelta = 10.0
-                let delta = newVal - prev
+                let delta = newVal - state
                 if abs(delta) > maxDelta {
-                    newVal = prev + (delta > 0 ? maxDelta : -maxDelta)
+                    newVal = state + (delta > 0 ? maxDelta : -maxDelta)
                 }
                 smoothed[i] = newVal
+                state = newVal
             }
             return smoothed
         }
@@ -3070,7 +3263,11 @@ class VideoProcessor: ObservableObject {
                 }
                 
                 if let lFoot3 = pelvisRelative(frame, .leftFootIndex, axes: axes) ?? pelvisRelative(frame, .leftHeel, axes: axes) {
-                    let ankleAngle = 180 - angleDegrees3D(lKnee3, lAnkle3, lFoot3)
+                    // Neutral-referenced dorsiflexion (0 = foot square to shank,
+                    // + dorsiflex, - plantarflex) so it matches the reference axis
+                    // (-40..35). Was 180-interior (~90 at neutral), which pinned
+                    // the ankle curve to the top of the chart. ROM is unchanged.
+                    let ankleAngle = 90 - angleDegrees3D(lKnee3, lAnkle3, lFoot3)
                     leftAnkleFlex.append(ankleAngle)
                     leftAnkleFlexSeries[index] = ankleAngle
                 }
@@ -3089,7 +3286,7 @@ class VideoProcessor: ObservableObject {
                 }
                 
                 if let lFoot = point(frame, .leftFootIndex) ?? point(frame, .leftHeel) {
-                    let ankleAngle = 180 - angleDegrees(lKnee, lAnkle, lFoot)
+                    let ankleAngle = 90 - angleDegrees(lKnee, lAnkle, lFoot)
                     leftAnkleFlex.append(ankleAngle)
                     leftAnkleFlexSeries[index] = ankleAngle
                 }
@@ -3111,7 +3308,7 @@ class VideoProcessor: ObservableObject {
                 }
                 
                 if let rFoot3 = pelvisRelative(frame, .rightFootIndex, axes: axes) ?? pelvisRelative(frame, .rightHeel, axes: axes) {
-                    let ankleAngle = 180 - angleDegrees3D(rKnee3, rAnkle3, rFoot3)
+                    let ankleAngle = 90 - angleDegrees3D(rKnee3, rAnkle3, rFoot3)
                     rightAnkleFlex.append(ankleAngle)
                     rightAnkleFlexSeries[index] = ankleAngle
                 }
@@ -3130,7 +3327,7 @@ class VideoProcessor: ObservableObject {
                 }
                 
                 if let rFoot = point(frame, .rightFootIndex) ?? point(frame, .rightHeel) {
-                    let ankleAngle = 180 - angleDegrees(rKnee, rAnkle, rFoot)
+                    let ankleAngle = 90 - angleDegrees(rKnee, rAnkle, rFoot)
                     rightAnkleFlex.append(ankleAngle)
                     rightAnkleFlexSeries[index] = ankleAngle
                 }
@@ -3471,7 +3668,15 @@ class VideoProcessor: ObservableObject {
                 shankSignedSamples.append(d)
             }
         }
-        let shankAngleAtContactSigned = RunPhysics.median(shankSignedSamples) ?? Double.nan
+        // Reject physiologically-impossible samples before taking the median: a
+        // real shank at contact sits within ~±35° of vertical. Anything beyond
+        // is a tracking artifact (occluded/mis-tracked leg) — averaging it in
+        // produced the −52° "overstride" garbage. If too few sane samples
+        // survive, the value is unmeasurable (NaN → shows "--"), not a fake.
+        let plausibleShank = shankSignedSamples.filter { $0.isFinite && abs($0) <= 35 }
+        let shankAngleAtContactSigned = plausibleShank.count >= 2
+            ? (RunPhysics.median(plausibleShank) ?? Double.nan)
+            : Double.nan
 
         // Build per-frame series (dense like hip drop)
         let strideSeries: [Double] = leftStride + rightStride
@@ -4072,12 +4277,12 @@ class VideoProcessor: ObservableObject {
             FormCueScore(cue: .footPlacement, score: footPlacementScore, rawValue: footPlacementMedian, mean: footPlacementMedian, std: max(footPlacementStd, 1))
         ]
         
-        let analysisStartTime = times.first(where: { $0 >= 1.0 }) ?? 0
-        let startIndex = times.firstIndex(where: { $0 >= analysisStartTime }) ?? 0
-        func trim(_ values: [Double]) -> [Double] {
-            guard startIndex < values.count else { return [] }
-            return Array(values[startIndex...])
-        }
+        // The clean-window pass already trimmed entry/exit garbage, so the old
+        // "drop the first 1s" warm-up trim is redundant and would just discard
+        // good data. Keep trim() as identity (startIndex 0) — this also keeps the
+        // fold-over-peaks alignment offset at zero (full-length series throughout).
+        let analysisStartTime = times.first ?? 0
+        func trim(_ values: [Double]) -> [Double] { values }
         let trimmedDuration = max((times.last ?? 0) - analysisStartTime, 0)
         
         let series = MetricSeries(

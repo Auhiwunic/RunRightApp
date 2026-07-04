@@ -133,30 +133,6 @@ public struct ActivityCalculator {
     }
 }
 
-// MARK: - Formatting Helpers
-
-public struct ActivityFormatter {
-    public static func formatDistance(_ meters: Double) -> String {
-        meters >= 1000 ? String(format: "%.2f km", meters / 1000) : String(format: "%.0f m", meters)
-    }
-    
-    public static func formatElevation(_ meters: Double) -> String {
-        String(format: "%.0f m", meters)
-    }
-    
-    public static func formatDuration(_ seconds: TimeInterval) -> String {
-        let hours = Int(seconds) / 3600
-        let minutes = (Int(seconds) % 3600) / 60
-        let secs = Int(seconds) % 60
-        return hours > 0 ? String(format: "%d:%02d:%02d", hours, minutes, secs)
-                         : String(format: "%d:%02d", minutes, secs)
-    }
-    
-    public static func formatSpeed(_ metersPerSecond: Double) -> String {
-        String(format: "%.1f km/h", metersPerSecond * 3.6)
-    }
-}
-
 // MARK: - GPS Tracker
 
 public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDelegate {
@@ -188,23 +164,27 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     public func startTracking() {
         // Stop any existing tracking first
         locationManager.stopUpdatingLocation()
-        
+
+        // Clean state up front. On a first install the authorization prompt is
+        // still pending here; with isTracking already true the delegate below
+        // starts GPS the moment the user grants it. Bailing out before setting
+        // state recorded a zero-GPS first run.
+        trackedLocations.removeAll()
+        liveSummary = nil
+        isPaused = false
+        isTracking = true
+        resetLiveAccumulators()
+
         let status = locationManager.authorizationStatus
         if status == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
-            return
+            return   // locationManagerDidChangeAuthorization starts updates
         }
         guard status == .authorizedWhenInUse || status == .authorizedAlways else {
             debugLog("Location not authorized: \(status.rawValue)")
             return
         }
-        
-        // Clean state
-        trackedLocations.removeAll()
-        liveSummary = nil
-        isPaused = false
-        isTracking = true
-        
+
         // Start fresh
         locationManager.startUpdatingLocation()
     }
@@ -231,7 +211,54 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         finalSummary = nil
         isTracking = false
         isPaused = false
+        resetLiveAccumulators()
         locationManager.stopUpdatingLocation()
+    }
+
+    // MARK: - Live accumulators
+    // Recomputing the full summary over the whole trace on every GPS update was
+    // O(n^2) across a run (a half marathon is ~4200 points x 3 full walks each
+    // update). These carry the running totals instead.
+    private var liveDistance: Double = 0
+    private var liveGain: Double = 0
+    private var liveLoss: Double = 0
+    private var liveHighest: Double = -.greatestFiniteMagnitude
+    private var liveLowest: Double = .greatestFiniteMagnitude
+    private var liveMaxSpeed: Double = 0
+    private var liveSpeedSum: Double = 0
+    private var liveSpeedCount: Int = 0
+
+    private func resetLiveAccumulators() {
+        liveDistance = 0; liveGain = 0; liveLoss = 0
+        liveHighest = -.greatestFiniteMagnitude
+        liveLowest = .greatestFiniteMagnitude
+        liveMaxSpeed = 0; liveSpeedSum = 0; liveSpeedCount = 0
+    }
+
+    /// Fold newly accepted points into the running totals. Call BEFORE they are
+    /// appended to trackedLocations (the previous point anchors the deltas).
+    private func accumulate(_ newLocations: [CLLocation]) {
+        var prev = trackedLocations.last
+        for loc in newLocations {
+            if let p = prev {
+                let d = loc.distance(from: p)
+                liveDistance += d
+                let diff = loc.altitude - p.altitude
+                if diff > 0 { liveGain += diff } else { liveLoss += abs(diff) }
+                let dt = loc.timestamp.timeIntervalSince(p.timestamp)
+                if dt > 0 && dt < 3600 {
+                    let speed = d / dt
+                    if speed <= 50 {
+                        liveSpeedSum += speed
+                        liveSpeedCount += 1
+                        liveMaxSpeed = max(liveMaxSpeed, speed)
+                    }
+                }
+            }
+            liveHighest = max(liveHighest, loc.altitude)
+            liveLowest = min(liveLowest, loc.altitude)
+            prev = loc
+        }
     }
     
     public func pauseTracking() {
@@ -256,11 +283,25 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         }
         
         guard !recentLocations.isEmpty else { return }
-        
+
+        accumulate(recentLocations)
         trackedLocations.append(contentsOf: recentLocations)
-        
-        if trackedLocations.count > 1 {
-            liveSummary = ActivityCalculator.calculateActivitySummary(from: trackedLocations)
+
+        if trackedLocations.count > 1,
+           let first = trackedLocations.first, let last = trackedLocations.last {
+            liveSummary = ActivitySummary(
+                distance: liveDistance,
+                duration: last.timestamp.timeIntervalSince(first.timestamp),
+                elevationGain: liveGain,
+                elevationLoss: liveLoss,
+                highestPoint: liveHighest,
+                lowestPoint: liveLowest,
+                averageSpeed: liveSpeedCount > 0 ? liveSpeedSum / Double(liveSpeedCount) : 0,
+                maxSpeed: liveMaxSpeed,
+                startTime: first.timestamp,
+                endTime: last.timestamp,
+                hasHeartRate: false
+            )
         }
     }
     

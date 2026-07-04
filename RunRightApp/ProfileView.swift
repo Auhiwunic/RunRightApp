@@ -9,8 +9,9 @@ import FirebaseAuth
 
 struct ProfileView: View {
     @StateObject private var auth = FirebaseAuthManager.shared
-    @State private var useMetric = false
-    @State private var notificationsOn = true
+    // The one real unit setting (drives Analyze and settings everywhere).
+    // The old local @State here was decorative and reset on every tab switch.
+    @AppStorage("useImperialUnits") private var useImperialUnits: Bool = true
     @State private var showAuthSheet = false
     @State private var stats: RunRepository.RunStats = .init()
     @State private var isLoading = true
@@ -37,6 +38,7 @@ struct ProfileView: View {
 
     private let accentLime = Color(hex: "#FFFFFF")
     private let backgroundColor = AppTheme.bgColor
+    @State private var legalDoc: LegalDoc?
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
     
@@ -521,37 +523,31 @@ struct ProfileView: View {
             // Units
             settingsRow(label: "Units", icon: "ruler") {
                 HStack(spacing: 0) {
-                    unitButton(text: "mi", selected: !useMetric) { useMetric = false }
-                    unitButton(text: "km", selected: useMetric) { useMetric = true }
+                    unitButton(text: "mi", selected: useImperialUnits) { useImperialUnits = true }
+                    unitButton(text: "km", selected: !useImperialUnits) { useImperialUnits = false }
                 }
-                .background(cardBackgroundSoft)
-                .cornerRadius(8)
+                .appRaisedBox(cornerRadius: 8)
             }
-            
-            Rectangle()
-                .fill(Color.white.opacity(0.06))
-                .frame(height: 1)
-            
-            // Notifications
-            settingsRow(label: "Notifications", icon: "bell.fill") {
-                ZStack {
-                    Capsule()
-                        .fill(notificationsOn ? accentLime : Color(hex: "#333333"))
-                        .frame(width: 44, height: 26)
-                    Circle()
-                        .fill(notificationsOn ? Color.black : Color.white)
-                        .frame(width: 20, height: 20)
-                        .offset(x: notificationsOn ? 9 : -9)
-                }
-                .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        notificationsOn.toggle()
+
+            ForEach([LegalDoc.privacyPolicy, .terms, .licenses]) { doc in
+                Rectangle()
+                    .fill(Color.white.opacity(0.06))
+                    .frame(height: 1)
+                Button(action: { legalDoc = doc }) {
+                    settingsRow(label: doc.title, icon: "doc.text") {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.3))
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
         .padding(16)
         .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .sheet(item: $legalDoc) { doc in
+            LegalDocView(doc: doc)
+        }
     }
     
     private func settingsRow<Content: View>(label: String, icon: String, @ViewBuilder trailing: () -> Content) -> some View {
@@ -578,24 +574,6 @@ struct ProfileView: View {
                 .background(selected ? accentLime : Color.clear)
                 .cornerRadius(6)
         }
-    }
-}
-
-// MARK: - PR Item (legacy, kept for compatibility)
-struct PRItem: View {
-    let distance: String
-    let time: String
-    
-    var body: some View {
-        VStack(spacing: 2) {
-            Text(distance)
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.4))
-            Text(time)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 

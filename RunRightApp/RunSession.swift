@@ -24,6 +24,12 @@ final class RunSession: ObservableObject {
     /// Wall-clock elapsed seconds (does not advance while paused).
     @Published private(set) var elapsed: TimeInterval = 0
     @Published var shoeName: String = ""
+    /// Per-mile splits live on the session (not the run view): minimizing the
+    /// run UI destroys the view's @State, which used to wipe real splits and
+    /// backfill them later as identical averages.
+    @Published private(set) var mileSplits: [MileSplit] = []
+    private var lastMileTime: TimeInterval = 0
+    private let metersPerMile: Double = 1609.344
 
     /// Target pace (sec/mile) from today's plan — drives goal-based coaching. nil = free run.
     var targetPaceSecPerMile: Double?
@@ -48,6 +54,8 @@ final class RunSession: ObservableObject {
         tracker.startTracking()
 
         elapsed = 0
+        mileSplits = []
+        lastMileTime = 0
         lastTick = Date()
         isActive = true
         isPresented = true
@@ -93,12 +101,28 @@ final class RunSession: ObservableObject {
 
     private func feedCoach(distance: Double, speed: Double?) {
         guard isActive else { return }
+        recordMileSplits(distance: distance)
         coach.update(
             distanceMeters: distance,
             elapsed: elapsed,
             paused: tracker.isPaused,
             speedMetersPerSec: speed
         )
+    }
+
+    private func recordMileSplits(distance: Double) {
+        let currentMiles = distance / metersPerMile
+        // One update can cross more than one mile boundary (GPS resume after
+        // background, coarse updates). Record every crossed mile and split the
+        // elapsed time evenly across the miles it covered.
+        var crossed = Int(currentMiles) - mileSplits.count
+        guard crossed > 0 else { return }
+        while crossed > 0 {
+            let splitTime = (elapsed - lastMileTime) / Double(crossed)
+            mileSplits.append(MileSplit(time: splitTime))
+            lastMileTime += splitTime
+            crossed -= 1
+        }
     }
 
     private func startTimer() {

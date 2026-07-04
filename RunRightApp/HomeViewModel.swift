@@ -5,7 +5,6 @@ import Combine
 
 @MainActor
 final class HomeViewModel: ObservableObject {
-    @Published var stepsMinutesToday: Double = 0   // run minutes (kept for legacy callers)
     @Published var stepsToday: Int = 0             // real step count from HealthKit
     @Published var caloriesToday: Int = 0          // active kcal from HealthKit
     @Published var distanceTodayMiles: Double = 0  // walking+running distance from HealthKit
@@ -21,9 +20,6 @@ final class HomeViewModel: ObservableObject {
     // Monthly stats
     @Published var monthlyRunCount: Int = 0
     @Published var monthlyMiles: Double = 0
-
-    // Today's runs
-    @Published var todaysRuns: [RunSummaryDTO] = []
 
     // All-time stats
     @Published var stats: RunRepository.RunStats = .init()
@@ -87,39 +83,33 @@ final class HomeViewModel: ObservableObject {
             }
         }
 
-        // Fetch all data concurrently
-        async let last = (try? await RunRepository.shared.fetchLastRun(uid: uid))
-        async let runs = (try? await RunRepository.shared.fetchRuns(uid: uid, limit: 10))
-        async let minutes = (try? await RunRepository.shared.fetchTotalDurationSecondsForDay(uid: uid, date: Date()))
+        // One runs query for the whole dashboard: last/recent/week/month are all
+        // slices of the full newest-first history, and each used to be its own
+        // billed Firestore query — the same documents were read up to 7 times
+        // per load.
         async let allRuns = (try? await RunRepository.shared.fetchAllRuns(uid: uid))
-        async let todayRunsResult = (try? await RunRepository.shared.fetchRunsForDay(uid: uid, date: Date()))
         async let plan = loadTodayPlan(uid: uid)
-        async let weekRuns = (try? await RunRepository.shared.fetchRunsForWeek(uid: uid, date: Date()))
-        async let monthRuns = (try? await RunRepository.shared.fetchRunsForMonth(uid: uid, date: Date()))
 
-        let (lastRun, runList, totalSeconds, allRunList, todayList, todayPlanResult, weekRunList, monthRunList) =
-            await (last, runs, minutes, allRuns, todayRunsResult, plan, weekRuns, monthRuns)
+        let (allRunList, todayPlanResult) = await (allRuns, plan)
+        let allRunsFinal = allRunList ?? []   // ordered by startTime descending
 
-        self.lastRun = lastRun
-        self.recentRuns = runList ?? []
-        self.stepsMinutesToday = (totalSeconds ?? 0) / 60.0
-        self.todaysRuns = todayList ?? []
+        self.lastRun = allRunsFinal.first
+        self.recentRuns = Array(allRunsFinal.prefix(10))
         self.todayPlan = todayPlanResult
 
-        // Weekly miles
-        self.weeklyMiles = RunRepository.weeklyMiles(from: weekRunList ?? [], weekOf: Date())
+        // Weekly miles (weeklyMiles filters to the Monday-based week itself)
+        self.weeklyMiles = RunRepository.weeklyMiles(from: allRunsFinal, weekOf: Date())
 
-        // Monthly run data — group by day-of-month
+        // Monthly run data — group this calendar month by day-of-month
         let calendar = Calendar.current
         var dayMap: [Int: Double] = [:]
-        for run in (monthRunList ?? []) {
+        for run in allRunsFinal where calendar.isDate(run.startTime, equalTo: Date(), toGranularity: .month) {
             let day = calendar.component(.day, from: run.startTime)
             dayMap[day, default: 0] += run.distanceMiles
         }
         self.monthlyRunsByDay = dayMap
 
         // Compute stats from all runs
-        let allRunsFinal = allRunList ?? []
         self.stats = RunRepository.computeStats(from: allRunsFinal)
         self.monthlyRunCount = stats.monthlyRuns
         self.monthlyMiles = stats.monthlyMiles
@@ -292,17 +282,25 @@ final class HomeViewModel: ObservableObject {
         return "\(hr)"
     }
 
+    // DateFormatter construction is expensive; these run from view bodies.
+    private static let todayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "'Today,' h:mm a"; return f
+    }()
+    private static let yesterdayFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "'Yesterday,' h:mm a"; return f
+    }()
+    private static let pastFormatter: DateFormatter = {
+        let f = DateFormatter(); f.dateFormat = "MMM d, h:mm a"; return f
+    }()
+
     func formattedLastRunTime() -> String {
         guard let run = lastRun else { return "" }
-        let formatter = DateFormatter()
         let calendar = Calendar.current
         if calendar.isDateInToday(run.startTime) {
-            formatter.dateFormat = "'Today,' h:mm a"
+            return Self.todayFormatter.string(from: run.startTime)
         } else if calendar.isDateInYesterday(run.startTime) {
-            formatter.dateFormat = "'Yesterday,' h:mm a"
-        } else {
-            formatter.dateFormat = "MMM d, h:mm a"
+            return Self.yesterdayFormatter.string(from: run.startTime)
         }
-        return formatter.string(from: run.startTime)
+        return Self.pastFormatter.string(from: run.startTime)
     }
 }

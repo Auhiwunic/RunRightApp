@@ -61,6 +61,128 @@ struct PoseObservation {
     let points3D: [PoseJoint: SIMD3<Double>]
 }
 
+// MARK: - Left/right identity stabilizer
+
+/// BlazePose infers anatomical left/right from appearance. In a side view both
+/// legs look alike, so as they scissor past each other the model frequently
+/// SWAPS the labels frame-to-frame — the drawn skeleton "jumps" between the
+/// physical legs and every left/right series inherits the glitch. This tracker
+/// re-assigns the labels each frame by temporal continuity: it predicts where
+/// each tracked limb should be (constant velocity) and keeps whichever
+/// labelling (as-is vs swapped) matches the prediction better, with a
+/// hysteresis margin so an ambiguous leg-crossing frame (both hypotheses cost
+/// the same) never oscillates. BlazePose depth (z) is a tiebreak: the
+/// camera-side limb keeps the nearer, stable depth ordering.
+///
+/// This also fixes the one-leg case: when only the near leg is detected but
+/// the model labelled it with the far leg's name, the lone chain matches the
+/// other track's prediction and gets relabelled.
+final class PoseIdentityStabilizer {
+
+    private struct PairGroup {
+        let pairs: [(left: PoseJoint, right: PoseJoint, weight: CGFloat)]
+    }
+
+    // Ankles/wrists carry the most identity signal (fastest, farthest apart
+    // mid-swing); hips/shoulders nearly coincide in profile so they get little.
+    private static let legGroup = PairGroup(pairs: [
+        (.leftHip, .rightHip, 0.5),
+        (.leftKnee, .rightKnee, 2.0),
+        (.leftAnkle, .rightAnkle, 3.0),
+        (.leftHeel, .rightHeel, 1.5),
+        (.leftFootIndex, .rightFootIndex, 1.5),
+    ])
+    private static let armGroup = PairGroup(pairs: [
+        (.leftShoulder, .rightShoulder, 0.5),
+        (.leftElbow, .rightElbow, 2.0),
+        (.leftWrist, .rightWrist, 3.0),
+    ])
+
+    private var prev: [PoseJoint: CGPoint] = [:]
+    private var prev2: [PoseJoint: CGPoint] = [:]
+    /// EMA of z(leftAnkle) − z(rightAnkle) AFTER correction. The near leg keeps
+    /// a stable depth ordering; a sudden sign flip is evidence of a label swap.
+    private var legZDiffEMA: Double?
+
+    func reset() {
+        prev = [:]
+        prev2 = [:]
+        legZDiffEMA = nil
+    }
+
+    func stabilize(_ obs: PoseObservation) -> PoseObservation {
+        var pts = obs.points2D
+        var pts3 = obs.points3D
+
+        applyGroup(Self.legGroup, zPair: (.leftAnkle, .rightAnkle), to: &pts, &pts3)
+        applyGroup(Self.armGroup, zPair: nil, to: &pts, &pts3)
+
+        // Track corrected positions for the next frame's velocity prediction.
+        prev2 = prev
+        prev = pts
+
+        if let zl = pts3[.leftAnkle]?.z, let zr = pts3[.rightAnkle]?.z {
+            let d = zl - zr
+            legZDiffEMA = legZDiffEMA.map { $0 * 0.9 + d * 0.1 } ?? d
+        }
+        return PoseObservation(points2D: pts, points3D: pts3)
+    }
+
+    /// Constant-velocity prediction — crucial at leg crossings, where plain
+    /// nearest-neighbour would lock both tracks onto the same leg.
+    private func predicted(_ j: PoseJoint) -> CGPoint? {
+        guard let p1 = prev[j] else { return nil }
+        guard let p2 = prev2[j] else { return p1 }
+        return CGPoint(x: p1.x * 2 - p2.x, y: p1.y * 2 - p2.y)
+    }
+
+    private func applyGroup(
+        _ group: PairGroup,
+        zPair: (PoseJoint, PoseJoint)?,
+        to pts: inout [PoseJoint: CGPoint],
+        _ pts3: inout [PoseJoint: SIMD3<Double>]
+    ) {
+        var costKeep: CGFloat = 0
+        var costSwap: CGFloat = 0
+        var terms = 0
+
+        for (l, r, w) in group.pairs {
+            let cl = pts[l], cr = pts[r]
+            let pl = predicted(l), pr = predicted(r)
+            if let c = cl, let p = pl { costKeep += w * dist(c, p); terms += 1 }
+            if let c = cr, let p = pr { costKeep += w * dist(c, p); terms += 1 }
+            if let c = cl, let p = pr { costSwap += w * dist(c, p) }
+            if let c = cr, let p = pl { costSwap += w * dist(c, p) }
+        }
+        guard terms >= 2 else { return }
+
+        // Depth tiebreak: this frame's z ordering contradicting the tracked
+        // ordering is independent evidence that the labels flipped.
+        var swapBias: CGFloat = 1.0
+        if let zp = zPair,
+           let zl = pts3[zp.0]?.z, let zr = pts3[zp.1]?.z,
+           let ema = legZDiffEMA {
+            let d = zl - zr
+            if abs(d) > 0.02, abs(ema) > 0.02, (d < 0) != (ema < 0) {
+                swapBias = 0.75
+            }
+        }
+
+        // Hysteresis: swap only when clearly better, so crossing frames where
+        // both hypotheses cost the same never trigger a flip.
+        if costSwap * swapBias < costKeep * 0.8 {
+            for (l, r, _) in group.pairs {
+                let tl = pts[l]; pts[l] = pts[r]; pts[r] = tl
+                let t3 = pts3[l]; pts3[l] = pts3[r]; pts3[r] = t3
+            }
+        }
+    }
+
+    private func dist(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
+        hypot(a.x - b.x, a.y - b.y)
+    }
+}
+
 // MARK: - Pose Detector Protocol
 protocol PoseDetector {
     var engineName: String { get }

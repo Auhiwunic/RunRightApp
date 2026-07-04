@@ -15,9 +15,11 @@ struct ActiveRunView: View {
     var plannedTargetPaceSecPerMile: Double? = nil
 
     @ObservedObject private var coach = GaitaCoach.shared
+    // Splits live on the session so they survive minimize/restore.
+    @ObservedObject private var session = RunSession.shared
 
     @Environment(\.dismiss) var dismiss
-    
+
     @State private var isPaused = false
     @State private var showFinishScreen = false
     @State private var savedSummary: ActivitySummary?
@@ -25,10 +27,10 @@ struct ActiveRunView: View {
     @State private var saveError: String?
     @State private var isExpanded = false
     @State private var currentPage = 0
-    @State private var mileSplits: [MileSplit] = []
-    @State private var lastMileTime: TimeInterval = 0
     @State private var dragOffset: CGFloat = 0
     @State private var compactDragOffset: CGFloat = 0
+
+    private var mileSplits: [MileSplit] { session.mileSplits }
     
     private let accentOrange = Color(hex: "#FF8C00")   // Run-tab accent (Z4 orange)
     private let backgroundColor = Color(hex: "#1A1A1C")
@@ -51,9 +53,6 @@ struct ActiveRunView: View {
         // cues continue when this screen is minimized. Here we only sync the local
         // pause UI when the screen (re)appears.
         .onAppear { isPaused = tracker.isPaused }
-        .onChange(of: tracker.liveSummary?.distance) { _, newDistance in
-            checkForMileSplit(distance: newDistance ?? 0)
-        }
     }
     
     // MARK: - Running Map View
@@ -616,21 +615,6 @@ struct ActiveRunView: View {
         showFinishScreen = true
     }
     
-    private func checkForMileSplit(distance: Double) {
-        let currentMiles = distance / metersPerMile
-        // One update can cross more than one mile boundary (GPS resume after
-        // background, coarse updates). Record every crossed mile and split the
-        // elapsed time evenly across the miles it covered.
-        var crossed = Int(currentMiles) - mileSplits.count
-        guard crossed > 0 else { return }
-        while crossed > 0 {
-            let splitTime = (elapsedTime - lastMileTime) / Double(crossed)
-            mileSplits.append(MileSplit(time: splitTime))
-            lastMileTime += splitTime
-            crossed -= 1
-        }
-    }
-    
     // MARK: - Formatters
     private func formatTime(_ seconds: TimeInterval) -> String {
         let mins = Int(seconds) / 60
@@ -696,18 +680,24 @@ struct StravaMapView: UIViewRepresentable {
     }
     
     func updateUIView(_ mapView: MKMapView, context: Context) {
-        mapView.removeOverlays(mapView.overlays)
-        if coordinates.count > 1 {
-            let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
-            mapView.addOverlay(polyline)
+        // SwiftUI re-runs this on every observed tick (0.5s during a run);
+        // only rebuild the O(route-length) polyline when new points arrived.
+        if coordinates.count != context.coordinator.renderedCount {
+            context.coordinator.renderedCount = coordinates.count
+            mapView.removeOverlays(mapView.overlays)
+            if coordinates.count > 1 {
+                let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                mapView.addOverlay(polyline)
+            }
         }
         if isTracking && mapView.userTrackingMode != .followWithHeading {
             mapView.userTrackingMode = .followWithHeading
         }
     }
-    
+
     func makeCoordinator() -> Coordinator { Coordinator() }
     class Coordinator: NSObject, MKMapViewDelegate {
+        var renderedCount = -1
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polyline = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: polyline)

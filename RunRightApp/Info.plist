@@ -27,6 +27,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>Gaita uses the camera to capture shoe-sole photos and running videos you choose for form analysis.</string>
 	<key>NSHealthShareUsageDescription</key>
@@ -34,15 +36,13 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Gaita uses your location while you run to calculate distance, pace, route maps, and local weather.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Gaita may use the microphone for voice features during runs when you choose to enable them.</string>
+	<string>Gaita uses the microphone for the running videos you capture and for voice messages to your coach. Voice messages are transcribed on your device.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Gaita uses device motion only to help you hold the phone level while scanning your shoe sole.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Gaita saves processed running-form videos to your photo library only when you tap Save.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Gaita uses photo library access so you can choose shoe photos or running videos for analysis.</string>
-	<key>NSSiriUsageDescription</key>
-	<string>Gaita uses Siri shortcuts for run controls and pace checks when you choose to use voice features.</string>
 	<!-- OpenAI key removed — it must never ship in the app binary. The shoe scanner
 	     calls the Firebase analyzeShoe Cloud Function, which verifies Firebase Auth
 	     and holds the key server-side. -->

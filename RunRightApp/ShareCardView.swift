@@ -115,7 +115,10 @@ extension FormStatus: RawRepresentable, Codable {
     }
 }
 
-struct StoredScorecardForm: Codable {
+struct StoredScorecardForm: Codable, Identifiable {
+    // Timestamp doubles as identity — each analysis is stamped at creation, so
+    // collisions are effectively impossible and no schema/migration is needed.
+    var id: Date { date }
     let date: Date
     let overall: Int
     let power: Int
@@ -128,6 +131,19 @@ struct StoredScorecardForm: Codable {
     var gct: [Double]? = nil
     var cadenceTrend: [Double]? = nil
     var cueScores: [String: Double]? = nil   // FormCue.rawValue → 0..100, for the Coach tab
+    // Measured joint-flexion curves resampled to 11 deciles of the gait cycle
+    // (0=foot strike … 100=next strike), for the your-vs-optimal overlay.
+    var kneeCycle: [Double]? = nil
+    var hipCycle: [Double]? = nil
+    var ankleCycle: [Double]? = nil
+    // Contact-phase scalars for the "you vs optimal" comparison tracks. Force is
+    // a modeled spring-mass magnitude (not a measured waveform); overstride is a
+    // direct sagittal geometry measurement.
+    var contactMs: Double? = nil
+    var dutyFactor: Double? = nil
+    var legSpringHz: Double? = nil
+    var peakForceBW: Double? = nil
+    var overstrideDeg: Double? = nil
 }
 
 final class ScorecardDataStore {
@@ -156,6 +172,12 @@ final class ScorecardDataStore {
     func load() -> StoredScorecardForm? {
         guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(StoredScorecardForm.self, from: data)
+    }
+
+    /// Remove only the current form (leaves gait/wear data). Used when the last
+    /// analysis is deleted from history so downstream surfaces stop showing it.
+    func clearForm() {
+        UserDefaults.standard.removeObject(forKey: key)
     }
 
     /// Persist the latest scanned shoe-sole image (+ optional analysis) so the
@@ -196,6 +218,9 @@ final class ScorecardDataStore {
         guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
         return try? JSONDecoder().decode(WearZoneData.self, from: data)
     }
+
+    /// The shoe the locally stored wear zones belong to.
+    func loadWearShoe() -> String? { UserDefaults.standard.string(forKey: wearShoeKey) }
 
     func clear() {
         for k in [key, gaitKey, gaitTypeKey, strikeKey, leftWearZonesKey, rightWearZonesKey, wearShoeKey] {
@@ -432,58 +457,17 @@ struct ShareCardView: View {
         }
     }
 
-    private func meterColumn<V: View>(_ label: String, @ViewBuilder _ meter: () -> V) -> some View {
-        VStack(spacing: 8) {
-            meter().frame(height: 116)
-            Text(label)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundColor(.white)
-        }
-    }
-
+    /// The left/right shoe wear heatmaps for the scorecard's gait panel.
     private var heatmapPanel: some View {
-        HStack(spacing: 7) {
-            if let zones = data.leftWearZones {
-                FootHeatmapView(isLeft: true, wearZones: zones)
-                    .scaleEffect(0.69)
-                    .frame(width: 75, height: 171)
-            }
-            if let zones = data.rightWearZones {
-                FootHeatmapView(isLeft: false, wearZones: zones)
-                    .scaleEffect(0.69)
-                    .frame(width: 75, height: 171)
-            }
+        HStack(spacing: 6) {
+            FootHeatmapView(isLeft: true, wearZones: data.leftWearZones,
+                            labelDesign: .default, showLabel: false, cellSize: 3, cellSpacing: 0.7)
+            FootHeatmapView(isLeft: false, wearZones: data.rightWearZones,
+                            labelDesign: .default, showLabel: false, cellSize: 3, cellSpacing: 0.7)
         }
     }
 }
 
-// MARK: - Visual meters
-
-/// Segmented LED "pulse" bar — green→yellow→orange→red, lit from the bottom to `value`.
-private struct PulseBar: View {
-    let value: Int
-    var segments: Int = 12
-    var body: some View {
-        let v = max(0, min(100, value))
-        let lit = Int((Double(v) / 100.0 * Double(segments)).rounded())
-        VStack(spacing: 3) {
-            ForEach((0..<segments).reversed(), id: \.self) { i in
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(PulseBar.color(i, segments).opacity(i < lit ? 1.0 : 0.14))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-    }
-    static func color(_ i: Int, _ total: Int) -> Color {
-        let f = Double(i) / Double(max(1, total - 1))
-        if f < 0.5 { return Color(red: 0.18, green: 0.80, blue: 0.44) }
-        if f < 0.72 { return Color(red: 0.95, green: 0.85, blue: 0.20) }
-        if f < 0.88 { return Color(red: 1.0, green: 0.62, blue: 0.04) }
-        return Color(red: 1.0, green: 0.23, blue: 0.19)
-    }
-}
-
-/// Circular ring gauge — arc fills to `value`, score in the center.
 private struct RingMeter: View {
     let value: Int
     let color: Color
@@ -555,29 +539,6 @@ private struct Sparkline: View {
 }
 
 /// Battery meter — fills bottom-up to `value`, with a terminal nub.
-private struct BatteryMeter: View {
-    let value: Int
-    let color: Color
-    var body: some View {
-        GeometryReader { geo in
-            let nub: CGFloat = 4
-            VStack(spacing: 3) {
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(Color.white.opacity(0.35))
-                    .frame(width: geo.size.width * 0.45, height: nub)
-                ZStack(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(Color.white.opacity(0.3), lineWidth: 1.5)
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(color)
-                        .frame(height: (geo.size.height - nub - 3 - 4) * CGFloat(max(0, min(100, value))) / 100)
-                        .padding(2)
-                }
-            }
-        }
-    }
-}
-
 // MARK: - Share screen (export + share sheet)
 
 struct ScorecardShareScreen: View {
@@ -586,6 +547,8 @@ struct ScorecardShareScreen: View {
     @State private var data: ScorecardData?
     @State private var isLoading = true
     @State private var errorMessage: String?
+
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         ZStack {
@@ -603,6 +566,39 @@ struct ScorecardShareScreen: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.clear)
+        // Close + Share: the screen previously rendered the card with no way to
+        // share it (exportAndShare was never wired up) and no close control.
+        .overlay(alignment: .topLeading) {
+            Button(action: { onClose?() ?? dismiss() }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.8))
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.black.opacity(0.55)))
+            }
+            .buttonStyle(.plain)
+            .padding(14)
+        }
+        .overlay(alignment: .bottom) {
+            if data != nil {
+                Button(action: exportAndShare) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("Share")
+                    }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 26)
+                    .padding(.vertical, 12)
+                    .background(Capsule().fill(Color.white))
+                }
+                .buttonStyle(.plain)
+                .padding(.bottom, 18)
+            }
+        }
+        .sheet(item: $shareItem) { file in
+            ShareSheet(items: [file.url])
+        }
         .task { await loadRealScorecard() }
         .presentationBackground(.clear)
     }

@@ -716,18 +716,19 @@ struct WeeklyPlannerSheet: View {
                     Button(action: {
                         Task {
                             guard let uid = Auth.auth().currentUser?.uid else {
-                                saveError = "Not signed in — can't save plan."
-                                dismiss()
+                                saveError = "Not signed in, so the plan can't be saved to your account."
                                 return
                             }
                             let weekId = PlanRepository.shared.weekId(for: Date())
                             do {
                                 try await PlanRepository.shared.saveWeeklyPlan(uid: uid, weekId: weekId, days: weeklyPlans)
                                 saveError = nil
+                                await MainActor.run { dismiss() }
                             } catch {
+                                // Keep the sheet up — dismissing on failure made
+                                // a failed save look identical to a successful one.
                                 saveError = "Failed to save plan: \(error.localizedDescription)"
                             }
-                            await MainActor.run { dismiss() }
                         }
                     }) {
                         Text("Done")
@@ -737,7 +738,7 @@ struct WeeklyPlannerSheet: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
-                
+
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 10) {
                         ForEach(weeklyPlans.indices, id: \.self) { index in
@@ -748,6 +749,14 @@ struct WeeklyPlannerSheet: View {
                     .padding(.bottom, 40)
                 }
             }
+        }
+        .alert("Plan not saved", isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(saveError ?? "")
         }
     }
     
@@ -1081,7 +1090,7 @@ struct DiagnosticRunSheet: View {
     var body: some View {
         ZStack {
             backgroundColor.ignoresSafeArea()
-            
+
             switch step {
             case 0: goalSelectionStep
             case 1: instructionsStep
@@ -1091,8 +1100,15 @@ struct DiagnosticRunSheet: View {
             default: goalSelectionStep
             }
         }
+        // The sheet can be swiped away mid-trial; without this the 10 Hz timer
+        // and GPS kept running forever behind the dismissed sheet.
+        .onDisappear {
+            timer?.invalidate()
+            timer = nil
+            if tracker.isTracking { _ = tracker.stopTracking() }
+        }
     }
-    
+
     // MARK: - Step 0: Goal Selection
     private var goalSelectionStep: some View {
         VStack(spacing: 24) {

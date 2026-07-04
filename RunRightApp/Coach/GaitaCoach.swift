@@ -117,7 +117,8 @@ final class GaitaCoach: ObservableObject {
             excluding: excluding
         ).text
 
-        // Mile markers get a spoken pace note prepended.
+        // Mile markers get a spoken pace note prepended. Pace is rounded to
+        // 5 seconds so every possible sentence exists as a bundled voice clip.
         if case .mileSplit = decision.trigger, let mile = decision.mile {
             if let pace = state.rollingPaceSecPerMile ?? state.currentPaceSecPerMile {
                 text = "Mile \(mile). \(Self.spokenPace(pace)) per mile. " + text
@@ -140,9 +141,12 @@ final class GaitaCoach: ObservableObject {
         return LiveRunState.metersPerMile / speed
     }
 
-    /// "8:45" — read naturally by TTS as "eight forty-five".
+    /// "8:45" — read naturally by TTS as "eight forty-five". Rounded to the
+    /// nearest 5 seconds and clamped to 4:00–19:55 so the phrase always maps
+    /// to a pre rendered voice clip.
     static func spokenPace(_ secPerMile: Double) -> String {
-        let total = Int(secPerMile.rounded())
+        var total = Int((secPerMile / 5).rounded()) * 5
+        total = min(max(total, 4 * 60), 19 * 60 + 55)
         let m = total / 60
         let s = total % 60
         return "\(m):" + String(format: "%02d", s)

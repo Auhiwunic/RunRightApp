@@ -102,20 +102,31 @@ final class CoachChatService {
 
 // MARK: - Chat view
 
+/// Conversation state lives outside the view: the tab views are rebuilt on
+/// every tab switch, which used to wipe the chat and silently drop any
+/// in-flight coach reply.
+@MainActor
+final class CoachChatStore: ObservableObject {
+    static let shared = CoachChatStore()
+    @Published var messages: [CoachMessage] = [
+        CoachMessage(role: .coach, text: "Ask me about your form or your next drill.")
+    ]
+    @Published var sending = false
+}
+
 struct CoachChatView: View {
     var embedded: Bool = false
     var isLocked: Bool = false
     var onLockedTap: (() -> Void)? = nil
 
-    @State private var messages: [CoachMessage] = [
-        CoachMessage(role: .coach, text: "Ask me about your form or your next drill.")
-    ]
+    @ObservedObject private var store = CoachChatStore.shared
     @State private var input = ""
-    @State private var sending = false
+    @StateObject private var voiceInput = CoachVoiceInput()
+    @ObservedObject private var voiceEngine = CoachVoiceEngine.shared
 
     private let starterPrompts = [
         "How was my last run coach?",
-        "What drills should I do to minimize knee pain?",
+        "Which drills fit my focus list?",
         "What should I focus on before my next run?"
     ]
 
@@ -136,11 +147,11 @@ struct CoachChatView: View {
     }
 
     private var canSend: Bool {
-        !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !sending && !isLocked
+        !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !store.sending && !isLocked
     }
 
     private var showStarterPrompts: Bool {
-        messages.count == 1 && !sending
+        store.messages.count == 1 && !store.sending
     }
 
     private var chatContent: some View {
@@ -150,9 +161,11 @@ struct CoachChatView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 42, height: 42)
-                    .shadow(color: Color(hex: "#00FF7F").opacity(sending ? 0.45 : 0.18), radius: sending ? 14 : 7)
-                    .rotationEffect(.degrees(sending ? 360 : 0))
-                    .animation(sending ? .linear(duration: 1.1).repeatForever(autoreverses: false) : .default, value: sending)
+                    .shadow(color: Color(hex: "#00FF7F").opacity(store.sending ? 0.45 : 0.18), radius: store.sending ? 14 : 7)
+                    .rotationEffect(.degrees(store.sending ? 360 : 0))
+                    // nil on the stop leg: 360 snaps to 0 (visually identical)
+                    // instead of animating a full backwards unwind.
+                    .animation(store.sending ? .linear(duration: 1.1).repeatForever(autoreverses: false) : nil, value: store.sending)
 
                 Text("GAITA")
                     .font(.system(size: embedded ? 18 : 24, weight: .bold))
@@ -168,14 +181,14 @@ struct CoachChatView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 12) {
-                        ForEach(messages) { bubble($0) }
-                        if sending {
+                        ForEach(store.messages) { bubble($0) }
+                        if store.sending {
                             HStack {
                                 Text("…")
                                     .font(.system(size: 16, weight: .bold))
                                     .foregroundColor(.white.opacity(0.5))
                                     .padding(.horizontal, 16).padding(.vertical, 10)
-                                    .background(AppTheme.cardBg)
+                                    .background(AppTheme.raisedFill)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                                 Spacer(minLength: 40)
                             }
@@ -185,8 +198,8 @@ struct CoachChatView: View {
                     .padding(.vertical, 8)
                 }
                 .frame(minHeight: embedded ? 220 : nil)
-                .onChange(of: messages.count) { _, _ in
-                    withAnimation { proxy.scrollTo(messages.last?.id, anchor: .bottom) }
+                .onChange(of: store.messages.count) { _, _ in
+                    withAnimation { proxy.scrollTo(store.messages.last?.id, anchor: .bottom) }
                 }
             }
 
@@ -215,17 +228,25 @@ struct CoachChatView: View {
             }
 
             HStack(spacing: 10) {
-                TextField("Message Gaita", text: $input, axis: .vertical)
+                TextField(voiceInput.phase == .recording ? "Listening…" : "Message Gaita", text: $input, axis: .vertical)
                     .font(.system(size: 14))
                     .foregroundColor(.white)
                     .lineLimit(1...4)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(Color.white.opacity(0.07))
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .appRaisedBox(cornerRadius: 18)
                     .disabled(isLocked)
                     .onTapGesture {
                         if isLocked { onLockedTap?() }
+                }
+                if CoachVoiceInput.isSupported {
+                    Button(action: { voiceMessageTapped() }) {
+                        Image(systemName: voiceInput.phase == .recording ? "stop.circle.fill" : "mic.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(voiceInput.phase == .recording ? Color(hex: "#FF5252") : Color(hex: "#00FF7F").opacity(isLocked ? 1 : 0.85))
+                            .symbolEffect(.pulse, isActive: voiceInput.phase == .recording)
+                    }
+                    .disabled(voiceInput.phase == .transcribing || store.sending)
                 }
                 Button(action: { send() }) {
                     Image(systemName: "arrow.up.circle.fill")
@@ -234,21 +255,72 @@ struct CoachChatView: View {
                 }
                 .disabled(!canSend && !isLocked)
             }
-            .padding(embedded ? 14 : 16)
+            .padding(.horizontal, embedded ? 14 : 16)
+            .padding(.top, embedded ? 14 : 16)
+            .padding(.bottom, 6)
+
+            if voiceInput.phase == .transcribing {
+                Text("Transcribing on device…")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.4))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.bottom, 4)
+            } else if case .downloading(let f) = voiceEngine.state {
+                Text("Downloading coach voice \(Int(f * 100))%")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.4))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.bottom, 4)
+            }
+
+            Text("General fitness guidance, not medical advice. See a professional for pain or injury. Voice messages are transcribed on your device; only the text is sent to your coach.")
+                .font(.system(size: 9))
+                .foregroundColor(.white.opacity(0.3))
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, embedded ? 14 : 16)
+                .padding(.bottom, embedded ? 10 : 12)
+        }
+        .task {
+            // Warm the premium coach voice so replies can be spoken aloud.
+            if !isLocked { await CoachVoiceEngine.shared.ensureReady() }
+        }
+        // Live transcription: words land in the input field as you speak.
+        .onChange(of: voiceInput.liveTranscript) { _, text in
+            if voiceInput.phase == .recording {
+                input = text
+            }
         }
     }
 
-    private func send(_ preset: String? = nil) {
+    private func voiceMessageTapped() {
+        if isLocked {
+            onLockedTap?()
+            return
+        }
+        Task {
+            if voiceInput.phase == .recording {
+                if let transcript = await voiceInput.stopAndTranscribe() {
+                    input = transcript
+                    send(spokenReply: true)
+                }
+            } else {
+                await voiceInput.startRecording()
+            }
+        }
+    }
+
+    private func send(_ preset: String? = nil, spokenReply: Bool = false) {
         if isLocked {
             onLockedTap?()
             return
         }
         let text = (preset ?? input).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
-        messages.append(CoachMessage(role: .user, text: text))
+        store.messages.append(CoachMessage(role: .user, text: text))
         input = ""
-        sending = true
-        let history = messages
+        store.sending = true
+        let history = store.messages
         Task {
             let result: String
             do {
@@ -257,8 +329,12 @@ struct CoachChatView: View {
                 result = (error as? LocalizedError)?.errorDescription ?? "Something went wrong."
             }
             await MainActor.run {
-                messages.append(CoachMessage(role: .coach, text: result))
-                sending = false
+                store.messages.append(CoachMessage(role: .coach, text: result))
+                store.sending = false
+            }
+            // Voice in, voice out: speak the reply in the coach's own voice.
+            if spokenReply {
+                await CoachVoiceEngine.shared.speak(result)
             }
         }
     }
@@ -271,49 +347,12 @@ struct CoachChatView: View {
                 .foregroundColor(m.role == .user ? .black : .white.opacity(0.85))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(m.role == .user ? Color(hex: "#00FF7F") : AppTheme.cardBg)
+                .background(m.role == .user ? Color(hex: "#00FF7F") : AppTheme.raisedFill)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .fixedSize(horizontal: false, vertical: true)
             if m.role == .coach { Spacer(minLength: 40) }
         }
         .id(m.id)
-    }
-}
-
-// MARK: - Home entry card (sits where Training Zones was)
-
-struct CoachHomeCard: View {
-    var onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("COACH")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
-                Text("Tell me what you are feeling and I will point you to the right drills.")
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.55))
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 0)
-                HStack {
-                    Text("Ask your coach")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.4))
-                    Spacer()
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(Color(hex: "#00FF7F"))
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .appRaisedSurface(fill: AppTheme.cardBgAlt, cornerRadius: 18, shadowRadius: 6, x: 3, y: 4, lightOpacity: 0.04, darkOpacity: 0.34)
-            }
-            .padding(16)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-            .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20)
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -374,6 +413,9 @@ struct CoachTabView: View {
     private let green = Color(hex: "#00FF7F")
     @ObservedObject private var subs = SubscriptionManager.shared
     @State private var showPaywall = false
+    // Loaded once per appearance — computing this in body JSON-decoded the whole
+    // stored scorecard (snapshot JPEG included) from UserDefaults on every render.
+    @State private var insights: [CombinedInsight] = []
 
     var body: some View {
         ZStack {
@@ -395,7 +437,6 @@ struct CoachTabView: View {
                     .frame(minHeight: 455)
 
                     // TODAY — top focus from the latest analysis
-                    let insights = Array(FormGaitCrossReference.storedInsights().prefix(3))
                     if !insights.isEmpty {
                         sectionHeader("TODAY")
                         ForEach(insights) { focusCard($0) }
@@ -411,6 +452,7 @@ struct CoachTabView: View {
                 .padding(.horizontal, 20)
             }
         }
+        .onAppear { insights = Array(FormGaitCrossReference.storedInsights().prefix(3)) }
         .sheet(isPresented: $showPaywall) { PaywallView() }
     }
 

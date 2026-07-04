@@ -2,11 +2,9 @@
 
 **App:** Gaita
 **Effective date:** June 22, 2026
-**Last updated:** June 22, 2026
+**Last updated:** July 3, 2026
 
-> **Fill before publishing:** `[LEGAL ENTITY NAME]` (the company or individual that owns Gaita), `[CONTACT EMAIL]`, `[BUSINESS ADDRESS]`, `[GOVERNING JURISDICTION]`. Replace every bracketed placeholder below, then have a lawyer review — this template covers the App Store, GDPR, and CCPA/CPRA bases but is not a substitute for legal advice, especially because Gaita handles health and location data.
-
-This Privacy Policy explains how `[LEGAL ENTITY NAME]` ("Gaita," "we," "us," or "our") collects, uses, shares, and protects your information when you use the Gaita mobile application (the "App"). By using the App, you agree to the practices described here.
+This Privacy Policy explains how Arjun Wategaonkar ("Gaita," "we," "us," or "our") collects, uses, shares, and protects your information when you use the Gaita mobile application (the "App"). By using the App, you agree to the practices described here.
 
 ---
 
@@ -16,11 +14,11 @@ This Privacy Policy explains how `[LEGAL ENTITY NAME]` ("Gaita," "we," "us," or 
 
 When the AI Voice Coach is **turned on** during a run:
 
-- **Microphone & Siri:** Gaita listens for voice commands (e.g. "start a run," "what's my pace?"). Speech-to-text is handled by Apple's on-device/Siri speech services under Apple's privacy terms.
+- **No listening:** the voice coach only speaks. Gaita does not listen for voice commands and does not use the microphone for the coach. The microphone is used solely to record the audio track of running videos you choose to capture with the camera.
 - **Cloud text-to-speech:** To speak coaching cues back to you in a natural voice, Gaita sends the **text of the cue** (for example, "Mile 3, pace 8:30, keep it steady") to our voice-generation service — a Gaita-operated proxy that relays the text to our text-to-speech provider (**ElevenLabs**). The provider returns synthesized audio, which Gaita plays and may cache on your device. **No microphone recording of your voice is sent to this service** — only the coaching text Gaita generates.
 - **What is *not* sent:** We do not transmit recordings of your surroundings or conversations, and we do not use the microphone to build a profile of you.
 
-**The voice coach is optional and off by default for cloud audio.** You can disable it at any time. With it off, Gaita falls back to Apple's on-device system voice and nothing is sent to the cloud for speech.
+**The voice coach is on by default and can be turned off at any time in settings.** When cloud voice is unavailable or disabled, Gaita falls back to Apple's on-device system voice and nothing is sent to the cloud for speech.
 
 ---
 
@@ -28,14 +26,14 @@ When the AI Voice Coach is **turned on** during a run:
 
 Gaita is a running-form and training companion. The App analyzes your running form from video, scans your shoe wear, tracks runs, builds a weekly training plan, and (optionally) coaches you by voice.
 
-**Data controller:** `[LEGAL ENTITY NAME]`
-**Contact:** `[CONTACT EMAIL]`
-**Address:** `[BUSINESS ADDRESS]`
+**Data controller:** Arjun Wategaonkar
+**Contact:** arjuncw2009@gmail.com
+**Address:** 18 Kara E, California, USA
 
 ## 2. Information we collect
 
 ### a) Information you provide
-- **Account information:** email address and display name when you create an account or sign in with Google. You may also use the App as an anonymous guest, in which case no account identifiers are collected until you choose to sign in.
+- **Account information:** email address and display name when you create an account or sign in with Google, Apple, or email and password. You may also use the App as a guest: a random anonymous identifier is created so your data can sync, but no email or name is collected until you sign in.
 - **Onboarding profile:** your name, age, biological sex (used for heart-rate zone calculation), self-reported experience level, weekly mileage goal, and chosen training days.
 
 ### b) Health & fitness data
@@ -62,9 +60,10 @@ Gaita is a running-form and training companion. The App analyzes your running fo
 |---|---|---|
 | Running-form / skeleton analysis (pose detection) | On-device (Apple Vision) | **No** |
 | Running metrics (power, impact, efficiency) | On-device | **No** |
-| Step count & workouts (HealthKit) | On-device read | **No** |
+| Step count (HealthKit) | On-device read | **No** |
+| Running workouts (HealthKit) | On-device read; workout summaries (time, distance, duration, average heart rate) synced to your account | Stored in your account (Firebase) |
 | GPS run tracking | On-device; route saved to your account | Stored in your account (Firebase) |
-| **Shoe-wear analysis** | **Cloud — photos sent to OpenAI** | **Yes** (see Section 5) |
+| **Shoe-wear analysis** | **Cloud — photos sent via a Gaita-operated function to OpenAI; a copy is stored in your account's cloud storage until you delete the scan or your account** | **Yes** (see Section 5) |
 | **AI Voice Coach (spoken cues)** | **Cloud — coaching text sent to TTS provider** | **Yes** (see highlighted section) |
 | Account, settings, runs, plan, history | Stored in your account | Stored in Firebase (Google) |
 
@@ -88,9 +87,10 @@ Gaita relies on the following providers, which process certain data on our behal
 |---|---|---|
 | **Google Firebase** (Google LLC) — Authentication, Firestore, Cloud Storage | Account sign-in, storing your settings/runs/plan/history, hosting processed media | Account identifiers, profile, runs, plan, and any media you save to your account |
 | **Google Sign-In** | Optional sign-in | Email, name, Google account identifier |
+| **Sign in with Apple** (Apple Inc.) | Optional sign-in | Email, name, Apple account identifier |
 | **OpenAI** | Shoe-sole **wear analysis** (vision model) | The shoe-sole **photo(s)** you submit for analysis, plus minimal prompt context |
 | **ElevenLabs** (via a Gaita-operated proxy) | AI Voice Coach text-to-speech | The **text** of coaching cues (no recordings of you) |
-| **Apple HealthKit / Siri** | Health data read; voice command recognition | Processed on-device under Apple's terms |
+| **Apple HealthKit** | Health data read | Processed on-device under Apple's terms; workout summaries you sync are stored in your account |
 
 We share information with these providers only to deliver the features you use. We do not authorize them to use your data for their own independent purposes beyond providing the service to us. Please review their policies:
 - Google/Firebase: https://policies.google.com/privacy
@@ -118,7 +118,7 @@ Depending on where you live, you may have the right to:
 
 **EEA/UK (GDPR):** our legal bases are your **consent** (camera, microphone, location, Health, voice coach), **performance of a contract** (providing the App and your account), and our **legitimate interests** (security, diagnostics, improving the App). You may lodge a complaint with your local data protection authority.
 
-To exercise any right, contact us at `[CONTACT EMAIL]`.
+To exercise any right, contact us at arjuncw2009@gmail.com.
 
 ## 8. Apple Health (HealthKit) specific terms
 
@@ -129,7 +129,7 @@ To exercise any right, contact us at `[CONTACT EMAIL]`.
 
 ## 9. Account and data deletion
 
-You can delete your account and associated cloud data from within the App, or by emailing `[CONTACT EMAIL]`. Deleting the App from your device also removes locally stored data (analysis history, cached coach audio, settings). Cloud-stored data tied to your account is deleted on request within `[30]` days, subject to legal retention requirements.
+You can delete your account and associated cloud data from within the App, or by emailing arjuncw2009@gmail.com. Deleting the App from your device also removes locally stored data (analysis history, cached coach audio, settings). Cloud-stored data tied to your account is deleted on request within `[30]` days, subject to legal retention requirements.
 
 ## 10. Children's privacy
 
@@ -141,6 +141,6 @@ We may update this Privacy Policy from time to time. We will revise the "Last up
 
 ## 12. Contact us
 
-`[LEGAL ENTITY NAME]`
-Email: `[CONTACT EMAIL]`
-Address: `[BUSINESS ADDRESS]`
+Arjun Wategaonkar
+Email: arjuncw2009@gmail.com
+Address: 18 Kara E, California, USA

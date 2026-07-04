@@ -19,14 +19,17 @@ final class ScanRepository {
         let shoeId = shoeDocumentId(from: shoeName)
         let doc = shoesCollection(uid: uid).document(shoeId)
 
-        let data: [String: Any] = [
-            "shoeName": shoeName,
-            "createdAt": FieldValue.serverTimestamp()
-        ]
-
-        // Merge so it's safe if it already exists — serverTimestamp won't overwrite
-        // on merge when the field already exists thanks to Firestore merge semantics.
-        try await doc.setData(data, merge: true)
+        // serverTimestamp DOES overwrite on merge, so writing it on every scan
+        // reset createdAt and churned shoe ordering. Stamp it only on creation.
+        let snapshot = try await doc.getDocument()
+        if snapshot.exists {
+            try await doc.setData(["shoeName": shoeName], merge: true)
+        } else {
+            try await doc.setData([
+                "shoeName": shoeName,
+                "createdAt": FieldValue.serverTimestamp()
+            ], merge: true)
+        }
     }
 
     func saveSingleShoeScan(

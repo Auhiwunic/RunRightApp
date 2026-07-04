@@ -27,6 +27,7 @@ struct ScanView: View {
 
     // Separate state for left and right shoe
     @State private var cameraSide: CameraSide?
+    @State private var pendingRightPrompt = false
     // Take Photo vs Choose from Library
     @State private var chooseSide: CameraSide?
     @State private var showLibrary = false
@@ -42,7 +43,7 @@ struct ScanView: View {
     @State private var scrollOffset: CGFloat = 0   // drives the header fade
     @ObservedObject private var scanVM = ScanViewModel.shared
 
-    private let accentLime = Color(hex: "#00FF7F")
+    private let accentLime = AppTheme.analyzePink
     private let backgroundColor = Color(hex: "#1A1A1C")
     private let cardBackground = Color(hex: "#2A2A2E")
     private let cardBackgroundSoft = Color(hex: "#242428")
@@ -103,75 +104,42 @@ struct ScanView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    // ── Two scan buttons ──────────────────────────────────
-                    // Checkmark reflects the currently-viewed day's scan, so it
-                    // persists across tab switches (driven by the shared history).
+                    // ── One guided scan button — left shoe, then right shoe,
+                    // one continuous flow instead of two buttons to hunt for. ──
                     let canScan = !selectedShoe.isEmpty && !isLoadingShoes
                     let leftScanned  = currentHistoryPage?.left != nil
                     let rightScanned = currentHistoryPage?.right != nil
-                    HStack(spacing: 12) {
-                        Button(action: { chooseSide = .left }) {
-                            VStack(spacing: 3) {
-                                HStack(spacing: 6) {
-                                    if isAnalyzingLeft {
-                                        ProgressView()
-                                            .tint(backgroundColor)
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: leftScanned ? "checkmark.circle.fill" : "camera.fill")
-                                            .font(.system(size: 13))
-                                    }
-                                    Text("Left Shoe")
-                                        .font(.system(size: 14, weight: .semibold))
+                    let bothScanned = leftScanned && rightScanned
+                    let isAnalyzing = isAnalyzingLeft || isAnalyzingRight
+                    Button(action: { chooseSide = .left }) {
+                        VStack(spacing: 3) {
+                            HStack(spacing: 8) {
+                                if isAnalyzing {
+                                    ProgressView().tint(backgroundColor).scaleEffect(0.85)
+                                } else {
+                                    Image(systemName: bothScanned ? "checkmark.circle.fill" : "camera.fill")
+                                        .font(.system(size: 14))
                                 }
-                                if isAnalyzingLeft && !leftStatus.isEmpty {
-                                    Text(leftStatus)
-                                        .font(.system(size: 10, weight: .medium))
-                                        .opacity(0.75)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-                                }
+                                Text(bothScanned ? "Rescan Shoes" : "Scan Shoes")
+                                    .font(.system(size: 15, weight: .semibold))
                             }
-                            .foregroundColor(canScan ? backgroundColor : .white.opacity(0.4))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(canScan ? (leftScanned ? accentLime.opacity(0.7) : accentLime)
-                                                : cardBackgroundSoft)
-                            .cornerRadius(16)
-                        }
-                        .disabled(isAnalyzingLeft || !canScan)
-
-                        Button(action: { chooseSide = .right }) {
-                            VStack(spacing: 3) {
-                                HStack(spacing: 6) {
-                                    if isAnalyzingRight {
-                                        ProgressView()
-                                            .tint(backgroundColor)
-                                            .scaleEffect(0.8)
-                                    } else {
-                                        Image(systemName: rightScanned ? "checkmark.circle.fill" : "camera.fill")
-                                            .font(.system(size: 13))
-                                    }
-                                    Text("Right Shoe")
-                                        .font(.system(size: 14, weight: .semibold))
-                                }
-                                if isAnalyzingRight && !rightStatus.isEmpty {
-                                    Text(rightStatus)
-                                        .font(.system(size: 10, weight: .medium))
-                                        .opacity(0.75)
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-                                }
+                            if isAnalyzing {
+                                Text(isAnalyzingLeft
+                                     ? (leftStatus.isEmpty ? "Left shoe…" : "Left — \(leftStatus)")
+                                     : (rightStatus.isEmpty ? "Right shoe…" : "Right — \(rightStatus)"))
+                                    .font(.system(size: 10, weight: .medium))
+                                    .opacity(0.75)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
                             }
-                            .foregroundColor(canScan ? backgroundColor : .white.opacity(0.4))
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(canScan ? (rightScanned ? accentLime.opacity(0.7) : accentLime)
-                                                : cardBackgroundSoft)
-                            .cornerRadius(16)
                         }
-                        .disabled(isAnalyzingRight || !canScan)
+                        .foregroundColor(canScan ? backgroundColor : .white.opacity(0.4))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(canScan ? accentLime : cardBackgroundSoft)
+                        .cornerRadius(16)
                     }
+                    .disabled(isAnalyzing || !canScan)
                     .padding(.horizontal, 20)
 
                     // ── Per-shoe error cards ──────────────────────────────
@@ -258,9 +226,18 @@ struct ScanView: View {
             .coordinateSpace(name: "scanScroll")
             .onPreferenceChange(ScrollOffsetKey.self) { scrollOffset = $0 }
         }
-        .fullScreenCover(item: $cameraSide) { side in
+        .fullScreenCover(item: $cameraSide, onDismiss: {
+            // Present the right-shoe prompt only after the camera cover has
+            // fully dismissed — requesting it on a timer while the cover was
+            // still animating away made UIKit silently drop the dialog.
+            if pendingRightPrompt {
+                pendingRightPrompt = false
+                chooseSide = .right
+            }
+        }) { side in
             ShoeCameraView(side: side.rawValue) { image in
                 runScan(image: image, side: side.rawValue)
+                if side == .left { pendingRightPrompt = true }
             }
         }
         .confirmationDialog(
@@ -278,7 +255,10 @@ struct ScanView: View {
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let img = UIImage(data: data) {
-                    await MainActor.run { runScan(image: img, side: side.rawValue) }
+                    await MainActor.run {
+                        runScan(image: img, side: side.rawValue)
+                        advanceToRightIfNeeded(after: side)   // picker path: delay-based
+                    }
                 }
                 await MainActor.run { libraryItem = nil; librarySide = nil }
             }
@@ -325,6 +305,16 @@ struct ScanView: View {
             Button("Cancel", role: .cancel) { newShoeName = "" }
         } message: {
             Text("Enter a name for your shoe.")
+        }
+    }
+
+    /// After picking the left sole from the photo library, prompt for the right
+    /// automatically. The camera path uses the cover's onDismiss instead; the
+    /// picker offers no dismissal hook, so this waits out its dismissal animation.
+    private func advanceToRightIfNeeded(after side: CameraSide) {
+        guard side == .left else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            chooseSide = .right
         }
     }
 
@@ -636,7 +626,7 @@ struct ScanView: View {
                 label: "Pronation",
                 value: pronationType,
                 valueColor: pronationColor,
-                cardBg: cardBackgroundSoft
+                guide: MetricGuide.pronation
             )
 
             ScanStatCard(
@@ -645,7 +635,7 @@ struct ScanView: View {
                 value: symmetryValue,
                 isSymmetry: true,
                 accent: accentLime,
-                cardBg: cardBackgroundSoft
+                guide: MetricGuide.wearSymmetry
             )
         }
     }
@@ -701,21 +691,11 @@ struct ScanView: View {
                     .font(.system(size: 11, weight: .regular))
                     .foregroundColor(.white.opacity(0.5))
                     .fixedSize(horizontal: false, vertical: true)
+                Text("General fitness guidance, not medical advice. See a professional for pain or injury.")
+                    .font(.system(size: 9))
+                    .foregroundColor(.white.opacity(0.3))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-        }
-    }
-    
-    private func analysisRow(label: String, value: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Text(label)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(accentLime.opacity(0.8))
-                .frame(width: 60, alignment: .leading)
-            Text(value)
-                .font(.system(size: 12, weight: .regular))
-                .foregroundColor(.white.opacity(0.85))
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
     
@@ -753,10 +733,14 @@ struct FootHeatmapView: View {
     let isLeft: Bool
     var wearZones: WearZoneData?
     var labelDesign: Font.Design = .monospaced
-    
+    var showLabel: Bool = true
+    /// Cell metrics are tunable so the map can render small (Analyze mini card)
+    /// with the exact same shape and blending as the full scan sheet.
+    var cellSize: CGFloat = 5
+    var cellSpacing: CGFloat = 1
+
     private let columns = 16
     private let rows = 33
-    private let cellSize: CGFloat = 5
     private let cornerRadius: CGFloat = 1.5
     private let blendRadius = 3          // wider neighborhood → smoother gradient
     private let blendPasses = 3          // more passes → softer color transitions
@@ -812,16 +796,18 @@ struct FootHeatmapView: View {
         let displayGrid = buildDisplayColorGrid()
         
         VStack(spacing: 8) {
-            Text(isLeft ? "Left" : "Right")
-                .font(.system(size: 13, weight: .bold, design: labelDesign))
-                .foregroundColor(.white)
-                .textCase(.uppercase)
-                .tracking(0.5)
+            if showLabel {
+                Text(isLeft ? "Left" : "Right")
+                    .font(.system(size: 13, weight: .bold, design: labelDesign))
+                    .foregroundColor(.white)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+            }
             
             // Simple VStack + HStack grid (more reliable than LazyVGrid)
-            VStack(spacing: 1) {
+            VStack(spacing: cellSpacing) {
                 ForEach(0..<rows, id: \.self) { row in
-                    HStack(spacing: 1) {
+                    HStack(spacing: cellSpacing) {
                         ForEach(0..<columns, id: \.self) { col in
                             RoundedRectangle(cornerRadius: cornerRadius)
                                 .fill(displayGrid[row][col])
@@ -1165,28 +1151,44 @@ struct ScanStatCard: View {
     var isSymmetry: Bool = false
     var accent: Color = Color(hex: "#00FF7F")
     var valueColor: Color = .white   // color the value (e.g. red/orange for pronation)
-    var cardBg: Color = Color(hex: "#242428")
+    var guide: MetricGuideEntry? = nil
+    @State private var showGuide = false
 
     var body: some View {
-        VStack(spacing: 8) {
-            if let icon {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundColor(accent)
+        Button(action: { showGuide = true }) {
+            VStack(spacing: 8) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(accent)
+                }
+
+                HStack(spacing: 3) {
+                    Text(label)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.white.opacity(0.5))
+                    if guide != nil {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 8))
+                            .foregroundColor(.white.opacity(0.28))
+                    }
+                }
+
+                Text(value)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(valueColor)
             }
-
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
-
-            Text(value)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(valueColor)
+            .frame(maxWidth: .infinity, minHeight: 90)
+            .padding(.vertical, 14)
+            .appRaisedBox(cornerRadius: 14)
         }
-        .frame(maxWidth: .infinity, minHeight: 90)
-        .padding(.vertical, 14)
-        .background(cardBg)
-        .cornerRadius(14)
+        .buttonStyle(.plain)
+        .disabled(guide == nil)
+        .sheet(isPresented: $showGuide) {
+            if let guide {
+                MetricGuideSheet(entry: guide, accent: accent)
+            }
+        }
     }
 }
 

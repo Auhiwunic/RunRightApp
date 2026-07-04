@@ -5,13 +5,14 @@
 
 import Foundation
 
-/// Cache → cloud (and cache write) → on-device system voice.
+/// Bundled coach voice → cache → cloud (and cache write) → system voice.
 @MainActor
 final class CompositeSpeechBackend: SpeechBackend {
     private(set) var displayName: String
     private let mode: SpeechVoiceMode
     private let systemBackend: AVSpeechBackend
     private let cloudBackend: CloudTTSSpeechBackend?
+    private let bundledBackend: LewisVoiceBackend?
     private let player: AudioPlaybackController
     private let voiceName: String
 
@@ -27,6 +28,7 @@ final class CompositeSpeechBackend: SpeechBackend {
         self.mode = mode
         self.systemBackend = systemBackend
         self.cloudBackend = cloudBackend
+        self.bundledBackend = LewisVoiceBackend.isAvailable ? LewisVoiceBackend(player: player) : nil
         self.player = player
         self.voiceName = voiceName
         self.displayName = systemBackend.displayName
@@ -35,6 +37,15 @@ final class CompositeSpeechBackend: SpeechBackend {
     func speak(_ text: String) async throws {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw SpeechBackendError.emptyText }
+
+        // The bundled coach voice covers every scripted cue and costs nothing —
+        // try it first in every mode; unknown sentences fall through.
+        if let bundledBackend, LewisVoiceBackend.clipSequence(for: trimmed) != nil {
+            lastUsedLabel = bundledBackend.displayName
+            try await bundledBackend.speak(trimmed)
+            displayName = lastUsedLabel
+            return
+        }
 
         switch mode {
         case .system:
@@ -87,6 +98,7 @@ final class CompositeSpeechBackend: SpeechBackend {
     }
 
     func stop() {
+        bundledBackend?.stop()
         player.stop()
         cloudBackend?.stop()
         systemBackend.stop()

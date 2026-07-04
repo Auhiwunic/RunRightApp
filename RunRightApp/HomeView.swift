@@ -20,7 +20,7 @@ struct HomeView: View {
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
     @State private var scrollOffset: CGFloat = 0   // drives the header fade
-    @State private var showCoach = false
+    private static var didAnimateEntrance = false
 
     var body: some View {
         NavigationStack {
@@ -68,21 +68,13 @@ struct HomeView: View {
                         .opacity(visibleSections[2] ? 1 : 0)
                         .offset(y: visibleSections[2] ? 0 : 18)
                     
-                    GeometryReader { geo in
-                        let totalWidth = geo.size.width - 12
-                        let cardHeight = geo.size.height
-                        HStack(alignment: .top, spacing: 12) {
-                            CoachHomeCard(onTap: onOpenCoach)
-                                .frame(width: totalWidth * 0.78, height: cardHeight)
-                            
-                            VStack(spacing: 12) {
-                                runningFormScoreCard
-                                shoeWearStatusCard
-                            }
-                            .frame(width: totalWidth * 0.22, height: cardHeight)
-                        }
+                    // RUNS and MILES share this row at equal height; the
+                    // coach card moved out — Coach has its own tab.
+                    HStack(spacing: 12) {
+                        runningFormScoreCard
+                        shoeWearStatusCard
                     }
-                    .frame(height: 220)
+                    .frame(height: 104)
                     .padding(.horizontal, 20)
                     .opacity(visibleSections[3] ? 1 : 0)
                     .offset(y: visibleSections[3] ? 0 : 18)
@@ -124,10 +116,15 @@ struct HomeView: View {
         .refreshable {
             await vm.load()
         }
-        .sheet(isPresented: $showCoach) {
-            CoachChatView()
-        }
         .onAppear {
+            // Stagger the entrance once per app session — the tab views are
+            // rebuilt on every switch, so without the flag the whole Home page
+            // blinked invisible and re-animated every time the user came back.
+            if Self.didAnimateEntrance {
+                visibleSections = Array(repeating: true, count: visibleSections.count)
+                return
+            }
+            Self.didAnimateEntrance = true
             for i in 0..<visibleSections.count {
                 DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.15) {
                     withAnimation(.easeOut(duration: 0.4)) {
@@ -583,240 +580,6 @@ struct StepsProgressRing: View {
 }
 
 
-// MARK: - Circular Progress View
-struct CircularProgressView: View {
-    private let ringSize: CGFloat = 280
-    private let strokeWidth: CGFloat = 20
-    private let progress: CGFloat = 0.75 // 75% progress
-    private let outerRingSize: CGFloat = 324  // Outer circle for week markers
-    
-    var body: some View {
-        ZStack {
-            // Outer circle connecting the week segments (white)
-            Circle()
-                .stroke(
-                    Color.white.opacity(0.3),
-                    lineWidth: 1
-                )
-                .frame(width: outerRingSize, height: outerRingSize)
-            
-            // Week segments (7 marks connecting outer circle to progress ring, white)
-            ForEach(0..<7, id: \.self) { index in
-                Rectangle()
-                    .fill(Color.white.opacity(0.3))
-                    .frame(width: 1, height: (outerRingSize - ringSize) / 2 + 2)
-                    .offset(y: -((outerRingSize + ringSize) / 4))
-                    .rotationEffect(.degrees(Double(index) * 51.43))
-            }
-            
-            // Background ring (inner, for the progress)
-            Circle()
-                .stroke(
-                    Color(hex: "#1a2a4a").opacity(0.4),
-                    lineWidth: strokeWidth
-                )
-                .frame(width: ringSize - strokeWidth, height: ringSize - strokeWidth)
-            
-            // Progress ring with blue → neon green → yellow gradient
-            Circle()
-                .trim(from: 0, to: progress)
-                .stroke(
-                    AngularGradient(
-                        stops: [
-                            .init(color: Color(hex: "#0a1a3d"), location: 0.0),
-                            .init(color: Color(hex: "#1a3a6e"), location: 0.12),
-                            .init(color: Color(hex: "#2563EB"), location: 0.25),
-                            .init(color: Color(hex: "#00CED1"), location: 0.4),
-                            .init(color: Color(hex: "#00FF7F"), location: 0.55),
-                            .init(color: Color(hex: "#39FF14"), location: 0.7),
-                            .init(color: Color(hex: "#ADFF2F"), location: 0.85),
-                            .init(color: Color(hex: "#FFFF00"), location: 1.0)
-                        ],
-                        center: .center,
-                        startAngle: .degrees(-90),
-                        endAngle: .degrees(270)
-                    ),
-                    style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round)
-                )
-                .frame(width: ringSize - strokeWidth, height: ringSize - strokeWidth)
-                .rotationEffect(.degrees(-90))
-            
-            // Center content
-            VStack(spacing: 0) {
-                // Runs
-                VStack(spacing: 2) {
-                    Text("4")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.white)
-                    Text("Runs")
-                        .font(.system(size: 9, weight: .regular))
-                        .foregroundColor(.white.opacity(0.4))
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-                }
-                .padding(.vertical, 4)
-                
-                // Divider
-                Rectangle()
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 160, height: 1)
-                
-                // Miles (center, BOLD and LARGE)
-                VStack(spacing: 2) {
-                    Text("23 mi")
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.white)
-                    Text("This Week")
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundColor(.white.opacity(0.4))
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-                }
-                .padding(.vertical, 14)
-                
-                // Divider
-                Rectangle()
-                    .fill(Color.white.opacity(0.15))
-                    .frame(width: 160, height: 1)
-                
-                // Time
-                VStack(spacing: 2) {
-                    Text("3h 42m")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.white)
-                    Text("Time")
-                        .font(.system(size: 9, weight: .regular))
-                        .foregroundColor(.white.opacity(0.4))
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-                }
-                .padding(.vertical, 4)
-            }
-        }
-        .frame(width: outerRingSize + 10, height: outerRingSize + 10)
-    }
-}
-
-// MARK: - Home Section Card
-struct HomeSectionCard<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
-            
-            content
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 14, shadowRadius: 9, x: 5, y: 6)
-    }
-}
-
-// MARK: - Weekly Plan Row (simplified, elegant like the dial)
-struct WeeklyPlanRow: View {
-    private let accentCyan = Color(hex: "#00CED1")
-    
-    private let days: [(day: String, workout: String, isCurrent: Bool)] = [
-        ("Mon", "5K Easy", false),
-        ("Tue", "Rest", false),
-        ("Wed", "Intervals", false),
-        ("Thu", "Rest", false),
-        ("Fri", "3K Easy", false),
-        ("Sat", "Long Run", true),
-        ("Sun", "Rest", false)
-    ]
-    
-    var body: some View {
-        HStack(spacing: 4) {
-            ForEach(days, id: \.day) { day, workout, isCurrent in
-                VStack(alignment: .leading, spacing: 8) {
-                    // Day
-                    Text(day)
-                        .font(.system(size: 10, weight: .regular))
-                        .foregroundColor(.white.opacity(0.4))
-                        .textCase(.uppercase)
-                        .tracking(0.5)
-                    
-                    // Workout
-                    Text(workout)
-                        .font(.system(size: 14, weight: .regular))
-                        .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    
-                    // Current day indicator (subtle)
-                    if isCurrent {
-                        Rectangle()
-                            .fill(accentCyan)
-                            .frame(height: 2)
-                            .cornerRadius(1)
-                    } else {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(height: 2)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(isCurrent ? Color.white.opacity(0.05) : Color.clear)
-                )
-            }
-        }
-    }
-}
-
-// MARK: - Today's Activity Content (simplified, elegant)
-struct TodaysActivityContent: View {
-    private let accentCyan = Color(hex: "#00CED1")
-    
-    var body: some View {
-        HStack(spacing: 0) {
-            // Mini map with route
-            RouteMapView(coordinates: [], isTracking: false)
-                .frame(width: 100, height: 100)
-                .cornerRadius(8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                )
-            
-            Spacer().frame(width: 16)
-            
-            // Details
-            VStack(alignment: .leading, spacing: 6) {
-                Text("0.0 km")
-                    .font(.system(size: 20, weight: .regular))
-                    .foregroundColor(.white)
-                
-                Text("No activity yet")
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.white.opacity(0.5))
-            }
-            
-            Spacer()
-            
-            // Simple Run button
-            Button(action: {}) {
-                Text("Run")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(accentCyan)
-                    .cornerRadius(8)
-            }
-        }
-    }
-}
-
 // MARK: - Monthly Heatmap View
 struct MonthlyHeatmapView: View {
     /// Miles ran per day-of-month (key = day number 1...31, value = miles)
@@ -903,30 +666,6 @@ struct MonthlyHeatmapView: View {
         } else {
             return accentLime.opacity(0.25)  // Just started — light
         }
-    }
-}
-
-// MARK: - Diagnostic Run Content (simplified, elegant)
-// MARK: - Section Header (no cyan rail, clean simple)
-struct HomeSectionHeader: View {
-    let title: String
-    let accent: Color
-    
-    var body: some View {
-        Text(title)
-            .font(AppTheme.subtitleFont)
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-    }
-}
-
-// MARK: - Section Divider
-struct HomeSectionDivider: View {
-    var body: some View {
-        Rectangle()
-            .fill(Color.white.opacity(0.06))
-            .frame(height: 1)
     }
 }
 

@@ -31,11 +31,19 @@ final class PlanRepository {
         return calendar.startOfDay(for: start)
     }
 
+    // Fixed-locale formatter: weekId is a Firestore DOCUMENT ID, so it must
+    // format identically on every device — a non-Gregorian or 12/24h-quirky
+    // locale would silently split one user's plans across different ids.
+    private static let weekIdFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.calendar = Calendar(identifier: .gregorian)
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+
     func weekId(for date: Date = Date()) -> String {
-        let start = weekStart(for: date)
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: start)
+        Self.weekIdFormatter.string(from: weekStart(for: date))
     }
 
     func loadWeeklyPlan(uid: String, weekId: String) async throws -> [DayPlan]? {

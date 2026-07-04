@@ -201,6 +201,105 @@ export const analyzeShoe = onRequest(
   }
 );
 
+// Gaita coach chat proxy. The app POSTs { message, context, history } with a
+// Firebase ID token; this verifies the user, grounds the model in the runner's
+// real form/gait data and the drills library (all sent by the app in
+// `context`), and returns { reply }. Key stays server-side, same as analyzeShoe.
+export const coachChat = onRequest(
+  {
+    secrets: [OPENAI_API_KEY],
+    cors: true,
+    timeoutSeconds: 60,
+    memory: "256MiB",
+    enforceAppCheck: true,
+    invoker: "public",
+  },
+  async (req, res) => {
+    if (req.method !== "POST") {
+      res.status(405).json({ error: "Use POST." });
+      return;
+    }
+
+    const authHeader = req.get("Authorization") || "";
+    const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!idToken) {
+      res.status(401).json({ error: "Missing auth token." });
+      return;
+    }
+    let uid;
+    try {
+      const decoded = await admin.auth().verifyIdToken(idToken);
+      uid = decoded.uid;
+    } catch (e) {
+      res.status(401).json({ error: "Invalid auth token." });
+      return;
+    }
+
+    if (!(await withinRateLimit(uid))) {
+      res.status(429).json({ error: "Too many requests. Please try again later." });
+      return;
+    }
+
+    const { message, context, history } = req.body || {};
+    if (!message || typeof message !== "string" || message.length > 2000) {
+      res.status(400).json({ error: "Provide a message under 2000 characters." });
+      return;
+    }
+
+    const system = `You are Gaita, a running form coach inside the Gaita iOS app. Style: a rally co driver crossed with a good club coach. Direct, brief, specific, warm underneath. Keep replies under 120 words. Ground every answer in the runner's own data from the context JSON (form cue scores 0 to 100, gait type, strike pattern, focus insights) and recommend only drills that appear in the context drills list, with their dosage. Plain language. Never use hyphens, dashes, or bullet lists in replies — write flowing sentences. You give general fitness guidance, not medical advice: never diagnose, and if the runner mentions pain or injury, tell them to see a professional. Do not invent data that is not in the context.
+
+RUNNER CONTEXT JSON:
+${JSON.stringify(context || {}).slice(0, 6000)}`;
+
+    const messages = [{ role: "system", content: system }];
+    if (Array.isArray(history)) {
+      for (const h of history.slice(-8)) {
+        const role = h?.role === "user" ? "user" : "assistant";
+        const text = String(h?.text || "").slice(0, 1000);
+        if (text) messages.push({ role, content: text });
+      }
+    }
+    // The app includes the latest user message in history; only append it if
+    // it is not already the last turn.
+    const last = messages[messages.length - 1];
+    if (!(last && last.role === "user" && last.content === message)) {
+      messages.push({ role: "user", content: String(message) });
+    }
+
+    try {
+      const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENAI_API_KEY.value()}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4.1-mini",
+          messages,
+          max_tokens: 400,
+          temperature: 0.6,
+        }),
+      });
+
+      if (!openaiRes.ok) {
+        const errText = await openaiRes.text();
+        res.status(502).json({ error: `OpenAI error: ${errText}` });
+        return;
+      }
+
+      const data = await openaiRes.json();
+      const reply = data?.choices?.[0]?.message?.content?.trim();
+      if (!reply) {
+        res.status(502).json({ error: "No content from OpenAI." });
+        return;
+      }
+      res.status(200).json({ reply });
+    } catch (e) {
+      res.status(500).json({ error: String(e?.message || e) });
+    }
+  }
+);
+
 // Server-side account-data cascade. Fires when a Firebase Auth user is deleted
 // (from the in-app "Delete Account" flow) and removes everything under
 // users/{uid} in Firestore plus the user's Storage folder. This is the reliable

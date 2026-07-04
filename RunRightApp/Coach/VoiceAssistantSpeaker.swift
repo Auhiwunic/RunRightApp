@@ -85,7 +85,11 @@ final class VoiceAssistantSpeaker: ObservableObject {
         system: AVSpeechBackend,
         player: AudioPlaybackController
     ) -> CompositeSpeechBackend {
-        let mode: SpeechVoiceMode = CoachTTSConfig.cloudBaseURL != nil ? .hybrid : .system
+        // Apple's on-device voice is the default: free, offline, nothing sent
+        // off device. The cloud voice stays behind an explicit opt-in flag —
+        // do not flip it on until the TTS worker authenticates callers.
+        let cloudOptIn = UserDefaults.standard.bool(forKey: "coach.cloudVoice.v1")
+        let mode: SpeechVoiceMode = (cloudOptIn && CoachTTSConfig.cloudBaseURL != nil) ? .hybrid : .system
         let cloud: CloudTTSSpeechBackend?
         if let baseURL = CoachTTSConfig.cloudBaseURL {
             cloud = CloudTTSSpeechBackend(baseURL: baseURL, player: player)

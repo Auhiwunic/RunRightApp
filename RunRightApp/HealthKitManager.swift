@@ -129,6 +129,7 @@ final class HealthKitManager: ObservableObject {
             // Fetch existing run start times from Firestore to avoid duplicates
             let existingTimes = await fetchExistingRunTimes(uid: uid, since: since)
 
+            var savedAny = false
             for workout in workouts {
                 let startTime = workout.startDate
                 // Skip if we already have a run within 60 seconds of this workout's start
@@ -155,10 +156,13 @@ final class HealthKitManager: ObservableObject {
                 )
 
                 try? await RunRepository.shared.saveRunDTO(dto, uid: uid)
+                savedAny = true
             }
 
-            // Post notification so HomeView refreshes
-            if !workouts.isEmpty {
+            // Refresh listeners only when something was actually written —
+            // posting on every app open re-ran the whole Home/Profile reload
+            // cascade even when all workouts were duplicates.
+            if savedAny {
                 NotificationCenter.default.post(name: .runSaved, object: nil)
             }
         } catch {

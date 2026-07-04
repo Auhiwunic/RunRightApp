@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		C0D0E0012FEEAA0000B1047C /* Neumorphic in Frameworks */ = {isa = PBXBuildFile; productRef = C0D0E0022FEEAA0000B1047C /* Neumorphic */; };
+		A1000FC1 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = A3000FC1 /* FluidAudio */; };
+		A1000FC2 /* bm_lewis.bin in Resources */ = {isa = PBXBuildFile; fileRef = A2000FC2 /* bm_lewis.bin */; };
 		068086E02FEE093100B1047C /* MuscleMap in Frameworks */ = {isa = PBXBuildFile; productRef = 068086DF2FEE093100B1047C /* MuscleMap */; };
 		143F8B49F0F7B8BC689097D1 /* CoachTTSConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1025D171D9606F73B94A903 /* CoachTTSConfig.swift */; };
 		23447C4B23CB87AEA46322F4 /* WeeklyPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55F5F8A2E3021002B52B86CF /* WeeklyPlanView.swift */; };
@@ -48,7 +50,18 @@
 		A1000E03 /* DrillsLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E03 /* DrillsLibrary.swift */; };
 		A1000E05 /* Subscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E05 /* Subscriptions.swift */; };
 		A1000E06 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E06 /* PaywallView.swift */; };
+		A1000FA1 /* LegalDocs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FA1 /* LegalDocs.swift */; };
+		A1000FD1 /* FormReferenceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FD1 /* FormReferenceModel.swift */; };
+		A1000FD2 /* GaitCycleChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FD2 /* GaitCycleChart.swift */; };
+		A1000FB1 /* LewisVoiceBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FB1 /* LewisVoiceBackend.swift */; };
+		A1000FC3 /* CoachVoiceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FC3 /* CoachVoiceEngine.swift */; };
+		A1000FC4 /* CoachVoiceInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FC4 /* CoachVoiceInput.swift */; };
+		A1000FB2 /* LewisVoice in Resources */ = {isa = PBXBuildFile; fileRef = A2000FB2 /* LewisVoice */; };
+		A1000FA2 /* PRIVACY_POLICY.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA2 /* PRIVACY_POLICY.md */; };
+		A1000FA3 /* TERMS_AND_CONDITIONS.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA3 /* TERMS_AND_CONDITIONS.md */; };
+		A1000FA4 /* LICENSES.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA4 /* LICENSES.md */; };
 		A1000E04 /* CoachChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E04 /* CoachChat.swift */; };
+		A1000E99 /* MetricGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E99 /* MetricGuide.swift */; };
 		A100000F /* RunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* RunView.swift */; };
 		A1000010 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* ProfileView.swift */; };
 		A1000013 /* HeartRateZonesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* HeartRateZonesManager.swift */; };
@@ -135,7 +148,19 @@
 		A2000E03 /* DrillsLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillsLibrary.swift; sourceTree = "<group>"; };
 		A2000E05 /* Subscriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscriptions.swift; sourceTree = "<group>"; };
 		A2000E06 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		A2000FA1 /* LegalDocs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocs.swift; sourceTree = "<group>"; };
+		A2000FD1 /* FormReferenceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormReferenceModel.swift; sourceTree = "<group>"; };
+		A2000FD2 /* GaitCycleChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaitCycleChart.swift; sourceTree = "<group>"; };
+		A2000FB1 /* LewisVoiceBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/LewisVoiceBackend.swift; sourceTree = "<group>"; };
+		A2000FC3 /* CoachVoiceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/CoachVoiceEngine.swift; sourceTree = "<group>"; };
+		A2000FC4 /* CoachVoiceInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/CoachVoiceInput.swift; sourceTree = "<group>"; };
+		A2000FB2 /* LewisVoice */ = {isa = PBXFileReference; lastKnownFileType = folder; path = LewisVoice; sourceTree = "<group>"; };
+		A2000FC2 /* bm_lewis.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = bm_lewis.bin; sourceTree = "<group>"; };
+		A2000FA2 /* PRIVACY_POLICY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = PRIVACY_POLICY.md; path = ../legal/PRIVACY_POLICY.md; sourceTree = "<group>"; };
+		A2000FA3 /* TERMS_AND_CONDITIONS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = TERMS_AND_CONDITIONS.md; path = ../legal/TERMS_AND_CONDITIONS.md; sourceTree = "<group>"; };
+		A2000FA4 /* LICENSES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = LICENSES.md; path = ../legal/LICENSES.md; sourceTree = "<group>"; };
 		A2000E04 /* CoachChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachChat.swift; sourceTree = "<group>"; };
+		A2000E99 /* MetricGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricGuide.swift; sourceTree = "<group>"; };
 		A2000010 /* RunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunView.swift; sourceTree = "<group>"; };
 		A2000011 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		A2000013 /* HeartRateZonesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZonesManager.swift; sourceTree = "<group>"; };
@@ -189,6 +214,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0D0E0012FEEAA0000B1047C /* Neumorphic in Frameworks */,
+				A1000FC1 /* FluidAudio in Frameworks */,
 				068086E02FEE093100B1047C /* MuscleMap in Frameworks */,
 				2BF80303E1FF6715E7B2945F /* Pods_RunRightApp.framework in Frameworks */,
 				AE000001 /* HealthKit.framework in Frameworks */,
@@ -296,7 +322,19 @@
 				A2000E03 /* DrillsLibrary.swift */,
 				A2000E05 /* Subscriptions.swift */,
 				A2000E06 /* PaywallView.swift */,
+				A2000FA1 /* LegalDocs.swift */,
+				A2000FD1 /* FormReferenceModel.swift */,
+				A2000FD2 /* GaitCycleChart.swift */,
+				A2000FB1 /* LewisVoiceBackend.swift */,
+				A2000FC3 /* CoachVoiceEngine.swift */,
+				A2000FC4 /* CoachVoiceInput.swift */,
+				A2000FB2 /* LewisVoice */,
+				A2000FC2 /* bm_lewis.bin */,
+				A2000FA2 /* PRIVACY_POLICY.md */,
+				A2000FA3 /* TERMS_AND_CONDITIONS.md */,
+				A2000FA4 /* LICENSES.md */,
 				A2000E04 /* CoachChat.swift */,
+				A2000E99 /* MetricGuide.swift */,
 				A2000010 /* RunView.swift */,
 				A2000016 /* ActiveRunView.swift */,
 				A2000017 /* PoseDetection.swift */,
@@ -388,6 +426,7 @@
 			packageReferences = (
 				C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */,
 				068086DE2FEE093100B1047C /* XCRemoteSwiftPackageReference "MuscleMap" */,
+				A3000FC2 /* XCRemoteSwiftPackageReference "FluidAudio" */,
 			);
 			productRefGroup = A5000003 /* Products */;
 			projectDirPath = "";
@@ -406,6 +445,11 @@
 				A100000B /* Assets.xcassets in Resources */,
 				A1000018 /* Models/pose_landmarker_heavy.task in Resources */,
 				A1000032 /* GoogleService-Info.plist in Resources */,
+				A1000FA2 /* PRIVACY_POLICY.md in Resources */,
+				A1000FB2 /* LewisVoice in Resources */,
+				A1000FC2 /* bm_lewis.bin in Resources */,
+				A1000FA3 /* TERMS_AND_CONDITIONS.md in Resources */,
+				A1000FA4 /* LICENSES.md in Resources */,
 				A1000039 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -494,7 +538,14 @@
 				A1000E03 /* DrillsLibrary.swift in Sources */,
 				A1000E05 /* Subscriptions.swift in Sources */,
 				A1000E06 /* PaywallView.swift in Sources */,
+				A1000FA1 /* LegalDocs.swift in Sources */,
+				A1000FD1 /* FormReferenceModel.swift in Sources */,
+				A1000FD2 /* GaitCycleChart.swift in Sources */,
+				A1000FB1 /* LewisVoiceBackend.swift in Sources */,
+				A1000FC3 /* CoachVoiceEngine.swift in Sources */,
+				A1000FC4 /* CoachVoiceInput.swift in Sources */,
 				A1000E04 /* CoachChat.swift in Sources */,
+				A1000E99 /* MetricGuide.swift in Sources */,
 				A100000F /* RunView.swift in Sources */,
 				A1000016 /* ActiveRunView.swift in Sources */,
 				A1000010 /* ProfileView.swift in Sources */,
@@ -678,7 +729,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RunRightApp/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Corsa;
+				INFOPLIST_KEY_CFBundleDisplayName = Gaita;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -711,7 +762,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = RunRightApp/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = Corsa;
+				INFOPLIST_KEY_CFBundleDisplayName = Gaita;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -770,6 +821,14 @@
 				minimumVersion = 1.6.4;
 			};
 		};
+		A3000FC2 /* XCRemoteSwiftPackageReference "FluidAudio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/FluidInference/FluidAudio.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.15.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -777,6 +836,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */;
 			productName = Neumorphic;
+		};
+		A3000FC1 /* FluidAudio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A3000FC2 /* XCRemoteSwiftPackageReference "FluidAudio" */;
+			productName = FluidAudio;
 		};
 		068086DF2FEE093100B1047C /* MuscleMap */ = {
 			isa = XCSwiftPackageProductDependency;

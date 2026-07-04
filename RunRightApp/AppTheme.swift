@@ -54,7 +54,8 @@ struct AppTheme {
     static let accentGreen = Color(hex: "#00FF7F")      // Spring green
     static let fitnessGreen = Color(hex: "#B7F75C")     // Apple Fitness+ green
     static let accentDim = Color(hex: "#00A5A8")        // Darker cyan
-    static let formRed = Color(hex: "#FF2D2D")          // Form Analysis accent (neon red)
+    static let formRed = Color(hex: "#FF2D2D")          // legacy red (skeleton overlay, scorecard)
+    static let analyzePink = Color(hex: "#FF2D9B")      // Form Analysis accent (hot pink)
     static let darkAccent = Color(hex: "#006666")       // Dark teal
     static let darkerAccent = Color(hex: "#003333")     // Very dark teal
     static let primaryText = Color.white
@@ -62,6 +63,9 @@ struct AppTheme {
     static let tabBarBg = Color(hex: "#20262B")
     static let cardBg = Color(hex: "#252B31")
     static let cardBgAlt = Color(hex: "#181D21")
+    /// Fill for boxes raised above a card — one step lighter than cardBg so the
+    /// lift reads as elevation, not decoration. No gradient, no shine.
+    static let raisedFill = Color(hex: "#30373F")
     static let dividerColor = Color.white.opacity(0.08)
     static let subtleBorder = Color.white.opacity(0.15)
     /// Text/icons drawn on top of a solid accent fill — high contrast (used by Analyze dashboard).
@@ -133,6 +137,11 @@ struct AppTheme {
     
     // MARK: - Font Sizes (Apple Fitness+ style)
     static let titleFont: Font = .system(size: 28, weight: .bold)
+
+    /// CANONICAL section / graph / card title — the ONE title font used app-wide.
+    /// White, monospaced, bold, deliberately larger. Every heading (Home, Analyze,
+    /// charts, tables) uses this; titles are never gray and never smaller.
+    static let sectionTitleFont: Font = .system(size: 15, weight: .bold, design: .monospaced)
     static let subtitleFont: Font = .system(size: 22, weight: .semibold)
     static let bodyFont: Font = .system(size: 17, weight: .regular)
     static let captionFont: Font = .system(size: 13, weight: .regular)
@@ -201,6 +210,20 @@ extension View {
                 lightOpacity: lightOpacity,
                 darkOpacity: darkOpacity
             )
+        )
+    }
+
+    /// The standard raised text box: a subtle lift above a card surface.
+    /// One recipe app-wide so every raised element reads as the same material.
+    func appRaisedBox(cornerRadius: CGFloat = AppTheme.buttonCornerRadius) -> some View {
+        appRaisedSurface(
+            fill: AppTheme.raisedFill,
+            cornerRadius: cornerRadius,
+            shadowRadius: 6,
+            x: 3,
+            y: 4,
+            lightOpacity: 0.10,
+            darkOpacity: 0.50
         )
     }
 

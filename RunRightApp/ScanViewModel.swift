@@ -33,6 +33,17 @@ struct ScanSnapshot {
         concern          = dto.concern
         severity         = dto.severity
     }
+
+    /// From the on-device store — carries only what ScorecardDataStore persists.
+    init(zones: WearZoneData?, gaitType: String, strikePattern: String?) {
+        self.zones         = zones
+        self.gaitType      = gaitType
+        self.strikePattern = strikePattern
+        primaryWearAreas   = nil
+        gaitCause          = nil
+        concern            = nil
+        severity           = nil
+    }
 }
 
 /// All scans from one calendar day — one page of the wear-pattern carousel.
@@ -89,20 +100,47 @@ final class ScanViewModel: ObservableObject {
             loadedShoe = ""
             return
         }
-        guard let uid = Auth.auth().currentUser?.uid else {
-            trendError = "Not signed in."
-            return
-        }
 
         trendError = nil
-        do {
-            let scans = try await ScanRepository.shared.fetchScans(uid: uid, shoeName: shoeName, limit: 400)
-            buildHistory(from: scans)
-            computeTrend()
-            loadedShoe = shoeName
-        } catch {
-            trendError = "Could not load scan history: \(error.localizedDescription)"
+        var fetched = false
+        if let uid = Auth.auth().currentUser?.uid {
+            do {
+                let scans = try await ScanRepository.shared.fetchScans(uid: uid, shoeName: shoeName, limit: 400)
+                buildHistory(from: scans)
+                fetched = true
+            } catch {
+                trendError = "Could not load scan history: \(error.localizedDescription)"
+                historyPages = []
+            }
+        } else {
+            trendError = "Not signed in."
+            historyPages = []
         }
+
+        // Local-first fallback: a scan saved on device (offline, cloud sync
+        // failed, or before sign-in) still shows — same source the Analyze
+        // heat grid reads, so the two surfaces never disagree.
+        // A nil stored shoe means the zones predate shoe tracking — show them
+        // rather than hide them, matching what the Analyze heat grid does.
+        let localShoe = ScorecardDataStore.shared.loadWearShoe()
+        if historyPages.isEmpty, localShoe == nil || localShoe == shoeName {
+            let left = ScorecardDataStore.shared.loadWearZones(side: "left")
+            let right = ScorecardDataStore.shared.loadWearZones(side: "right")
+            if left != nil || right != nil {
+                let gait = ScorecardDataStore.shared.loadGaitType() ?? "neutral"
+                let strike = ScorecardDataStore.shared.loadGaitStrike()
+                let today = Calendar.current.startOfDay(for: Date())
+                var page = ScanHistoryPage(id: today, date: today, left: nil, right: nil)
+                if let left { page.left = ScanSnapshot(zones: left, gaitType: gait, strikePattern: strike) }
+                if let right { page.right = ScanSnapshot(zones: right, gaitType: gait, strikePattern: strike) }
+                historyPages = [page]
+                trendError = nil
+                fetched = true
+            }
+        }
+
+        computeTrend()
+        if fetched { loadedShoe = shoeName }
     }
 
     /// Groups scans by calendar day. Scans arrive newest-first, so the first

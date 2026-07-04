@@ -29,6 +29,9 @@ struct RunRightApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                // Every screen is styled dark; without this, system chrome
+                // (status bar, sheets, alerts, keyboard) rendered light-mode.
+                .preferredColorScheme(.dark)
                 .onOpenURL { url in
                     // Required for Google Sign In to complete its OAuth flow
                     GIDSignIn.sharedInstance.handle(url)
