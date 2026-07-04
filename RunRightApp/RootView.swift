@@ -432,13 +432,13 @@ struct AuthSheet: View {
                     }) {
                         Text("Continue with Apple")
                             .font(AppTheme.bodySemibold(15))
-                            .foregroundColor(AppTheme.primaryText)
+                            .foregroundColor(.white)   // always-black Apple button
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
                             .background(Color.black)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .stroke(AppTheme.primaryText.opacity(0.18), lineWidth: 1)
+                                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
                             )
                             .cornerRadius(14)
                     }

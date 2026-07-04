@@ -1940,7 +1940,9 @@ struct AnalyzeView: View {
 
     private var loadingOverlay: some View {
         ZStack {
-            Color.black.opacity(0.92)
+            // Adaptive scrim: near-black in dark, near-white in light, so the
+            // ink/white progress text on top stays legible in both modes.
+            Color(light: .white, dark: .black).opacity(0.92)
                 .ignoresSafeArea()
             VStack(spacing: 20) {
                 ZStack {

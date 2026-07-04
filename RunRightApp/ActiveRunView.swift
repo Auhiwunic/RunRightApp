@@ -296,13 +296,13 @@ struct ActiveRunView: View {
                 if tracker.liveSummary?.averageSpeed ?? 0 < 0.5 {
                     HStack(spacing: 4) {
                         Text("--")
-                            .font(AppTheme.body(72))
+                            .font(AppTheme.displayTabular(72))
                             .foregroundColor(AppTheme.primaryText)
                         Text(":")
-                            .font(AppTheme.body(72))
+                            .font(AppTheme.displayTabular(72))
                             .foregroundColor(AppTheme.primaryText)
                         Text("--")
-                            .font(AppTheme.body(72))
+                            .font(AppTheme.displayTabular(72))
                             .foregroundColor(AppTheme.primaryText)
                     }
                 } else {
@@ -407,7 +407,7 @@ struct ActiveRunView: View {
     
     private func barColor(for time: TimeInterval) -> Color {
         let paceMinutes = time / 60
-        if paceMinutes < 8 { return accentOrange }
+        if paceMinutes < 8 { return Color(hex: "#FF8C00") }   // warm gradient fast end (not the app accent)
         if paceMinutes < 10 { return Color(hex: "#E0902E") }
         return Color(hex: "#A8641A")
     }
@@ -646,7 +646,7 @@ struct ActiveRunView: View {
     
     private func paceColor(_ time: TimeInterval) -> Color {
         let mins = time / 60
-        if mins < 8 { return accentOrange }
+        if mins < 8 { return Color(hex: "#FF8C00") }   // warm gradient fast end
         if mins < 10 { return Color(hex: "#E0902E") }
         return Color(hex: "#A8641A")
     }

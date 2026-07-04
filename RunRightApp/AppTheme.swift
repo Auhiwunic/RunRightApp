@@ -187,18 +187,12 @@ struct AppTheme {
 
     /// Display cut with tabular figures — for live readouts (timers, paces,
     /// tickers) whose digits must not jitter as values change. Site `.tabular`.
-    /// UIFontMetrics scales it with Dynamic Type to match the other tokens.
+    /// Goes through `.custom(relativeTo:)` + `.monospacedDigit()` so it scales
+    /// with Dynamic Type AND honors the app-root `.dynamicTypeSize` cap, exactly
+    /// like the other tokens (the old UIFontMetrics path scaled off the uncapped
+    /// global category and could overflow fixed frames past the cap).
     static func displayTabular(_ size: CGFloat) -> Font {
-        let descriptor = UIFontDescriptor(fontAttributes: [
-            .name: "Archivo-Display",
-            .featureSettings: [[
-                UIFontDescriptor.FeatureKey.type: kNumberSpacingType,
-                UIFontDescriptor.FeatureKey.selector: kMonospacedNumbersSelector
-            ]]
-        ])
-        let base = UIFont(descriptor: descriptor, size: size)
-        let scaled = UIFontMetrics(forTextStyle: .title1).scaledFont(for: base)
-        return Font(scaled)
+        .custom("Archivo-Display", size: size, relativeTo: .title).monospacedDigit()
     }
 
     // MARK: - Font tokens (sizes unchanged; faces now match the site)

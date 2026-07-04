@@ -169,7 +169,7 @@ struct ScanView: View {
                                 HStack(spacing: 6) {
                                     Text(selectedShoe.isEmpty ? "Select Shoe" : selectedShoe)
                                         .font(AppTheme.bodyMedium(12))
-                                        .foregroundColor(selectedShoe.isEmpty ? AppTheme.primaryText.opacity(0.4) : .white)
+                                        .foregroundColor(selectedShoe.isEmpty ? AppTheme.primaryText.opacity(0.4) : AppTheme.primaryText)
                                     Image(systemName: "chevron.down")
                                         .font(AppTheme.body(9))
                                         .foregroundColor(AppTheme.primaryText.opacity(0.5))
@@ -615,7 +615,7 @@ struct ScanView: View {
         // Any pronation/supination is a flag — color it; neutral stays clean.
         let pronationColor: Color = {
             switch pronationType.lowercased() {
-            case "neutral", "—": return .white
+            case "neutral", "—": return AppTheme.primaryText
             case "overpronation": return Color(hex: "#E83030")   // red
             default:              return Color(hex: "#E89830")   // orange
             }
@@ -1150,7 +1150,7 @@ struct ScanStatCard: View {
     let value: String
     var isSymmetry: Bool = false
     var accent: Color = AppTheme.accentColor
-    var valueColor: Color = .white   // color the value (e.g. red/orange for pronation)
+    var valueColor: Color = AppTheme.primaryText   // adaptive by default; callers pass red/orange for status
     var guide: MetricGuideEntry? = nil
     @State private var showGuide = false
 
