@@ -129,11 +129,12 @@ func classifyShinStride(angle: Double?) -> ShinStrideClassification {
 
 private enum TorsoAngleThresholds {
     static let unknownMin: Double = 0.1
-    // More lenient bands (reduce false "too much lean" flags)
-    static let tooUprightMax: Double = 4.0
-    static let optimalMax: Double = 12.0
-    static let goodMax: Double = 18.0
-    static let moderateLeanMax: Double = 25.0
+    // More lenient bands (reduce false "too much lean" flags). Treadmill runners
+    // often run a touch upright, so the optimal window starts low.
+    static let tooUprightMax: Double = 2.5
+    static let optimalMax: Double = 13.0
+    static let goodMax: Double = 19.0
+    static let moderateLeanMax: Double = 26.0
 }
 
 func classifyTorsoAngle(angle: Double?) -> TorsoAngleClassification {
@@ -238,10 +239,12 @@ struct ElbowAngleClassification {
 }
 
 private enum ElbowAngleThresholds {
-    static let tooTightMax: Double = 70.0
-    static let goodLowerMax: Double = 80.0
+    // Arm carriage is highly individual and low-consequence; faster runners fold
+    // the arm more (~55-90°). Only a genuinely locked/over-tight arm scores low.
+    static let tooTightMax: Double = 52.0
+    static let goodLowerMax: Double = 65.0
     static let optimalMax: Double = 100.0
-    static let goodUpperMax: Double = 110.0
+    static let goodUpperMax: Double = 115.0
     // > 110° = too straight
 }
 
@@ -966,21 +969,23 @@ func classifyShinStrideSigned(angle: Double?) -> ShinStrideClassification {
         return ShinStrideClassification(band: .unknown, label: "Unknown", score: 50)
     }
     func clampScore(_ x: Double, _ lo: Int, _ hi: Int) -> Int { max(lo, min(hi, Int(x.rounded()))) }
-    if a < -6 {
-        // Well behind vertical: slight understride, still low-risk.
-        return ShinStrideClassification(band: .understride, label: "Understride", score: clampScore(86 + (a + 6), 72, 88))
-    } else if a < 3 {
-        // Vertical-ish — ideal: foot lands under the body.
-        let dist = abs(a - (-1.5))
-        return ShinStrideClassification(band: .goodStride, label: "Good Stride", score: clampScore(100 - dist / 4.5 * 12, 88, 100))
+    // Shank inclination at contact. SOME forward lean is normal even for elite
+    // runners; overstride only becomes a fault once the foot lands well ahead of
+    // the body (~15°+). Bands widened so good technique is not mislabelled.
+    if a < -10 {
+        // Well behind vertical: understride, still low-risk.
+        return ShinStrideClassification(band: .understride, label: "Understride", score: clampScore(88 + (a + 10), 78, 88))
     } else if a < 8 {
-        let t = (a - 3) / 5.0
-        return ShinStrideClassification(band: .mildOverstride, label: "Mild Overstride", score: clampScore(84 - t * 14, 70, 84))
-    } else if a < 14 {
-        let t = (a - 8) / 6.0
-        return ShinStrideClassification(band: .moderateOverstride, label: "Moderate Overstride", score: clampScore(69 - t * 14, 55, 69))
+        // Foot lands under the body (slightly back to slightly forward) — ideal.
+        return ShinStrideClassification(band: .goodStride, label: "Good Stride", score: clampScore(100 - abs(a + 2), 88, 100))
+    } else if a < 15 {
+        let t = (a - 8) / 7.0
+        return ShinStrideClassification(band: .mildOverstride, label: "Mild Overstride", score: clampScore(88 - t * 14, 74, 88))
+    } else if a < 22 {
+        let t = (a - 15) / 7.0
+        return ShinStrideClassification(band: .moderateOverstride, label: "Moderate Overstride", score: clampScore(73 - t * 15, 58, 73))
     } else {
-        return ShinStrideClassification(band: .severeOverstride, label: "Severe Overstride", score: 42)
+        return ShinStrideClassification(band: .severeOverstride, label: "Severe Overstride", score: clampScore(56 - (a - 22), 42, 56))
     }
 }
 

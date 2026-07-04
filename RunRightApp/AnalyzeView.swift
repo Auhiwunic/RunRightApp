@@ -695,13 +695,8 @@ struct AnalyzeView: View {
                         .padding(.horizontal, 20)
                     }
 
-                    // One toggle governs every distance/sprint surface below.
-                    Picker("Run type", selection: $fullMetricsMode) {
-                        ForEach(RunMode.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal, 20)
-
+                    // Single run profile — one set of optimal ranges (distance);
+                    // the sprint/distance toggle was removed for simplicity.
                     if let form = currentForm {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("ANGLES + TARGETS")
@@ -1486,12 +1481,12 @@ struct AnalyzeView: View {
 
         let rows: [StoredScorecardMetric] = [
             scorecardMetric(label: "CAD", value: "\(analyzeSafeInt(canonicalCadence))", optimal: "165-190", score: cadenceScore(canonicalCadence)),
-            scorecardMetric(label: "TORSO", value: degreeText(series.torsoAngleMean), optimal: "5-10°", score: breakdown.torso.score),
-            scorecardMetric(label: "SHIN", value: degreeText(abs(series.shankAngleAtContactSignedDeg)), optimal: "<8°", score: breakdown.shin.score),
-            scorecardMetric(label: "KNEE", value: degreeText(series.kneeAngleMean), optimal: "150-170", score: kneeScore(series.kneeAngleMean)),
-            scorecardMetric(label: "HIP", value: degreeText(series.hipAngleMean), optimal: "150-175", score: hipScore(series.hipAngleMean)),
-            scorecardMetric(label: "ELBOW", value: degreeText(series.elbowAngleMean), optimal: "~90°", score: breakdown.elbow.score),
-            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "<250", score: avgGCT.map(groundContactScore) ?? 0),
+            scorecardMetric(label: "TORSO", value: degreeText(series.torsoAngleMean), optimal: "3-12°", score: breakdown.torso.score),
+            scorecardMetric(label: "SHIN", value: degreeText(abs(series.shankAngleAtContactSignedDeg)), optimal: "<12°", score: breakdown.shin.score),
+            scorecardMetric(label: "KNEE", value: degreeText(series.kneeAngleMean), optimal: "128-160", score: kneeScore(series.kneeAngleMean)),
+            scorecardMetric(label: "HIP", value: degreeText(series.hipAngleMean), optimal: "135-172", score: hipScore(series.hipAngleMean)),
+            scorecardMetric(label: "ELBOW", value: degreeText(series.elbowAngleMean), optimal: "55-105°", score: breakdown.elbow.score),
+            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "<300", score: avgGCT.map(groundContactScore) ?? 0),
             scorecardMetric(label: "STRIKE", value: metrics.footStrikePattern.uppercased().prefix(4).description, optimal: "MID", score: analyzeSafeInt(metrics.footStrikeConfidence * 100))
         ]
 
@@ -1570,22 +1565,26 @@ struct AnalyzeView: View {
 
     private func groundContactScore(_ milliseconds: Double) -> Int {
         guard milliseconds > 0 else { return 0 }
-        if milliseconds <= 250 { return 90 }
-        return max(40, Int((90 - (milliseconds - 250) * 0.25).rounded()))
+        // Easy-pace distance running sits ~250-300 ms; only longer is a real drag.
+        if milliseconds <= 300 { return 90 }
+        return max(40, Int((90 - (milliseconds - 300) * 0.25).rounded()))
     }
 
+    // NOTE: the displayed knee/hip value is the full-cycle MEAN interior angle
+    // (swing flexion pulls it well below the stance value), so the "good" window
+    // is a cycle-mean range, not a stance range.
     private func kneeScore(_ angle: Double) -> Int {
         guard angle > 0 else { return 0 }
-        if angle >= 150 && angle <= 170 { return 88 }
-        let distance = angle < 150 ? 150 - angle : angle - 170
-        return max(45, Int((88 - distance * 1.5).rounded()))
+        if angle >= 128 && angle <= 160 { return 90 }
+        let distance = angle < 128 ? 128 - angle : angle - 160
+        return max(45, Int((90 - distance * 1.4).rounded()))
     }
 
     private func hipScore(_ angle: Double) -> Int {
         guard angle > 0 else { return 0 }
-        if angle >= 150 && angle <= 175 { return 88 }
-        let distance = angle < 150 ? 150 - angle : angle - 175
-        return max(45, Int((88 - distance * 1.5).rounded()))
+        if angle >= 135 && angle <= 172 { return 90 }
+        let distance = angle < 135 ? 135 - angle : angle - 172
+        return max(45, Int((90 - distance * 1.4).rounded()))
     }
     
     // MARK: - Instructions Popup

@@ -256,18 +256,21 @@ enum RunImpactModel {
         verticalOscillationCm: Double?,
         footStrike: String
     ) -> ImpactResult {
-        // Overstride: best when shank is vertical or leaning slightly back (≤0°);
-        // worsens as it tips forward toward +15°.
-        let overstrideScore: Double? = shankAngleAtContactDeg.map { clamp(100.0 - ramp($0, 0, 15)) }
-        // Vertical oscillation: 6–10 cm typical; lower = softer ride. <7 cm excellent,
-        // >12 cm jarring.
-        let oscScore: Double? = verticalOscillationCm.map { clamp(100.0 - ramp($0, 6, 13)) }
-        // Foot-strike loading: a pronounced heel strike raises the impact transient.
+        // Overstride: some forward shank lean at contact is normal even for
+        // elites; only penalise once the foot lands well ahead of the body.
+        // Good up to ~10°, ramping to a fault by ~26°.
+        let overstrideScore: Double? = shankAngleAtContactDeg.map { clamp(100.0 - ramp($0, 10, 26)) }
+        // Vertical oscillation: 6–11 cm typical; lower = softer ride. <8 cm
+        // excellent, >16 cm jarring.
+        let oscScore: Double? = verticalOscillationCm.map { clamp(100.0 - ramp($0, 8, 16)) }
+        // Foot-strike loading: a heel strike raises the impact transient slightly
+        // but is not a fault by itself for distance running (many elites heel
+        // strike) — only a mild penalty, since overstride already captures the risk.
         let strikeScore: Double?
         switch footStrike {
-        case "Forefoot Strike": strikeScore = 92
-        case "Mixed":           strikeScore = 80
-        case "Heel Strike":     strikeScore = 60
+        case "Forefoot Strike": strikeScore = 95
+        case "Mixed":           strikeScore = 90
+        case "Heel Strike":     strikeScore = 82
         default:                strikeScore = nil
         }
 
@@ -283,7 +286,9 @@ enum RunImpactModel {
 
         let mean = parts.reduce(0, +) / Double(parts.count)
         let worst = parts.min() ?? mean
-        let composite = 0.55 * worst + 0.45 * mean
+        // Gentler worst-weighting: one moderate pillar shouldn't tank an
+        // otherwise-good landing, but the worst still pulls the score down.
+        let composite = 0.35 * worst + 0.65 * mean
 
         let score = Int(clamp(composite).rounded())
         let label: String
