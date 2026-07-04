@@ -3444,10 +3444,14 @@ class VideoProcessor: ObservableObject {
         
         let verticalOscillation = hipY.isEmpty ? 0 : (percentile(hipY, 0.9) - percentile(hipY, 0.1)) / bodyHeight * 100
         let trunkLean = trunkAngles.isEmpty ? 0 : trunkAngles.reduce(0, +) / Double(trunkAngles.count)
+        // Honesty gate: a joint's mean must reflect a meaningful slice of the
+        // analysis window, not a handful of stray frames, or it reads "--".
+        // ~1/12 of the clean window (min 6 frames) ≈ enough to trust the median.
+        let minAngleSamples = max(6, frameCount / 12)
         let torsoAngleMean: Double = {
             let valid = selectedTorsoAngles
                 .filter { !$0.isNaN && $0.isFinite && $0 <= 45.0 }
-            guard valid.count >= 2 else { return -1.0 }
+            guard valid.count >= minAngleSamples else { return -1.0 }
             let sorted = valid.sorted()
             if sorted.count % 2 == 0 {
                 return (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2.0
@@ -3457,7 +3461,7 @@ class VideoProcessor: ObservableObject {
         let headAngleMean: Double = {
             let valid = selectedHeadAngles
                 .filter { !$0.isNaN && $0.isFinite && $0 >= 0 && $0 <= 45.0 }
-            guard valid.count >= 1 else { return -1.0 }
+            guard valid.count >= minAngleSamples else { return -1.0 }
             let sorted = valid.sorted()
             if sorted.count % 2 == 0 {
                 return (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2.0
@@ -3489,7 +3493,7 @@ class VideoProcessor: ObservableObject {
             return selectedElbowAngles.filter { !$0.isNaN && $0.isFinite && $0 > 0 && $0 < 180.0 }
         }()
         let elbowAngleMean: Double = {
-            guard validInteriorElbowAngles.count >= 2 else { return -1.0 }
+            guard validInteriorElbowAngles.count >= minAngleSamples else { return -1.0 }
             let sorted = validInteriorElbowAngles.sorted()
             if sorted.count % 2 == 0 {
                 return (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2.0
@@ -3512,7 +3516,7 @@ class VideoProcessor: ObservableObject {
                 }
             }
             let valid = selected.filter { !$0.isNaN && $0.isFinite && $0 > 0 && $0 < 180.0 }
-            guard valid.count >= 2 else { return -1.0 }
+            guard valid.count >= minAngleSamples else { return -1.0 }
             let sorted = valid.sorted()
             if sorted.count % 2 == 0 {
                 return (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2.0
