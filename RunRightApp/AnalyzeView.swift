@@ -360,7 +360,7 @@ struct AnalyzeView: View {
             }
             .foregroundColor(AppTheme.onAccentPrimary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .appRaisedSurface(fill: AppTheme.analyzePink, cornerRadius: 14, shadowRadius: 6, x: 4, y: 5, lightOpacity: 0.08, darkOpacity: 0.34)
+            .appRaisedSurface(fill: AppTheme.accentColor, cornerRadius: 14, shadowRadius: 6, x: 4, y: 5, lightOpacity: 0.08, darkOpacity: 0.34)
         }
         .buttonStyle(.plain)
     }
@@ -449,7 +449,7 @@ struct AnalyzeView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-                    .appRaisedSurface(fill: AppTheme.analyzePink, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
+                    .appRaisedSurface(fill: AppTheme.accentColor, cornerRadius: 16, shadowRadius: 8, x: 5, y: 6, lightOpacity: 0.08, darkOpacity: 0.34)
                 }
                 .buttonStyle(.plain)
                 Button(action: analyzeStartRecording) {
@@ -477,7 +477,7 @@ struct AnalyzeView: View {
     private func analyzeHeroChip(_ icon: String, onAccent: Bool = false) -> some View {
         Image(systemName: icon)
             .font(AppTheme.meta(12))
-            .foregroundColor(onAccent ? AppTheme.analyzePink : .white)
+            .foregroundColor(onAccent ? AppTheme.accentColor : .white)
             .frame(width: 30, height: 30)
             .background(Circle().fill(Color.black.opacity(onAccent ? 0.75 : 0.45)))
     }
@@ -554,7 +554,7 @@ struct AnalyzeView: View {
         // Trend vs the previous analysis: nil delta = no comparison yet.
         let delta: Int? = (score != nil && prevScore != nil) ? score! - prevScore! : nil
         let arcColor: Color = {
-            guard let d = delta, d != 0 else { return AppTheme.analyzePink }
+            guard let d = delta, d != 0 else { return AppTheme.accentColor }
             return d > 0 ? AppTheme.accentGreen : AppTheme.formRed
         }()
         return Button(action: { metricGuide = guide }) {
@@ -902,7 +902,7 @@ struct AnalyzeView: View {
                             .font(AppTheme.sectionTitleFont)
                             .foregroundColor(AppTheme.primaryText)
                         TrendChartView(dataPoints: points,
-                                       accent: AppTheme.analyzePink, bg: AppTheme.cardBg)
+                                       accent: AppTheme.accentColor, bg: AppTheme.cardBg)
                             .frame(height: 64)
                             .clipped()
                     }
@@ -982,7 +982,7 @@ struct AnalyzeView: View {
                             Text("SEE ALL")
                                 .font(AppTheme.meta(11))
                         }
-                        .foregroundColor(AppTheme.analyzePink)
+                        .foregroundColor(AppTheme.accentColor)
                         .padding(.vertical, 10)
                     }
                     .buttonStyle(.plain)
@@ -1077,7 +1077,7 @@ struct AnalyzeView: View {
             }
             Text(record.overall.map(String.init) ?? "—")
                 .font(.analyzeMetric)
-                .foregroundColor(AppTheme.analyzePink)
+                .foregroundColor(AppTheme.accentColor)
         }
         .padding(.vertical, 12)
     }
@@ -1096,7 +1096,7 @@ struct AnalyzeView: View {
             }
             Button("Try again") { resetProcessor() }
                 .font(AppTheme.bodySemibold(13))
-                .foregroundColor(AppTheme.analyzePink)
+                .foregroundColor(AppTheme.accentColor)
         }
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1229,7 +1229,7 @@ struct AnalyzeView: View {
                     .foregroundColor(AppTheme.primaryText.opacity(0.4))
 
                 if scanTrend.hasTrend {
-                    TrendChartView(dataPoints: scanTrend.trendPoints, accent: AppTheme.analyzePink, bg: AppTheme.bgColor)
+                    TrendChartView(dataPoints: scanTrend.trendPoints, accent: AppTheme.accentColor, bg: AppTheme.bgColor)
                         .frame(height: 70)
                     HStack {
                         if let first = scanTrend.trendLabels.first {
@@ -1263,7 +1263,7 @@ struct AnalyzeView: View {
                 .minimumScaleFactor(0.6)
             Text(label)
                 .font(.analyzeTiny)
-                .foregroundColor(AppTheme.analyzePink.opacity(0.8))
+                .foregroundColor(AppTheme.accentColor.opacity(0.8))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
@@ -1718,7 +1718,7 @@ struct AnalyzeView: View {
                         .foregroundColor(AppTheme.onAccentPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(AppTheme.analyzePink)
+                        .background(AppTheme.accentColor)
                         .cornerRadius(12)
                 }
             }
@@ -1768,7 +1768,7 @@ struct AnalyzeView: View {
                     VStack(spacing: 5) {
                         Image(systemName: "iphone")
                             .font(AppTheme.body(30))
-                            .foregroundColor(AppTheme.analyzePink)
+                            .foregroundColor(AppTheme.accentColor)
                         Text("CAMERA")
                             .font(AppTheme.meta(8))
                             .foregroundColor(AppTheme.primaryText.opacity(0.4))
@@ -1817,7 +1817,7 @@ struct AnalyzeView: View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(AppTheme.bodySemibold(14))
-                .foregroundColor(AppTheme.analyzePink)
+                .foregroundColor(AppTheme.accentColor)
                 .frame(width: 22)
             Text(text)
                 .font(AppTheme.bodyMedium(13))
@@ -1944,7 +1944,7 @@ struct AnalyzeView: View {
                     Circle()
                         .trim(from: 0, to: min(max(processor.progress, 0), 1))
                         .stroke(
-                            AppTheme.analyzePink,
+                            AppTheme.accentColor,
                             style: StrokeStyle(lineWidth: 6, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
@@ -2183,7 +2183,7 @@ private struct InfoSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.analyzePink)
+                        .foregroundColor(AppTheme.accentColor)
                 }
             }
         }
@@ -2410,7 +2410,7 @@ private struct GraphCard: View {
                 // Graph content - no cursor, no scrolling
                 SparklineView(
                     series: series,
-                    color: AppTheme.analyzePink,
+                    color: AppTheme.accentColor,
                     unit: unit,
                     durationSeconds: durationSeconds,
                     referenceBands: referenceBands,
@@ -2798,7 +2798,7 @@ struct SprintPowerDial: View {
         guard let s = score else { return .gray }
         switch s {
         case 85...100: return Color(hex: "#34C759")
-        case 70..<85: return AppTheme.analyzePink
+        case 70..<85: return Color(hex: "#FFD23F")
         case 55..<70: return .orange
         default: return .red
         }
@@ -2827,7 +2827,7 @@ struct SprintPowerDial: View {
                                 gradient: Gradient(colors: [
                                     Color(hex: "#FF3B30"),
                                     Color(hex: "#FF9500"),
-                                    AppTheme.analyzePink,
+                                    Color(hex: "#FFD23F"),
                                     Color(hex: "#34C759")
                                 ]),
                                 center: .bottom,
@@ -2904,7 +2904,7 @@ struct SprintMetricCard: View {
     private var color: Color {
         switch cls.score {
         case 80...100: return .green
-        case 65..<80: return AppTheme.analyzePink
+        case 65..<80: return Color(hex: "#FFD23F")
         case 50..<65: return .orange
         default: return .red
         }
@@ -2953,7 +2953,7 @@ struct FootPlacementCard: View {
     let tip: String
 
     private var accentColor: Color {
-        label == "Unknown" ? .gray : AppTheme.analyzePink.opacity(0.75)
+        label == "Unknown" ? .gray : AppTheme.accentColor.opacity(0.75)
     }
 
     var body: some View {
@@ -3104,7 +3104,7 @@ struct AnalysisHistorySheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(AppTheme.analyzePink)
+                        .foregroundColor(AppTheme.accentColor)
                 }
             }
         }
@@ -3137,7 +3137,7 @@ struct AnalysisHistorySheet: View {
             Spacer()
             Text(record.overall.map(String.init) ?? "—")
                 .font(AppTheme.display(20))
-                .foregroundColor(AppTheme.analyzePink)
+                .foregroundColor(AppTheme.accentColor)
         }
         .padding(.vertical, 6)
     }

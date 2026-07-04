@@ -16,7 +16,7 @@ struct PaywallView: View {
     @State private var purchasing = false
     @State private var legalDoc: LegalDoc?
 
-    private let green = Color(hex: "#00FF7F")
+    private let green = AppTheme.accentColor
 
     private let perks: [(icon: String, text: String)] = [
         ("bubble.left.fill", "AI coach chat and drills"),

@@ -161,7 +161,7 @@ struct CoachChatView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 42, height: 42)
-                    .shadow(color: Color(hex: "#00FF7F").opacity(store.sending ? 0.45 : 0.18), radius: store.sending ? 14 : 7)
+                    .shadow(color: AppTheme.accentColor.opacity(store.sending ? 0.45 : 0.18), radius: store.sending ? 14 : 7)
                     .rotationEffect(.degrees(store.sending ? 360 : 0))
                     // nil on the stop leg: 360 snaps to 0 (visually identical)
                     // instead of animating a full backwards unwind.
@@ -215,7 +215,7 @@ struct CoachChatView: View {
                                     .multilineTextAlignment(.trailing)
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
-                                    .background(Color(hex: "#00FF7F"))
+                                    .background(AppTheme.accentColor)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                             }
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -243,7 +243,7 @@ struct CoachChatView: View {
                     Button(action: { voiceMessageTapped() }) {
                         Image(systemName: voiceInput.phase == .recording ? "stop.circle.fill" : "mic.circle.fill")
                             .font(AppTheme.body(30))
-                            .foregroundColor(voiceInput.phase == .recording ? Color(hex: "#FF5252") : Color(hex: "#00FF7F").opacity(isLocked ? 1 : 0.85))
+                            .foregroundColor(voiceInput.phase == .recording ? Color(hex: "#FF5252") : AppTheme.accentColor.opacity(isLocked ? 1 : 0.85))
                             .symbolEffect(.pulse, isActive: voiceInput.phase == .recording)
                     }
                     .disabled(voiceInput.phase == .transcribing || store.sending)
@@ -251,7 +251,7 @@ struct CoachChatView: View {
                 Button(action: { send() }) {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(AppTheme.body(30))
-                        .foregroundColor(canSend || isLocked ? Color(hex: "#00FF7F") : AppTheme.primaryText.opacity(0.2))
+                        .foregroundColor(canSend || isLocked ? AppTheme.accentColor : AppTheme.primaryText.opacity(0.2))
                 }
                 .disabled(!canSend && !isLocked)
             }
@@ -347,7 +347,7 @@ struct CoachChatView: View {
                 .foregroundColor(m.role == .user ? .black : AppTheme.primaryText.opacity(0.85))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(m.role == .user ? Color(hex: "#00FF7F") : AppTheme.raisedFill)
+                .background(m.role == .user ? AppTheme.accentColor : AppTheme.raisedFill)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .fixedSize(horizontal: false, vertical: true)
             if m.role == .coach { Spacer(minLength: 40) }
@@ -410,7 +410,7 @@ struct TrainingZonesCard: View {
 // MARK: - Coach tab (green) — coaching home: today's focus + drills + chat
 
 struct CoachTabView: View {
-    private let green = Color(hex: "#00FF7F")
+    private let green = AppTheme.accentColor
     @ObservedObject private var subs = SubscriptionManager.shared
     @State private var showPaywall = false
     // Loaded once per appearance — computing this in body JSON-decoded the whole

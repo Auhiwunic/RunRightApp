@@ -12,7 +12,7 @@ struct RunHistoryView: View {
     @State private var runs: [RunSummaryDTO] = []
     @State private var isLoading = true
 
-    private let accentLime = Color(hex: "#FF8C00")   // Run-tab orange (Z4)
+    private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     private let cardBackground = AppTheme.cardBg
 

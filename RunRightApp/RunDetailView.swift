@@ -10,7 +10,7 @@ struct RunDetailView: View {
     let run: RunSummaryDTO
     @Environment(\.dismiss) var dismiss
 
-    private let accentLime = Color(hex: "#FF8C00")   // Run-tab orange (Z4)
+    private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt

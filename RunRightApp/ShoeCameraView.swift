@@ -145,7 +145,7 @@ struct ShoeCameraView: View {
     @State private var libraryItem: PhotosPickerItem?
     @State private var previewImage: UIImage?    // non-nil = confirm stage
 
-    private let accentLime = Color(hex: "#00FF7F")   // Scan-tab green (Z2)
+    private let accentLime = AppTheme.accentColor
 
     var body: some View {
         ZStack {

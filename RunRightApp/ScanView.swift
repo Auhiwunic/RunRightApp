@@ -43,7 +43,7 @@ struct ScanView: View {
     @State private var scrollOffset: CGFloat = 0   // drives the header fade
     @ObservedObject private var scanVM = ScanViewModel.shared
 
-    private let accentLime = AppTheme.analyzePink
+    private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
@@ -1149,7 +1149,7 @@ struct ScanStatCard: View {
     let label: String
     let value: String
     var isSymmetry: Bool = false
-    var accent: Color = Color(hex: "#00FF7F")
+    var accent: Color = AppTheme.accentColor
     var valueColor: Color = .white   // color the value (e.g. red/orange for pronation)
     var guide: MetricGuideEntry? = nil
     @State private var showGuide = false
@@ -1195,7 +1195,7 @@ struct ScanStatCard: View {
 // MARK: - Trend Chart View
 struct TrendChartView: View {
     var dataPoints: [CGFloat]
-    var accent: Color = Color(hex: "#00FF7F")
+    var accent: Color = AppTheme.accentColor
     var bg: Color = AppTheme.bgColor
     
     var body: some View {

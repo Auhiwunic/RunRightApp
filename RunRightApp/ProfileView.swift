@@ -37,7 +37,7 @@ struct ProfileView: View {
     // Shareable scorecard
     @State private var showScorecard = false
 
-    private let accentLime = Color(lightHex: "#141412", darkHex: "#FFFFFF")
+    private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     @State private var legalDoc: LegalDoc?
     private let cardBackground = AppTheme.cardBg
@@ -79,10 +79,10 @@ struct ProfileView: View {
                         Text("SHARE SCORECARD")
                             .font(AppTheme.head(14))
                             .tracking(1)
-                            .foregroundColor(AppTheme.bgColor)
+                            .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 15)
-                            .background(AppTheme.primaryText)
+                            .background(AppTheme.accentColor)
                             .clipShape(Capsule())
                     }
                     .padding(.horizontal, 20)
@@ -390,10 +390,10 @@ struct ProfileView: View {
             Button(action: { showAuthSheet = true }) {
                 Text("Sign In")
                     .font(AppTheme.head(15))
-                    .foregroundColor(AppTheme.bgColor)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(AppTheme.primaryText)
+                    .background(AppTheme.accentColor)
                     .cornerRadius(14)
             }
             .padding(.horizontal, 44)

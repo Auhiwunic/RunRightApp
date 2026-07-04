@@ -109,7 +109,7 @@ enum MetricGuide {
 /// Four short sections: what, why, target, fix.
 struct MetricGuideSheet: View {
     let entry: MetricGuideEntry
-    var accent: Color = AppTheme.analyzePink
+    var accent: Color = AppTheme.accentColor
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {

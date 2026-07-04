@@ -32,7 +32,7 @@ struct ActiveRunView: View {
 
     private var mileSplits: [MileSplit] { session.mileSplits }
     
-    private let accentOrange = Color(hex: "#FF8C00")   // Run-tab accent (Z4 orange)
+    private let accentOrange = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     private let cardBackground = AppTheme.cardBg
     private let metersPerMile: Double = 1609.344
@@ -437,10 +437,10 @@ struct ActiveRunView: View {
                         Text("Finish")
                             .font(AppTheme.bodySemibold(17))
                     }
-                    .foregroundColor(AppTheme.bgColor)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(AppTheme.primaryText)
+                    .background(AppTheme.accentColor)
                     .cornerRadius(28)
                 }
             } else {
@@ -451,10 +451,10 @@ struct ActiveRunView: View {
                         Text("Pause")
                             .font(AppTheme.bodySemibold(17))
                     }
-                    .foregroundColor(AppTheme.bgColor)
+                    .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(AppTheme.primaryText)
+                    .background(AppTheme.accentColor)
                     .cornerRadius(28)
                 }
             }

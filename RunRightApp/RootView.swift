@@ -133,7 +133,7 @@ private struct ConsentGateView: View {
     @State private var isSaving = false
     @State private var saveError: String?
 
-    private var accent: Color { Color(hex: "#00FF7F") }
+    private var accent: Color { AppTheme.accentColor }
     private var isOldEnough: Bool {
         ConsentManager.age(on: dateOfBirth) >= region.minimumAge
     }
@@ -312,7 +312,7 @@ private struct ConsentGateView: View {
 private struct SyncPromptCard: View {
     let onSignIn: () -> Void
     let onClose: () -> Void
-    private var lime: Color { Color(hex: "#FF8C00") }   // sync accent — orange
+    private var lime: Color { AppTheme.accentColor }   // sync accent — orange
 
     var body: some View {
         ZStack {
@@ -377,7 +377,7 @@ struct AuthSheet: View {
     @State private var showForgotPassword = false
     @State private var resetEmail = ""
 
-    private var lime: Color { AppTheme.primaryText }
+    private var lime: Color { AppTheme.accentColor }
     private var bg: Color { AppTheme.bgColor }
     private var card: Color { AppTheme.cardBg }
 
@@ -503,11 +503,11 @@ struct AuthSheet: View {
                     }) {
                         ZStack {
                             if isLoading {
-                                ProgressView().tint(AppTheme.bgColor)
+                                ProgressView().tint(.black)
                             } else {
                                 Text(isSignUp ? "Create Account" : "Sign In")
                                     .font(AppTheme.head(15))
-                                    .foregroundColor(AppTheme.bgColor)
+                                    .foregroundColor(.black)
                             }
                         }
                         .frame(maxWidth: .infinity)

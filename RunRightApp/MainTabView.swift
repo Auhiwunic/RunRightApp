@@ -55,7 +55,7 @@ struct MainTabView: View {
 
     // MARK: - Running banner (shown across tabs while a run is minimized)
     private var runningBanner: some View {
-        let orange = Color(hex: "#FF8C00")
+        let orange = AppTheme.accentColor
         let miles = (run.tracker.liveSummary?.distance ?? 0) / 1609.344
         let secs = Int(run.elapsed)
         let time = String(format: "%d:%02d", secs / 60, secs % 60)
@@ -104,13 +104,15 @@ struct CustomTabBar: View {
         ("person.fill", "Profile")
     ]
 
-    // Per-tab accent — matches each screen's theme color.
+    // Single unified UI accent — one signature cyan across every tab. The
+    // per-tab zone colors were retired: color now lives only in data (charts,
+    // dials, heatmaps, zones, cue tiles), never in the chrome.
     private let tabColors: [Color] = [
-        AppTheme.analyzePink,   // Analyze — hot pink
-        Color(hex: "#00FF7F"),  // Coach — green (Z2)
-        Color(hex: "#00CED1"),  // Home — blue (Z1)
-        Color(hex: "#FF8C00"),  // Run — orange (Z4)
-        Color.white             // Profile — white
+        AppTheme.accentColor,   // Analyze
+        AppTheme.accentColor,   // Coach
+        AppTheme.accentColor,   // Home
+        AppTheme.accentColor,   // Run
+        AppTheme.accentColor    // Profile
     ]
 
     var body: some View {

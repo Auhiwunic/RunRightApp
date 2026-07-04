@@ -74,7 +74,7 @@ struct AppTheme {
     static let fitnessGreen = Color(hex: "#B7F75C")     // Apple Fitness+ green
     static let accentDim = Color(hex: "#00A5A8")        // Darker cyan
     static let formRed = Color(hex: "#FF2D2D")          // legacy red (skeleton overlay, scorecard)
-    static let analyzePink = Color(hex: "#FF2D9B")      // Form Analysis accent (hot pink)
+    static let analyzePink = Color(hex: "#FF2D9B")      // RETIRED: the app now uses one unified UI accent (accentColor). Kept only so any stray reference still compiles.
     static let darkAccent = Color(hex: "#006666")       // Dark teal
     static let darkerAccent = Color(hex: "#003333")     // Very dark teal
     static let primaryText = Color(lightHex: "#141412", darkHex: "#FFFFFF")   // site ink / white

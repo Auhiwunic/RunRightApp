@@ -28,7 +28,7 @@ struct RunView: View {
     @State private var scrollOffset: CGFloat = 0   // drives the header fade
     @State private var planError: String?
 
-    private let accentLime = Color(hex: "#FF8C00")
+    private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
@@ -534,7 +534,7 @@ struct RunView: View {
 struct RunStatItem: View {
     let value: String
     let label: String
-    private let accentLime = Color(hex: "#FF8C00")
+    private let accentLime = AppTheme.accentColor
     
     var body: some View {
         VStack(spacing: 4) {
@@ -554,7 +554,7 @@ struct RunStatItem: View {
 struct ToggleRow: View {
     let label: String
     @Binding var isOn: Bool
-    private let accentLime = Color(hex: "#FF8C00")
+    private let accentLime = AppTheme.accentColor
 
     var body: some View {
         HStack {
@@ -663,7 +663,7 @@ struct WeeklyPlannerSheet: View {
     @State private var expandedDay: Int? = nil
     @State private var saveError: String?
     
-    private let accentLime = Color(hex: "#FF8C00")
+    private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
@@ -1081,7 +1081,7 @@ struct DiagnosticRunSheet: View {
     @State private var calculatedVDOT: Double? = nil
     @State private var calculatedPaces: TrainingPaces? = nil
     
-    private let accentLime = Color(hex: "#FF8C00")
+    private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
