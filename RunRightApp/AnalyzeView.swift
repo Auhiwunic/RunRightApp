@@ -606,25 +606,42 @@ struct AnalyzeView: View {
     private var analyzeCueGrid: some View {
         let cues = currentForm?.cueScores
         func cue(_ c: FormCue) -> Int? { cues?[c.rawValue].map { Int($0.rounded()) } }
-        let heel = [cue(.shinVertical), cue(.footUnderCOM), cue(.footPlacement)].compactMap { $0 }.min()
+        // HEEL BRAKING is the "does the foot land ahead and brake" cue — the exact
+        // thing the validated signed shank-angle-at-contact measures. Drive it from
+        // that (same source as SHIN / OVERSTRIDE) instead of the old footUnderCOM /
+        // shinVertical classifiers, which were never recalibrated and disagree with
+        // it (they read a run with a 0° shank as heel-braking). Consistency first.
+        let heel: Int? = currentForm.flatMap { $0.overstrideDeg }
+            .map { classifyShinStrideSigned(angle: $0).score }
         let head = cue(.eyesForward)
         let arm = cue(.elbows)
         let cad = currentForm.map(\.cadence)
 
+        // Tile color now reflects the SCORE (green good / amber ok / red poor), not
+        // a fixed brand color — a red tile behind a 90 read as an alarm.
+        func tint(_ v: Int?) -> Color {
+            guard let v else { return Color(hex: "#6E6E73") }
+            return v >= 80 ? Color(hex: "#34C759") : v >= 60 ? Color(hex: "#FFB020") : Color(hex: "#FF3B30")
+        }
+        func cadTint(_ c: Int?) -> Color {
+            guard let c else { return Color(hex: "#6E6E73") }
+            return (165...190).contains(c) ? Color(hex: "#34C759")
+                 : (155...200).contains(c) ? Color(hex: "#FFB020") : Color(hex: "#FF3B30")
+        }
+
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible())], spacing: 12) {
-            analyzeCueBox("HEEL BRAKING", "#00CED1", heel,
+            analyzeCueBox("HEEL BRAKING", tint(heel), heel,
                           heel.map { $0 < 65 ? "Foot lands out front and brakes each step." : "Foot lands under you." })
-            analyzeCueBox("HEAD DOWN", "#FF2D2D", head,
+            analyzeCueBox("HEAD DOWN", tint(head), head,
                           head.map { $0 < 65 ? "Eyes drop to the ground ahead of you." : "Gaze is level and forward." })
-            analyzeCueBox("ARM CARRIAGE", "#00FF7F", arm,
+            analyzeCueBox("ARM CARRIAGE", tint(arm), arm,
                           arm.map { $0 < 65 ? "Arms swing across your body." : "Swing is straight, front to back." })
-            analyzeCueBox("CADENCE", "#FFD23F", cad,
+            analyzeCueBox("CADENCE", cadTint(cad), cad,
                           cad.map { $0 < 160 ? "Slow turnover stretches your stride." : $0 <= 190 ? "Turnover is in the range." : "Very quick turnover." })
         }
     }
 
-    private func analyzeCueBox(_ title: String, _ hex: String, _ value: Int?, _ brief: String?) -> some View {
-        let color = Color(hex: hex)
+    private func analyzeCueBox(_ title: String, _ color: Color, _ value: Int?, _ brief: String?) -> some View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 7) {
                 Text(title)
