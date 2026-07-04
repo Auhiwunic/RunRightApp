@@ -2919,8 +2919,16 @@ class VideoProcessor: ObservableObject {
         }
         
         // ONLY detect strikes and cycles for the selected side(s)
-        let leftStrikes = useLeftSide ? detectHeelStrikes(ySeries: leftFootYSmooth, vRelSeries: leftVRel, yVelSeries: leftYVel) : []
-        let rightStrikes = useRightSide ? detectHeelStrikes(ySeries: rightFootYSmooth, vRelSeries: rightVRel, yVelSeries: rightYVel) : []
+        // Anchor the gait cycle to INITIAL CONTACT via the foot-hip forward-reach
+        // peaks (leftEvents.peaks): the foot is furthest ahead of the hip at
+        // contact, a signal that is belt-invariant so it works on a treadmill
+        // (unlike the old detectHeelStrikes, which latched onto the foot's lowest
+        // screen-Y = mid/late stance, shifting every joint curve ~40% early and
+        // over-counting cadence). These carry a 0.25s min-spacing so they also
+        // stop the intra-stride double counting. detectHeelStrikes is retained
+        // only for reference; it is no longer the cycle/cadence source.
+        let leftStrikes = useLeftSide ? leftEvents.peaks : []
+        let rightStrikes = useRightSide ? rightEvents.peaks : []
         let leftCycles = useLeftSide ? detectCycles(strikes: leftStrikes, vRel: leftVRel, yVel: leftYVel, ySeries: leftFootYSmooth, times: times) : []
         let rightCycles = useRightSide ? detectCycles(strikes: rightStrikes, vRel: rightVRel, yVel: rightYVel, ySeries: rightFootYSmooth, times: times) : []
         
