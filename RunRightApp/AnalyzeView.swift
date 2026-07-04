@@ -1445,7 +1445,12 @@ struct AnalyzeView: View {
         let actualDuration = ((try? await AVAsset(url: processedURL).load(.duration))?.seconds) ?? 0
         let footHip = !series.rightFootHipDistanceSeries.isEmpty
             ? series.rightFootHipDistanceSeries : series.leftFootHipDistanceSeries
-        let fps = actualDuration > 0 && !footHip.isEmpty ? Double(footHip.count) / actualDuration : 30.0
+        // fps from the ANALYZED window, not the full output video. The pipeline
+        // trims poseFrames (clean-window + stopped-frame trims), so footHip.count
+        // counts only analyzed frames while the video stays full length —
+        // footHip.count / videoDuration would under-report fps (and thus cadence).
+        let windowDuration = series.durationSeconds > 0.1 ? series.durationSeconds : actualDuration
+        let fps = windowDuration > 0 && !footHip.isEmpty ? Double(footHip.count) / windowDuration : 30.0
         let peaks = AnalyzeMath.detectLocalMaxima(footHip, frameRate: fps)
         let canonicalCadence = peaks.count >= 2
             ? AnalyzeMath.calculateCadenceFromPeaks(peaks, frameRate: fps)

@@ -1470,6 +1470,62 @@ class VideoProcessor: ObservableObject {
         return (0..<n, false)
     }
 
+    /// The sub-range where the runner is actively RUNNING. When they stop (walk
+    /// off, stand), the foot's vertical motion flatlines — a standing runner is
+    /// still "well framed", so cleanWindowRange keeps those frames, and they'd
+    /// otherwise drag down the averages, cadence and cycle detection. This keeps
+    /// the longest contiguous span whose rolling foot-motion amplitude clears a
+    /// fraction of the running level. Returns the FULL range when it can't
+    /// distinguish (uniform motion) so an all-running clip is never over-trimmed.
+    static func activeRunningRange(_ frames: [PoseFrame], frameRate: Double) -> Range<Int> {
+        let n = frames.count
+        guard n > 10 else { return 0..<n }
+        // Near-side foot vertical position per frame (ankle, fallback foot index).
+        let footY: [Double] = frames.map { f in
+            let ankle: PoseJoint = f.facingRight ? .rightAnkle : .leftAnkle
+            let toe: PoseJoint = f.facingRight ? .rightFootIndex : .leftFootIndex
+            if let p = f.points[ankle] { return Double(p.y) }
+            if let p = f.points[toe] { return Double(p.y) }
+            return .nan
+        }
+        // Frame-to-frame vertical speed.
+        var speed = [Double](repeating: .nan, count: n)
+        for i in 1..<n where footY[i].isFinite && footY[i - 1].isFinite {
+            speed[i] = abs(footY[i] - footY[i - 1])
+        }
+        // Rolling peak motion over ~0.5s (a stride phase): high while running,
+        // near zero while standing.
+        let w = max(3, Int((frameRate * 0.5).rounded()))
+        var amp = [Double](repeating: 0, count: n)
+        for i in 0..<n {
+            let lo = max(0, i - w / 2), hi = min(n - 1, i + w / 2)
+            var m = 0.0
+            for j in lo...hi where speed[j].isFinite { m = max(m, speed[j]) }
+            amp[i] = m
+        }
+        let sortedActive = amp.filter { $0 > 0 }.sorted()
+        guard sortedActive.count > 5 else { return 0..<n }
+        let p75 = sortedActive[Int(Double(sortedActive.count - 1) * 0.75)]
+        guard p75 > 0 else { return 0..<n }
+        let thresh = p75 * 0.30   // "moving" if rolling peak motion >= 30% of the running level
+        let moving = amp.map { $0 >= thresh }
+        // Longest contiguous moving span, bridging brief gaps (~0.2s).
+        let maxGap = max(2, Int((frameRate * 0.2).rounded()))
+        var bestStart = 0, bestEnd = -1, i = 0
+        while i < n {
+            if !moving[i] { i += 1; continue }
+            var j = i, gap = 0, lastGood = i
+            while j < n {
+                if moving[j] { lastGood = j; gap = 0 }
+                else { gap += 1; if gap > maxGap { break } }
+                j += 1
+            }
+            if lastGood - i > bestEnd - bestStart { bestStart = i; bestEnd = lastGood }
+            i = max(lastGood + 1, i + 1)
+        }
+        return bestEnd >= bestStart ? bestStart..<(bestEnd + 1) : 0..<n
+    }
+
     // MARK: - Scan quality (v1 gate)
 
     /// Whole-clip quality verdict from the tracking signals the pipeline already
@@ -1879,6 +1935,16 @@ class VideoProcessor: ObservableObject {
         )
         logScanQuality(quality, clip: inputURL.lastPathComponent)
         poseFrames = Array(poseFrames[cleanRange])
+        // Then trim to the ACTIVELY RUNNING span so a stopped/standing tail (flat
+        // signal) doesn't skew the averages, cadence or cycle detection — and,
+        // since the metric series is built from these frames, the trend graphs
+        // stop flatlining too. Only applied when it finds a real running sub-span
+        // (>= 1.5s) shorter than the whole clip; otherwise the clip is kept intact.
+        let activeRange = Self.activeRunningRange(poseFrames, frameRate: fps)
+        if activeRange.count >= Int((fps * 1.5).rounded()), activeRange.count < poseFrames.count {
+            debugLog("[ActiveRun] trimmed stopped frames: kept \(activeRange) of \(poseFrames.count) (\(Int(Double(activeRange.count)/Double(poseFrames.count)*100))%)")
+            poseFrames = Array(poseFrames[activeRange])
+        }
         let computed = computeMetrics(frames: poseFrames, renderSize: CGSize(width: renderWidth, height: renderHeight), frameRate: fps)
         await publishProgress(0.98, force: true)
         await MainActor.run {
