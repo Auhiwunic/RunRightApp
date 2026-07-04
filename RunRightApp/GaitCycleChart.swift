@@ -152,8 +152,20 @@ struct GaitCycleReferenceChart: View {
 
             // Measured curve from the user's run — only when plausible (real,
             // in-frame, not a degenerate flat/pinned line). Smoothed.
+            //
+            // SHAPE, not absolute degrees: a 2D markerless camera places each
+            // joint center a systematic few degrees off its true anatomical
+            // center (worst and ~2x noisier at the ankle / occluded far leg),
+            // and that offset is larger than the real differences between healthy
+            // runners. So we align the user curve's mean to the band's mean and
+            // compare the SHAPE and timing of the motion — a genuinely reduced
+            // range of motion or mistimed peak still shows, but a runner isn't
+            // flagged "off" just for the camera angle or their own anatomy.
             if userPlausible, let uc = userCurve, uc.count == 11 {
-                let pts = (0...10).map { CGPoint(x: x($0), y: y(min(max(uc[$0], lo), hi))) }
+                let userMean = uc.reduce(0, +) / Double(uc.count)
+                let refMean = mean.reduce(0, +) / Double(mean.count)
+                let shift = refMean - userMean
+                let pts = (0...10).map { CGPoint(x: x($0), y: y(min(max(uc[$0] + shift, lo), hi))) }
                 Path { p in Self.smooth(&p, pts, close: false) }
                 .stroke(userAccent, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
             } else if let u = userAtStrike {

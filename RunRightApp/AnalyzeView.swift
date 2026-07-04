@@ -824,7 +824,7 @@ struct AnalyzeView: View {
                     userAccent: AppTheme.primaryText
                 )
             }
-            Text("Shaded bands are the typical range from published running kinematics (Novacheck, Schache, Nagahara), not a target: good form is individual, not one line. Your line is this run's cycle average. Ankle is the least reliable joint from a side view.")
+            Text("Shaded bands are the typical range from published running kinematics (Novacheck, Schache, Nagahara), not a target: good form is individual, not one line. Your line is this run's cycle average, aligned to the band to compare the shape of your motion since camera angle shifts the exact degrees. Ankle is the least reliable joint from a side view.")
                 .font(AppTheme.body(9))
                 .foregroundColor(AppTheme.primaryText.opacity(0.3))
                 .fixedSize(horizontal: false, vertical: true)
