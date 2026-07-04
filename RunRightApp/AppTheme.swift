@@ -46,10 +46,29 @@ extension Color {
     }
 }
 
+// MARK: - Adaptive color (dark = original palette, light = gaita-site paper/ink)
+extension Color {
+    /// Resolves per trait collection: `dark` is the app's original palette,
+    /// `light` is the marketing site's bone/ink editorial palette.
+    init(light: Color, dark: Color) {
+        self.init(UIColor { trait in
+            trait.userInterfaceStyle == .light ? UIColor(light) : UIColor(dark)
+        })
+    }
+
+    init(lightHex: String, darkHex: String) {
+        self.init(light: Color(hex: lightHex), dark: Color(hex: darkHex))
+    }
+}
+
 // MARK: - App Theme
 struct AppTheme {
-    // MARK: - Colors (cyan/spring green accent scheme)
-    static let bgColor = Color(hex: "#121518")
+    // MARK: - Colors
+    // Dark mode: the original cyan/spring-green scheme, untouched.
+    // Light mode ("white mode"): the gaita-site palette — bone paper canvas,
+    // ink type, shell recessed tiles. Elevation ladder keeps the same token
+    // order in both modes: bgColor < cardBgAlt < cardBg < raisedFill.
+    static let bgColor = Color(lightHex: "#EAEAE7", darkHex: "#121518")
     static let accentColor = Color(hex: "#00CED1")      // Cyan
     static let accentGreen = Color(hex: "#00FF7F")      // Spring green
     static let fitnessGreen = Color(hex: "#B7F75C")     // Apple Fitness+ green
@@ -58,32 +77,39 @@ struct AppTheme {
     static let analyzePink = Color(hex: "#FF2D9B")      // Form Analysis accent (hot pink)
     static let darkAccent = Color(hex: "#006666")       // Dark teal
     static let darkerAccent = Color(hex: "#003333")     // Very dark teal
-    static let primaryText = Color.white
-    static let secondaryText = Color(hex: "#7A7A7A")
-    static let tabBarBg = Color(hex: "#20262B")
-    static let cardBg = Color(hex: "#252B31")
-    static let cardBgAlt = Color(hex: "#181D21")
+    static let primaryText = Color(lightHex: "#141412", darkHex: "#FFFFFF")   // site ink / white
+    static let secondaryText = Color(lightHex: "#6D6D68", darkHex: "#7A7A7A") // site mid
+    /// Tertiary/meta text — site "soft".
+    static let tertiaryText = Color(lightHex: "#A3A39E", darkHex: "#5F5F5F")
+    static let tabBarBg = Color(lightHex: "#ECECE9", darkHex: "#20262B")
+    static let cardBg = Color(lightHex: "#FAFAF9", darkHex: "#252B31")
+    static let cardBgAlt = Color(lightHex: "#F1F1EF", darkHex: "#181D21")     // light = site bone
     /// Fill for boxes raised above a card — one step lighter than cardBg so the
     /// lift reads as elevation, not decoration. No gradient, no shine.
-    static let raisedFill = Color(hex: "#30373F")
-    static let dividerColor = Color.white.opacity(0.08)
-    static let subtleBorder = Color.white.opacity(0.15)
-    /// Text/icons drawn on top of a solid accent fill — high contrast (used by Analyze dashboard).
+    static let raisedFill = Color(lightHex: "#FFFFFF", darkHex: "#30373F")
+    /// Recessed/inset tile fill — light mode uses the site's "shell".
+    static let insetFill = Color(lightHex: "#E7E7E4", darkHex: "#181D21")
+    static let dividerColor = Color(light: Color(hex: "#141412").opacity(0.10),
+                                    dark: Color.white.opacity(0.08))
+    static let subtleBorder = Color(light: Color(hex: "#141412").opacity(0.16),
+                                    dark: Color.white.opacity(0.15))
+    /// Text/icons drawn on top of a solid accent fill — high contrast in both modes.
     static let onAccentPrimary = Color(hex: "#121212")
     
     // MARK: - Gradients
     
-    /// Main gradient for header section (gray to black) - more visible
+    /// Main gradient for header section (gray to black) - more visible.
+    /// Light mode: warm paper grays fading to bone, same geometry.
     static let headerGradient = LinearGradient(
         stops: [
-            .init(color: Color(hex: "#5a5a5a"), location: 0.0),
-            .init(color: Color(hex: "#4a4a4a"), location: 0.06),
-            .init(color: Color(hex: "#3a3a3a"), location: 0.12),
-            .init(color: Color(hex: "#2a2a2a"), location: 0.20),
-            .init(color: Color(hex: "#1a1a1a"), location: 0.32),
-            .init(color: Color(hex: "#0f0f0f"), location: 0.50),
-            .init(color: Color(hex: "#0a0a0a"), location: 0.75),
-            .init(color: Color(hex: "#0a0a0a"), location: 1.0)
+            .init(color: Color(lightHex: "#D9D9D5", darkHex: "#5a5a5a"), location: 0.0),
+            .init(color: Color(lightHex: "#DEDEDA", darkHex: "#4a4a4a"), location: 0.06),
+            .init(color: Color(lightHex: "#E2E2DE", darkHex: "#3a3a3a"), location: 0.12),
+            .init(color: Color(lightHex: "#E7E7E3", darkHex: "#2a2a2a"), location: 0.20),
+            .init(color: Color(lightHex: "#EBEBE8", darkHex: "#1a1a1a"), location: 0.32),
+            .init(color: Color(lightHex: "#EEEEEB", darkHex: "#0f0f0f"), location: 0.50),
+            .init(color: Color(lightHex: "#F1F1EF", darkHex: "#0a0a0a"), location: 0.75),
+            .init(color: Color(lightHex: "#F1F1EF", darkHex: "#0a0a0a"), location: 1.0)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
@@ -116,38 +142,71 @@ struct AppTheme {
         endPoint: .bottomTrailing
     )
     
-    /// Card gradient (dark but not pitch black)
+    /// Card gradient (adapts: dark grays / paper whites)
     static let cardGradient = LinearGradient(
-        colors: [Color(hex: "#252B31"), Color(hex: "#181D21")],
+        colors: [cardBg, cardBgAlt],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
-    
+
     /// Top bar gradient for secondary pages - more visible
     static let topBarGradient = LinearGradient(
         stops: [
-            .init(color: Color(hex: "#3a3a3a").opacity(0.8), location: 0.0),
-            .init(color: Color(hex: "#2a2a2a").opacity(0.5), location: 0.25),
-            .init(color: Color(hex: "#1a1a1a").opacity(0.3), location: 0.5),
+            .init(color: Color(lightHex: "#DEDEDA", darkHex: "#3a3a3a").opacity(0.8), location: 0.0),
+            .init(color: Color(lightHex: "#E7E7E3", darkHex: "#2a2a2a").opacity(0.5), location: 0.25),
+            .init(color: Color(lightHex: "#EDEDEA", darkHex: "#1a1a1a").opacity(0.3), location: 0.5),
             .init(color: Color.clear, location: 0.75)
         ],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
-    
-    // MARK: - Font Sizes (Apple Fitness+ style)
-    static let titleFont: Font = .system(size: 28, weight: .bold)
+
+    // MARK: - Type system (ported from gaita-site "track day")
+    // Archivo carries every heading, label and readout; Switzer carries body
+    // copy. The four Archivo cuts are static instances of the variable font at
+    // the site's exact weight/width values.
+
+    /// Massive display caps and big number readouts — Archivo 650, 90% width.
+    /// Site `.display-caps`. Pair with `.tracking(size * -0.02)` on standalone Text.
+    static func display(_ size: CGFloat) -> Font { .custom("Archivo-Display", size: size) }
+    /// Section heads — Archivo 600, 93% width. Site `.head-caps`.
+    static func head(_ size: CGFloat) -> Font { .custom("Archivo-Head", size: size) }
+    /// Screen titles / logo weight — Archivo 700, 93% width.
+    static func headBold(_ size: CGFloat) -> Font { .custom("Archivo-HeadBold", size: size) }
+    /// Tiny wide-tracked meta labels — Archivo 500, never condensed. Site `.meta`.
+    /// Pair with `.tracking(size * 0.12)` for the site's letterspacing.
+    static func meta(_ size: CGFloat) -> Font { .custom("Archivo-Meta", size: size) }
+    /// Body copy — Switzer 400 / 500 / 600.
+    static func body(_ size: CGFloat) -> Font { .custom("Switzer-Regular", size: size) }
+    static func bodyMedium(_ size: CGFloat) -> Font { .custom("Switzer-Medium", size: size) }
+    static func bodySemibold(_ size: CGFloat) -> Font { .custom("Switzer-Semibold", size: size) }
+
+    /// Display cut with tabular figures — for live readouts (timers, paces,
+    /// tickers) whose digits must not jitter as values change. Site `.tabular`.
+    static func displayTabular(_ size: CGFloat) -> Font {
+        let descriptor = UIFontDescriptor(fontAttributes: [
+            .name: "Archivo-Display",
+            .featureSettings: [[
+                UIFontDescriptor.FeatureKey.type: kNumberSpacingType,
+                UIFontDescriptor.FeatureKey.selector: kMonospacedNumbersSelector
+            ]]
+        ])
+        return Font(UIFont(descriptor: descriptor, size: size))
+    }
+
+    // MARK: - Font tokens (sizes unchanged; faces now match the site)
+    static let titleFont: Font = headBold(28)
 
     /// CANONICAL section / graph / card title — the ONE title font used app-wide.
-    /// White, monospaced, bold, deliberately larger. Every heading (Home, Analyze,
-    /// charts, tables) uses this; titles are never gray and never smaller.
-    static let sectionTitleFont: Font = .system(size: 15, weight: .bold, design: .monospaced)
-    static let subtitleFont: Font = .system(size: 22, weight: .semibold)
-    static let bodyFont: Font = .system(size: 17, weight: .regular)
-    static let captionFont: Font = .system(size: 13, weight: .regular)
-    static let smallFont: Font = .system(size: 12, weight: .regular)
-    static let tinyFont: Font = .system(size: 10, weight: .regular)
-    static let tabBarLabelFont: Font = .system(size: 11, weight: .semibold)
+    /// primaryText ink/white, Archivo head caps, deliberately larger. Every heading
+    /// (Home, Analyze, charts, tables) uses this; titles are never gray and never smaller.
+    static let sectionTitleFont: Font = head(15)
+    static let subtitleFont: Font = head(22)
+    static let bodyFont: Font = body(17)
+    static let captionFont: Font = body(13)
+    static let smallFont: Font = body(12)
+    static let tinyFont: Font = meta(10)
+    static let tabBarLabelFont: Font = meta(11)
     
     // MARK: - Spacing
     static let screenPadding: CGFloat = 20
@@ -171,18 +230,28 @@ struct AppRaisedSurface: ViewModifier {
     let lightOpacity: Double
     let darkOpacity: Double
 
+    @Environment(\.colorScheme) private var colorScheme
+
     private var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
     }
 
     func body(content: Content) -> some View {
+        // Light mode swaps the shadow pair for paper: a warm gray drop shadow
+        // and a white top light. Same geometry, softer contrast.
+        let darkShadow = colorScheme == .light
+            ? Color(hex: "#B4B4AE").opacity(min(darkOpacity, 0.55))
+            : Color(hex: "#000000").opacity(darkOpacity)
+        let lightShadow = colorScheme == .light
+            ? Color.white.opacity(min(lightOpacity * 5, 0.9))
+            : Color(hex: "#56636E").opacity(lightOpacity)
         content
             .background(
                 shape
                     .fill(fill)
                     .softOuterShadow(
-                        darkShadow: Color(hex: "#000000").opacity(darkOpacity),
-                        lightShadow: Color(hex: "#56636E").opacity(lightOpacity),
+                        darkShadow: darkShadow,
+                        lightShadow: lightShadow,
                         offset: max(x, y),
                         radius: shadowRadius
                     )

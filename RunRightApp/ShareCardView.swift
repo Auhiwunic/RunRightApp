@@ -14,8 +14,10 @@ import FirebaseAuth
 // MARK: - Fonts (telemetry / digital — monospaced)
 
 private extension Font {
-    static func arial(_ size: CGFloat) -> Font { .system(size: size, weight: .medium, design: .monospaced) }
-    static func arialBold(_ size: CGFloat) -> Font { .system(size: size, weight: .bold, design: .monospaced) }
+    // Share card uses the app faces (Archivo/Switzer). Numbers use the tabular
+    // Archivo cut so the packed metric table stays column-aligned in the export.
+    static func arial(_ size: CGFloat) -> Font { AppTheme.bodyMedium(size) }
+    static func arialBold(_ size: CGFloat) -> Font { AppTheme.displayTabular(size) }
 }
 
 // MARK: - Telemetry field box

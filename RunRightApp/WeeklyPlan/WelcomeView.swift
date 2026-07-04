@@ -15,16 +15,16 @@ struct WelcomeView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Build your")
-                        .font(.system(size: 44, weight: .bold))
+                        .font(AppTheme.display(44))
                         .foregroundStyle(PlanTheme.textPrimary)
 
                     Text("week.")
-                        .font(.system(size: 44, weight: .bold))
+                        .font(AppTheme.display(44))
                         .foregroundStyle(PlanTheme.textPrimary)
                 }
 
                 Text("A few quick questions to shape your plan.")
-                    .font(.body)
+                    .font(AppTheme.body(17))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .padding(.top, 20)
 
@@ -32,7 +32,7 @@ struct WelcomeView: View {
 
                 Button(action: onGetStarted) {
                     Text("Let's go")
-                        .font(.headline)
+                        .font(AppTheme.bodySemibold(17))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 18)
                         .background(Color.white)

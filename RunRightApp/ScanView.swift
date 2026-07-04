@@ -44,9 +44,9 @@ struct ScanView: View {
     @ObservedObject private var scanVM = ScanViewModel.shared
 
     private let accentLime = AppTheme.analyzePink
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
-    private let cardBackgroundSoft = Color(hex: "#242428")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
+    private let cardBackgroundSoft = AppTheme.cardBgAlt
     
     var body: some View {
         ZStack {
@@ -67,8 +67,8 @@ struct ScanView: View {
                         HStack(spacing: 8) {
                             ProgressView().tint(accentLime).scaleEffect(0.8)
                             Text("Loading your shoes…")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.white.opacity(0.5))
+                                .font(AppTheme.bodyMedium(13))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.5))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(12)
@@ -81,16 +81,16 @@ struct ScanView: View {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundColor(accentLime)
                                 Text("Select a shoe to start scanning")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundColor(.white)
+                                    .font(AppTheme.bodySemibold(14))
+                                    .foregroundColor(AppTheme.primaryText)
                             }
                             Text("Use the \"Wear Pattern\" dropdown above to choose a shoe, or add one first.")
-                                .font(.system(size: 12))
-                                .foregroundColor(.white.opacity(0.5))
+                                .font(AppTheme.body(12))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                 .multilineTextAlignment(.center)
                             Button(action: { showAddShoeAlert = true }) {
                                 Label("Add New Shoe", systemImage: "plus.circle.fill")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(AppTheme.bodySemibold(13))
                                     .foregroundColor(.black)
                                     .padding(.horizontal, 20)
                                     .padding(.vertical, 10)
@@ -118,22 +118,22 @@ struct ScanView: View {
                                     ProgressView().tint(backgroundColor).scaleEffect(0.85)
                                 } else {
                                     Image(systemName: bothScanned ? "checkmark.circle.fill" : "camera.fill")
-                                        .font(.system(size: 14))
+                                        .font(AppTheme.body(14))
                                 }
                                 Text(bothScanned ? "Rescan Shoes" : "Scan Shoes")
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(AppTheme.bodySemibold(15))
                             }
                             if isAnalyzing {
                                 Text(isAnalyzingLeft
                                      ? (leftStatus.isEmpty ? "Left shoe…" : "Left — \(leftStatus)")
                                      : (rightStatus.isEmpty ? "Right shoe…" : "Right — \(rightStatus)"))
-                                    .font(.system(size: 10, weight: .medium))
+                                    .font(AppTheme.bodyMedium(10))
                                     .opacity(0.75)
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
                             }
                         }
-                        .foregroundColor(canScan ? backgroundColor : .white.opacity(0.4))
+                        .foregroundColor(canScan ? backgroundColor : AppTheme.primaryText.opacity(0.4))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .background(canScan ? accentLime : cardBackgroundSoft)
@@ -154,8 +154,8 @@ struct ScanView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text("Wear Pattern")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.white)
+                                .font(AppTheme.bodySemibold(16))
+                                .foregroundColor(AppTheme.primaryText)
                             Spacer()
                             Menu {
                                 ForEach(shoes, id: \.self) { shoe in
@@ -168,11 +168,11 @@ struct ScanView: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     Text(selectedShoe.isEmpty ? "Select Shoe" : selectedShoe)
-                                        .font(.system(size: 12, weight: .medium))
-                                        .foregroundColor(selectedShoe.isEmpty ? .white.opacity(0.4) : .white)
+                                        .font(AppTheme.bodyMedium(12))
+                                        .foregroundColor(selectedShoe.isEmpty ? AppTheme.primaryText.opacity(0.4) : .white)
                                     Image(systemName: "chevron.down")
-                                        .font(.system(size: 9))
-                                        .foregroundColor(.white.opacity(0.5))
+                                        .font(AppTheme.body(9))
+                                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                 }
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 7)
@@ -197,7 +197,7 @@ struct ScanView: View {
                                 if let right = page.right {
                                     if page.left != nil {
                                         Rectangle()
-                                            .fill(Color.white.opacity(0.08))
+                                            .fill(AppTheme.primaryText.opacity(0.08))
                                             .frame(height: 1)
                                     }
                                     shoeAnalysisSection(snapshot: right, label: "Right")
@@ -464,11 +464,11 @@ struct ScanView: View {
     private func errorCard(title: String, message: String) -> some View {
         VStack(spacing: 8) {
             Text(title)
-                .font(.system(size: 14, weight: .medium))
+                .font(AppTheme.bodyMedium(14))
                 .foregroundColor(Color(hex: "#FF8C00"))
             Text(message)
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.6))
+                .font(AppTheme.body(12))
+                .foregroundColor(AppTheme.primaryText.opacity(0.6))
                 .multilineTextAlignment(.center)
         }
         .padding(12)
@@ -481,15 +481,15 @@ struct ScanView: View {
     private var scanHeader: some View {
         HStack {
             Text("Gait Analysis")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.display(32))
+                .foregroundColor(AppTheme.primaryText)
             Spacer()
             Button(action: { dismiss() }) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(AppTheme.bodySemibold(14))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.7))
                     .frame(width: 32, height: 32)
-                    .background(Circle().fill(Color.white.opacity(0.08)))
+                    .background(Circle().fill(AppTheme.primaryText.opacity(0.08)))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Close")
@@ -500,8 +500,8 @@ struct ScanView: View {
     private func scanCard<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .font(AppTheme.bodySemibold(16))
+                .foregroundColor(AppTheme.primaryText)
             content()
         }
         .padding(16)
@@ -529,13 +529,13 @@ struct ScanView: View {
                 .frame(maxWidth: .infinity)
 
                 Text("No scans yet. Scan each shoe above to see its wear pattern.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     .multilineTextAlignment(.center)
             } else {
                 // Date of the scan being viewed
                 Text(dateLabel(for: currentHistoryPage?.date))
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(AppTheme.bodySemibold(13))
                     .foregroundColor(accentLime)
                     .frame(maxWidth: .infinity)
                     .animation(nil, value: currentPage)
@@ -573,8 +573,8 @@ struct ScanView: View {
     private func carouselArrow(_ systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(enabled ? .white.opacity(0.85) : .white.opacity(0.15))
+                .font(AppTheme.meta(13))
+                .foregroundColor(enabled ? AppTheme.primaryText.opacity(0.85) : AppTheme.primaryText.opacity(0.15))
                 .frame(width: 32, height: 32)
                 .background(cardBackgroundSoft.opacity(enabled ? 1 : 0.4))
                 .clipShape(Circle())
@@ -651,21 +651,21 @@ struct ScanView: View {
                 HStack {
                     if let first = scanVM.trendLabels.first {
                         Text(first)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.bodyMedium(10))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
                     Spacer()
                     if let last = scanVM.trendLabels.last {
                         Text(last)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.bodyMedium(10))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
                 }
             } else {
                 // Not enough scans yet to draw a line.
                 Text("No trend yet")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white.opacity(0.3))
+                    .font(AppTheme.bodyMedium(13))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
                     .frame(maxWidth: .infinity)
                     .frame(height: 80)
             }
@@ -683,17 +683,17 @@ struct ScanView: View {
         // comfort first note. Coaching now lives in the Analyze FOCUS list.
         VStack(alignment: .leading, spacing: 6) {
             Text("\(label): \(shoe.gaitType.capitalized)\(strikeText)")
-                .font(.system(size: 13, weight: .bold))
+                .font(AppTheme.meta(13))
                 .foregroundColor(accentLime)
 
             if let h = health {
                 Text("Tread health \(h)%. Replace shoes based on how they feel, not a number.")
-                    .font(.system(size: 11, weight: .regular))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(AppTheme.body(11))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     .fixedSize(horizontal: false, vertical: true)
                 Text("General fitness guidance, not medical advice. See a professional for pain or injury.")
-                    .font(.system(size: 9))
-                    .foregroundColor(.white.opacity(0.3))
+                    .font(AppTheme.body(9))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -799,7 +799,7 @@ struct FootHeatmapView: View {
             if showLabel {
                 Text(isLeft ? "Left" : "Right")
                     .font(.system(size: 13, weight: .bold, design: labelDesign))
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.primaryText)
                     .textCase(.uppercase)
                     .tracking(0.5)
             }
@@ -901,7 +901,7 @@ struct FootHeatmapView: View {
         )
 
         // Dim neutral cells when there's no scan yet — shows the shoe outline only.
-        let placeholder = Color.white.opacity(0.08)
+        let placeholder = AppTheme.primaryText.opacity(0.08)
 
         for row in 0..<rows {
             for col in 0..<columns {
@@ -1159,23 +1159,23 @@ struct ScanStatCard: View {
             VStack(spacing: 8) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.system(size: 16, weight: .bold))
+                        .font(AppTheme.head(16))
                         .foregroundColor(accent)
                 }
 
                 HStack(spacing: 3) {
                     Text(label)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.bodyMedium(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     if guide != nil {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 8))
-                            .foregroundColor(.white.opacity(0.28))
+                            .font(AppTheme.body(8))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.28))
                     }
                 }
 
                 Text(value)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(AppTheme.bodySemibold(18))
                     .foregroundColor(valueColor)
             }
             .frame(maxWidth: .infinity, minHeight: 90)
@@ -1196,7 +1196,7 @@ struct ScanStatCard: View {
 struct TrendChartView: View {
     var dataPoints: [CGFloat]
     var accent: Color = Color(hex: "#00FF7F")
-    var bg: Color = Color(hex: "#1A1A1C")
+    var bg: Color = AppTheme.bgColor
     
     var body: some View {
         GeometryReader { geometry in
@@ -1211,7 +1211,7 @@ struct TrendChartView: View {
                         path.move(to: CGPoint(x: 0, y: height * (1 - y)))
                         path.addLine(to: CGPoint(x: width, y: height * (1 - y)))
                     }
-                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                    .stroke(AppTheme.primaryText.opacity(0.06), lineWidth: 1)
                 }
                 
                 // Area fill
@@ -1262,8 +1262,8 @@ struct ScanSectionHeader: View {
     
     var body: some View {
         Text(title)
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundColor(.white)
+            .font(AppTheme.bodySemibold(16))
+            .foregroundColor(AppTheme.primaryText)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 20)
     }
@@ -1273,7 +1273,7 @@ struct ScanSectionHeader: View {
 struct ScanSectionDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.white.opacity(0.06))
+            .fill(AppTheme.primaryText.opacity(0.06))
             .frame(height: 1)
     }
 }

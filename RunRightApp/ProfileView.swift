@@ -12,6 +12,7 @@ struct ProfileView: View {
     // The one real unit setting (drives Analyze and settings everywhere).
     // The old local @State here was decorative and reset on every tab switch.
     @AppStorage("useImperialUnits") private var useImperialUnits: Bool = true
+    @AppStorage("gaita.appearance") private var appearance = "dark"
     @State private var showAuthSheet = false
     @State private var stats: RunRepository.RunStats = .init()
     @State private var isLoading = true
@@ -36,7 +37,7 @@ struct ProfileView: View {
     // Shareable scorecard
     @State private var showScorecard = false
 
-    private let accentLime = Color(hex: "#FFFFFF")
+    private let accentLime = Color(lightHex: "#141412", darkHex: "#FFFFFF")
     private let backgroundColor = AppTheme.bgColor
     @State private var legalDoc: LegalDoc?
     private let cardBackground = AppTheme.cardBg
@@ -76,12 +77,12 @@ struct ProfileView: View {
                     // Shareable scorecard (marketable share-to-social card)
                     Button(action: { showScorecard = true }) {
                         Text("SHARE SCORECARD")
-                            .font(.system(size: 14, weight: .bold, design: .monospaced))
+                            .font(AppTheme.head(14))
                             .tracking(1)
-                            .foregroundColor(.black)
+                            .foregroundColor(AppTheme.bgColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 15)
-                            .background(Color.white)
+                            .background(AppTheme.primaryText)
                             .clipShape(Capsule())
                     }
                     .padding(.horizontal, 20)
@@ -94,8 +95,8 @@ struct ProfileView: View {
                             Task { await auth.signInAnonymouslyIfNeeded() }
                         }) {
                             Text("SIGN OUT")
-                                .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white.opacity(0.5))
+                                .font(AppTheme.head(13))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
                         }
@@ -104,10 +105,10 @@ struct ProfileView: View {
 
                         Button(action: { Task { await exportData() } }) {
                             HStack(spacing: 8) {
-                                if isExporting { ProgressView().tint(.white.opacity(0.6)) }
+                                if isExporting { ProgressView().tint(AppTheme.primaryText.opacity(0.6)) }
                                 Text(isExporting ? "PREPARING…" : "EXPORT MY DATA")
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                                    .foregroundColor(.white.opacity(0.5))
+                                    .font(AppTheme.head(13))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -119,7 +120,7 @@ struct ProfileView: View {
                             HStack(spacing: 8) {
                                 if isDeleting { ProgressView().tint(Color(hex: "#FF453A")) }
                                 Text(isDeleting ? "DELETING…" : "DELETE ACCOUNT")
-                                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                    .font(AppTheme.head(13))
                                     .foregroundColor(Color(hex: "#FF453A"))
                             }
                             .frame(maxWidth: .infinity)
@@ -131,8 +132,8 @@ struct ProfileView: View {
 
                     // App version
                     Text(appVersionText)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white.opacity(0.2))
+                        .font(AppTheme.bodyMedium(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.2))
                         .padding(.top, 4)
 
                     // Bottom padding for tab bar
@@ -354,8 +355,8 @@ struct ProfileView: View {
     private var profileHeader: some View {
         HStack {
             Text("Profile")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.display(32))
+                .foregroundColor(AppTheme.primaryText)
             Spacer()
             if auth.isAuthenticated && !auth.isAnonymous {
                 avatarBadge
@@ -370,29 +371,29 @@ struct ProfileView: View {
             : (Auth.auth().currentUser?.email ?? "")
         let initial = String(source.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased()
         return Text(initial.isEmpty ? "U" : initial)
-            .font(.system(size: 16, weight: .bold))
-            .foregroundColor(.black)
+            .font(AppTheme.head(16))
+            .foregroundColor(AppTheme.bgColor)
             .frame(width: 40, height: 40)
-            .background(Circle().fill(Color.white))
+            .background(Circle().fill(AppTheme.primaryText))
     }
 
     // MARK: - Sign-in gate (anonymous users)
     private var signInGate: some View {
         VStack(spacing: 18) {
             Image(systemName: "person.crop.circle")
-                .font(.system(size: 54))
-                .foregroundColor(.white.opacity(0.9))
+                .font(AppTheme.body(54))
+                .foregroundColor(AppTheme.primaryText.opacity(0.9))
             Text("Sign in to view your stats")
-                .font(.system(size: 19, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.head(19))
+                .foregroundColor(AppTheme.primaryText)
                 .multilineTextAlignment(.center)
             Button(action: { showAuthSheet = true }) {
                 Text("Sign In")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.black)
+                    .font(AppTheme.head(15))
+                    .foregroundColor(AppTheme.bgColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(Color.white)
+                    .background(AppTheme.primaryText)
                     .cornerRadius(14)
             }
             .padding(.horizontal, 44)
@@ -400,9 +401,9 @@ struct ProfileView: View {
             // Guests can still preview/share a scorecard (it's the marketable hook).
             Button(action: { showScorecard = true }) {
                 Text("SHARE SCORECARD")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .font(AppTheme.head(13))
                     .tracking(1)
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.7))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
             }
@@ -424,11 +425,11 @@ struct ProfileView: View {
     private func profileStatBox(value: String, label: String) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 24, weight: .bold, design: .monospaced))
+                .font(AppTheme.display(24))
                 .foregroundColor(accentLime)
             Text(label.uppercased())
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.meta(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -445,8 +446,8 @@ struct ProfileView: View {
 
         return VStack(alignment: .leading, spacing: 12) {
             Text(monthName.uppercased())
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
-                .foregroundColor(.white)
+                .font(AppTheme.head(16))
+                .foregroundColor(AppTheme.primaryText)
             MonthlyHeatmapView(runsByDay: monthlyRunsByDay, dailyGoalMiles: dailyGoalMiles)
         }
         .padding(16)
@@ -478,11 +479,11 @@ struct ProfileView: View {
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("THIS WEEK")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(16))
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Text("\(String(format: "%.1f", totalMiles)) mi")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(AppTheme.bodySemibold(13))
                     .foregroundColor(accentLime)
             }
 
@@ -491,8 +492,8 @@ struct ProfileView: View {
                     VStack(spacing: 4) {
                         if miles[i] > 0 {
                             Text(String(format: "%.1f", miles[i]))
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(.white.opacity(0.5))
+                                .font(AppTheme.bodySemibold(9))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.5))
                         }
 
                         RoundedRectangle(cornerRadius: 4)
@@ -500,8 +501,8 @@ struct ProfileView: View {
                             .frame(height: miles[i] > 0 ? max(16, CGFloat(miles[i] / maxMile) * 80) : 8)
 
                         Text(days[i])
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(i == todayIndex ? accentLime : .white.opacity(0.35))
+                            .font(AppTheme.bodyMedium(10))
+                            .foregroundColor(i == todayIndex ? accentLime : AppTheme.primaryText.opacity(0.35))
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -516,8 +517,8 @@ struct ProfileView: View {
     private var settingsCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("PREFERENCES")
-                .font(.system(size: 16, weight: .bold, design: .monospaced))
-                .foregroundColor(.white)
+                .font(AppTheme.head(16))
+                .foregroundColor(AppTheme.primaryText)
                 .padding(.bottom, 8)
             
             // Units
@@ -529,15 +530,28 @@ struct ProfileView: View {
                 .appRaisedBox(cornerRadius: 8)
             }
 
+            Rectangle()
+                .fill(AppTheme.primaryText.opacity(0.06))
+                .frame(height: 1)
+
+            // Theme (white mode)
+            settingsRow(label: "Theme", icon: "circle.lefthalf.filled") {
+                HStack(spacing: 0) {
+                    themeButton(text: "dark", selected: appearance != "light") { appearance = "dark" }
+                    themeButton(text: "light", selected: appearance == "light") { appearance = "light" }
+                }
+                .appRaisedBox(cornerRadius: 8)
+            }
+
             ForEach([LegalDoc.privacyPolicy, .terms, .licenses]) { doc in
                 Rectangle()
-                    .fill(Color.white.opacity(0.06))
+                    .fill(AppTheme.primaryText.opacity(0.06))
                     .frame(height: 1)
                 Button(action: { legalDoc = doc }) {
                     settingsRow(label: doc.title, icon: "doc.text") {
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.3))
+                            .font(AppTheme.bodySemibold(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.3))
                     }
                 }
                 .buttonStyle(.plain)
@@ -553,12 +567,12 @@ struct ProfileView: View {
     private func settingsRow<Content: View>(label: String, icon: String, @ViewBuilder trailing: () -> Content) -> some View {
         HStack {
             Image(systemName: icon)
-                .font(.system(size: 13))
+                .font(AppTheme.body(13))
                 .foregroundColor(accentLime)
                 .frame(width: 24)
             Text(label)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.white)
+                .font(AppTheme.bodyMedium(14))
+                .foregroundColor(AppTheme.primaryText)
             Spacer()
             trailing()
         }
@@ -568,9 +582,20 @@ struct ProfileView: View {
     private func unitButton(text: String, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: { withAnimation(.easeInOut(duration: 0.15)) { action() } }) {
             Text(text)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(selected ? .black : .white.opacity(0.5))
+                .font(AppTheme.bodySemibold(12))
+                .foregroundColor(selected ? AppTheme.bgColor : AppTheme.primaryText.opacity(0.5))
                 .frame(width: 36, height: 28)
+                .background(selected ? accentLime : Color.clear)
+                .cornerRadius(6)
+        }
+    }
+
+    private func themeButton(text: String, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: { withAnimation(.easeInOut(duration: 0.15)) { action() } }) {
+            Text(text)
+                .font(AppTheme.bodySemibold(12))
+                .foregroundColor(selected ? AppTheme.bgColor : AppTheme.secondaryText)
+                .frame(width: 46, height: 28)
                 .background(selected ? accentLime : Color.clear)
                 .cornerRadius(6)
         }

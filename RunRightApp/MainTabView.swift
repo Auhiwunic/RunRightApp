@@ -63,14 +63,14 @@ struct MainTabView: View {
             HStack(spacing: 10) {
                 Circle().fill(orange).frame(width: 9, height: 9)
                 Text("RUNNING")
-                    .font(.system(size: 12, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.meta(12))
+                    .foregroundColor(AppTheme.primaryText)
                 Text("\(time) · \(String(format: "%.2f", miles)) mi")
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.65))
+                    .font(AppTheme.meta(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.65))
                 Spacer()
                 Text("RESUME")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(11))
                     .foregroundColor(.black)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
@@ -79,7 +79,7 @@ struct MainTabView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color(hex: "#1C1C1E"))
+            .background(AppTheme.tabBarBg)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -116,7 +116,7 @@ struct CustomTabBar: View {
     var body: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(Color.white.opacity(0.08))
+                .fill(AppTheme.primaryText.opacity(0.08))
                 .frame(height: 1)
 
             HStack(spacing: 0) {
@@ -155,8 +155,8 @@ struct TabBarItem: View {
     var body: some View {
         VStack(spacing: 5) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .medium))
-                .foregroundColor(isSelected ? color : Color.white.opacity(0.58))
+                .font(AppTheme.bodyMedium(20))
+                .foregroundColor(isSelected ? color : AppTheme.primaryText.opacity(0.58))
                 .frame(width: 52, height: 32)
                 .background(
                     Capsule(style: .continuous)
@@ -165,7 +165,7 @@ struct TabBarItem: View {
 
             Text(label)
                 .font(AppTheme.tabBarLabelFont)
-                .foregroundColor(isSelected ? color : Color.white.opacity(0.58))
+                .foregroundColor(isSelected ? color : AppTheme.primaryText.opacity(0.58))
         }
         .frame(maxWidth: .infinity)
         .animation(.easeInOut(duration: 0.18), value: isSelected)

@@ -22,7 +22,7 @@ struct GoalTile: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 Text(goal.subtitle)
-                    .font(.caption)
+                    .font(AppTheme.body(12))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)

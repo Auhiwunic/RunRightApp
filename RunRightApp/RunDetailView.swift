@@ -11,9 +11,9 @@ struct RunDetailView: View {
     @Environment(\.dismiss) var dismiss
 
     private let accentLime = Color(hex: "#FF8C00")   // Run-tab orange (Z4)
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
-    private let cardBackgroundSoft = Color(hex: "#242428")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
+    private let cardBackgroundSoft = AppTheme.cardBgAlt
 
     var body: some View {
         ZStack {
@@ -61,20 +61,20 @@ struct RunDetailView: View {
         HStack {
             Button(action: { dismiss() }) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodyMedium(16))
+                    .foregroundColor(AppTheme.primaryText)
                     .padding(8)
             }
 
             Text("Run Details")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.head(24))
+                .foregroundColor(AppTheme.primaryText)
 
             Spacer()
 
             Text(formattedDate)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.bodyMedium(12))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
     }
 
@@ -84,15 +84,15 @@ struct RunDetailView: View {
         VStack(spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(String(format: "%.2f", run.distanceMiles))
-                    .font(.system(size: 64, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.display(64))
+                    .foregroundColor(AppTheme.primaryText)
                 Text("mi")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(AppTheme.bodyMedium(22))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
             }
             Text("Total Distance")
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.body(13))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
@@ -115,14 +115,14 @@ struct RunDetailView: View {
     private func statCell(value: String, label: String, icon: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: icon)
-                .font(.system(size: 14))
+                .font(AppTheme.body(14))
                 .foregroundColor(accentLime.opacity(0.7))
             Text(value)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.head(18))
+                .foregroundColor(AppTheme.primaryText)
             Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.bodyMedium(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 14)
@@ -134,28 +134,28 @@ struct RunDetailView: View {
     private var paceCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Pace Breakdown")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .font(AppTheme.bodySemibold(16))
+                .foregroundColor(AppTheme.primaryText)
 
             HStack(spacing: 20) {
                 VStack(spacing: 4) {
                     Text(formattedPace)
-                        .font(.system(size: 28, weight: .bold))
+                        .font(AppTheme.display(28))
                         .foregroundColor(accentLime)
                     Text("per mile")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.body(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 }
 
                 Spacer()
 
                 VStack(spacing: 4) {
                     Text(formattedPacePerKm)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.display(28))
+                        .foregroundColor(AppTheme.primaryText)
                     Text("per km")
-                        .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.body(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 }
 
                 Spacer()
@@ -174,17 +174,17 @@ struct RunDetailView: View {
                     .fill(accentLime.opacity(0.12))
                     .frame(width: 42, height: 42)
                 Image(systemName: "shoe.fill")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(AppTheme.bodySemibold(16))
                     .foregroundColor(accentLime)
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Shoe Used")
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(11))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 Text(shoe)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(AppTheme.primaryText)
             }
 
             Spacer()
@@ -199,20 +199,20 @@ struct RunDetailView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Color.white.opacity(0.06))
+                    .fill(AppTheme.primaryText.opacity(0.06))
                     .frame(width: 42, height: 42)
                 Image(systemName: "calendar")
-                    .font(.system(size: 16))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(AppTheme.body(16))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
             }
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(formattedFullDate)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(14))
+                    .foregroundColor(AppTheme.primaryText)
                 Text(formattedTime)
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
             }
 
             Spacer()

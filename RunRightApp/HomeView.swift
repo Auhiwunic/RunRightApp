@@ -88,15 +88,15 @@ struct HomeView: View {
                     NavigationLink(destination: RunHistoryView()) {
                         HStack(spacing: 12) {
                             Text("RUN HISTORY")
-                                .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                .foregroundColor(.white)
+                                .font(AppTheme.head(14))
+                                .foregroundColor(AppTheme.primaryText)
                             Spacer()
                             Text("\(vm.stats.totalRuns) runs")
-                                .font(.system(size: 12))
-                                .foregroundColor(.white.opacity(0.5))
+                                .font(AppTheme.body(12))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.5))
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white.opacity(0.3))
+                                .font(AppTheme.bodyMedium(12))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.3))
                         }
                         .padding(16)
                         .appRaisedSurface(fill: cardBackground, cornerRadius: 16, shadowRadius: 9, x: 5, y: 6)
@@ -141,11 +141,11 @@ struct HomeView: View {
     private var headerRow: some View {
         HStack {
             Text("Hello, ")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.display(32))
+                .foregroundColor(AppTheme.primaryText)
             + Text(vm.displayName)
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.display(32))
+                .foregroundColor(AppTheme.primaryText)
 
             Spacer()
         }
@@ -166,8 +166,8 @@ struct HomeView: View {
 
                 VStack(spacing: spacing) {
                     Text("TODAY")
-                        .font(.system(size: 13, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .font(AppTheme.head(13))
+                        .foregroundColor(AppTheme.primaryText)
                         .frame(maxWidth: .infinity, alignment: .leading)
 
                     StepsProgressRing(progress: progress, steps: steps,
@@ -187,8 +187,8 @@ struct HomeView: View {
                         }
                     } else {
                         Text("Health not available\non Simulator")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.35))
+                            .font(AppTheme.bodyMedium(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.35))
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity, alignment: .center)
                     }
@@ -200,13 +200,13 @@ struct HomeView: View {
     private func hkChip(value: String, unit: String) -> some View {
         VStack(spacing: 3) {
             Text(value)
-                .font(.system(size: 20, weight: .bold, design: .monospaced))
-                .foregroundColor(.white)
+                .font(AppTheme.display(20))
+                .foregroundColor(AppTheme.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(unit.uppercased())
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.meta(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
@@ -216,10 +216,10 @@ struct HomeView: View {
     private var runButtonBox: some View {
         VStack(spacing: 2) {
             Text("\(vm.runStreak)")
-                .font(.system(size: 30, weight: .bold, design: .monospaced))
+                .font(AppTheme.display(30))
                 .foregroundColor(backgroundColor)
             Text("DAY STREAK")
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(9))
                 .foregroundColor(backgroundColor.opacity(0.65))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -244,8 +244,8 @@ struct HomeView: View {
         return DashboardCard(background: cardBackground) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("THIS WEEK")
-                    .font(.system(size: 13, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(13))
+                    .foregroundColor(AppTheme.primaryText)
 
                 // Rows flex to fill available height — no fixed row height needed
                 VStack(spacing: 3) {
@@ -254,13 +254,13 @@ struct HomeView: View {
                         let fillRatio = hasRun ? CGFloat(miles[index] / maxMiles) : 0
                         HStack(spacing: 5) {
                             Text(dayNames[index])
-                                .font(.system(size: 9, weight: .semibold))
-                                .foregroundColor(index == todayIndex ? accentLime : .white.opacity(0.4))
+                                .font(AppTheme.bodySemibold(9))
+                                .foregroundColor(index == todayIndex ? accentLime : AppTheme.primaryText.opacity(0.4))
                                 .frame(width: 10)
                             GeometryReader { geo in
                                 ZStack(alignment: .leading) {
                                     RoundedRectangle(cornerRadius: 3)
-                                        .fill(Color.white.opacity(0.07))
+                                        .fill(AppTheme.primaryText.opacity(0.07))
                                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                                     if hasRun {
                                         RoundedRectangle(cornerRadius: 3)
@@ -290,8 +290,8 @@ struct HomeView: View {
             if vm.lastRun == nil {
                 // Empty state — clean, no icon, no subtext
                 Text("NO RUNS YET")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.5))
+                    .font(AppTheme.head(16))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 28)
             } else {
@@ -307,22 +307,22 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack {
                     Text("LAST RUN")
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .font(AppTheme.head(16))
+                        .foregroundColor(AppTheme.primaryText)
                     Spacer()
                     Text(vm.formattedLastRunTime())
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 }
                 
                 // Big distance
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(distanceKmText)
-                        .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.display(48))
+                        .foregroundColor(AppTheme.primaryText)
                     Text("km")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.bodyMedium(20))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                 }
                 
                 // Stats row
@@ -348,11 +348,11 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         Text(lastRunGraphMetric == .pace ? "Pace (min/km)" : "Heart Rate (bpm)")
-                            .font(.system(size: 11, weight: .regular))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.body(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                         Spacer()
                         Text(lastRunGraphMetric == .pace ? "Avg \(avgPaceText) " : "Avg \(avgHrText) bpm")
-                            .font(.system(size: 11, weight: .medium))
+                            .font(AppTheme.bodyMedium(11))
                             .foregroundColor(lastRunGraphMetric == .pace ? accentLime : Color(hex: "#FF6B6B"))
                     }
                     
@@ -413,14 +413,14 @@ struct HomeView: View {
     private func lastRunStat(value: String, label: String, icon: String, isSelected: Bool) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 12))
+                .font(AppTheme.body(12))
                 .foregroundColor(accentLime.opacity(0.7))
             Text(value)
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
+                .font(AppTheme.bodySemibold(16))
+                .foregroundColor(AppTheme.primaryText)
             Text(label)
-                .font(.system(size: 10, weight: .regular))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.body(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)
@@ -434,10 +434,10 @@ struct HomeView: View {
     private var runningFormScoreCard: some View {
         VStack(spacing: 4) {
             Text("RUNS")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(10))
                 .foregroundColor(backgroundColor)
             Text("\(vm.monthlyRunCount)")
-                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .font(AppTheme.display(28))
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -453,10 +453,10 @@ struct HomeView: View {
         }()
         return VStack(spacing: 4) {
             Text("MILES")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(10))
                 .foregroundColor(backgroundColor)
             Text(milesText)
-                .font(.system(size: 28, weight: .bold, design: .monospaced))
+                .font(AppTheme.display(28))
                 .foregroundColor(backgroundColor)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -471,11 +471,11 @@ struct HomeView: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("WEEKLY GOAL")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(14))
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Text("\(String(format: "%.1f", vm.weeklyMilesTotal)) / \(String(format: "%.0f", vm.weeklyGoalMiles)) mi")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(AppTheme.bodySemibold(12))
                     .foregroundColor(accentLime)
             }
 
@@ -483,7 +483,7 @@ struct HomeView: View {
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 5)
-                        .fill(Color.white.opacity(0.08))
+                        .fill(AppTheme.primaryText.opacity(0.08))
                         .frame(height: 10)
                     RoundedRectangle(cornerRadius: 5)
                         .fill(
@@ -501,16 +501,16 @@ struct HomeView: View {
             if progress >= 1.0 {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 12))
+                        .font(AppTheme.body(12))
                         .foregroundColor(accentLime)
                     Text("Goal reached!")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(AppTheme.bodyMedium(12))
                         .foregroundColor(accentLime)
                 }
             } else {
                 Text("\(String(format: "%.1f", remaining)) mi remaining")
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.35))
+                    .font(AppTheme.body(11))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.35))
             }
         }
         .padding(16)
@@ -546,7 +546,7 @@ struct StepsProgressRing: View {
         let ringLineWidth: CGFloat = 16
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.1), lineWidth: ringLineWidth)
+                .stroke(AppTheme.primaryText.opacity(0.1), lineWidth: ringLineWidth)
 
             Circle()
                 .trim(from: 0, to: progress)
@@ -559,21 +559,21 @@ struct StepsProgressRing: View {
                     Text(steps >= 1000
                          ? String(format: "%.1fk", Double(steps) / 1000)
                          : "\(steps)")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.head(20))
+                        .foregroundColor(AppTheme.primaryText)
                     Text("steps")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.body(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     if progress >= 1.0 {
                         Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 12))
+                            .font(AppTheme.body(12))
                             .foregroundColor(accent)
                     }
                 }
             } else {
                 Image(systemName: "heart.slash")
-                    .font(.system(size: 22))
-                    .foregroundColor(.white.opacity(0.2))
+                    .font(AppTheme.body(22))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.2))
             }
         }
     }
@@ -588,7 +588,7 @@ struct MonthlyHeatmapView: View {
     var dailyGoalMiles: Double = 3.0
 
     private let accentLime = Color(hex: "#00CED1")
-    private let accentBright = Color(hex: "#FFFFFF")   // today highlight — white
+    private let accentBright = Color(lightHex: "#141412", darkHex: "#FFFFFF")
     private let dayLabels = ["M", "T", "W", "T", "F", "S", "S"]
 
     var body: some View {
@@ -624,8 +624,8 @@ struct MonthlyHeatmapView: View {
             HStack(spacing: 4) {
                 ForEach(dayLabels, id: \.self) { label in
                     Text(label)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.bodyMedium(10))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
@@ -657,7 +657,7 @@ struct MonthlyHeatmapView: View {
 
     /// Intensity: 0 = no run, low = just started, medium = partial goal, full = hit goal
     private func heatmapColor(miles: Double) -> Color {
-        guard miles > 0 else { return Color.white.opacity(0.05) }
+        guard miles > 0 else { return AppTheme.primaryText.opacity(0.05) }
         let ratio = min(miles / max(dailyGoalMiles, 0.1), 1.0)
         if ratio >= 0.9 {
             return accentLime                // Hit the goal — full lime

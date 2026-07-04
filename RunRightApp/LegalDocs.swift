@@ -45,23 +45,23 @@ struct LegalDocView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text(doc.title)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
+                            .font(AppTheme.head(20))
+                            .foregroundColor(AppTheme.primaryText)
                         Spacer()
                         Button(action: { dismiss() }) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white.opacity(0.6))
+                                .font(AppTheme.meta(13))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.6))
                                 .frame(width: 30, height: 30)
-                                .background(Circle().fill(Color.white.opacity(0.08)))
+                                .background(Circle().fill(AppTheme.primaryText.opacity(0.08)))
                         }
                         .buttonStyle(.plain)
                     }
                     .padding(.top, 20)
 
                     Text(doc.bodyText)
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.85))
+                        .font(AppTheme.body(13))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.85))
                         .textSelection(.enabled)
 
                     Spacer(minLength: 24)

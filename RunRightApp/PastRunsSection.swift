@@ -126,17 +126,17 @@ struct RunMapThumbnail: View {
                     .resizable()
                     .aspectRatio(contentMode: .fill)
             } else {
-                Color(hex: "#242428")
+                AppTheme.cardBgAlt
                 Image(systemName: route.count > 1 ? "map" : "figure.run")
-                    .font(.system(size: 22, weight: .regular))
-                    .foregroundColor(.white.opacity(0.22))
+                    .font(AppTheme.body(22))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.22))
             }
         }
         .frame(width: width, height: height)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(AppTheme.primaryText.opacity(0.08), lineWidth: 1)
         )
         .task(id: id) { await render() }
     }
@@ -204,11 +204,11 @@ struct PastRunCard: View {
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(item.distanceText)
-                    .font(.system(size: 26, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.display(26))
+                    .foregroundColor(AppTheme.primaryText)
                 Text("mi")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white.opacity(0.45))
+                    .font(AppTheme.bodyMedium(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.45))
             }
 
             HStack(spacing: 14) {
@@ -217,26 +217,26 @@ struct PastRunCard: View {
             }
 
             Text(item.dateText)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.meta(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
         .padding(12)
         .frame(width: 174, alignment: .leading)
         .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 20, shadowRadius: 9, x: 5, y: 5)
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(AppTheme.primaryText.opacity(0.06), lineWidth: 1)
         )
     }
 
     private func pastRunStat(_ value: String, _ label: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(value)
-                .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                .foregroundColor(.white)
+                .font(AppTheme.head(14))
+                .foregroundColor(AppTheme.primaryText)
             Text(label)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.meta(9))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
     }
 }

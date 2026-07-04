@@ -118,15 +118,15 @@ struct OnboardingSignInView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Save your")
-                        .font(.system(size: 44, weight: .bold))
+                        .font(AppTheme.display(44))
                         .foregroundStyle(PlanTheme.textPrimary)
                     Text("progress.")
-                        .font(.system(size: 44, weight: .bold))
+                        .font(AppTheme.display(44))
                         .foregroundStyle(PlanTheme.textPrimary)
                 }
 
                 Text("Sign in to back up your runs, scans, and plan, then pick up on any device. You can always do this later.")
-                    .font(.body)
+                    .font(AppTheme.body(17))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 20)
@@ -140,7 +140,7 @@ struct OnboardingSignInView: View {
                                 ProgressView().tint(.black)
                             } else {
                                 Text("Continue with Google")
-                                    .font(.headline)
+                                    .font(AppTheme.bodySemibold(17))
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -153,28 +153,28 @@ struct OnboardingSignInView: View {
 
                     Button(action: appleSignIn) {
                         Text("Continue with Apple")
-                            .font(.headline)
+                            .font(AppTheme.bodySemibold(17))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(Color.black)
                             .foregroundStyle(.white)
                             .clipShape(Capsule())
                             .overlay(
-                                Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                Capsule().stroke(AppTheme.primaryText.opacity(0.18), lineWidth: 1)
                             )
                     }
                     .disabled(isLoading)
 
                     Button(action: { showEmailSheet = true }) {
                         Text("Sign up with email")
-                            .font(.headline)
+                            .font(AppTheme.bodySemibold(17))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
                             .background(PlanTheme.card)
                             .foregroundStyle(PlanTheme.textPrimary)
                             .clipShape(Capsule())
                             .overlay(
-                                Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1)
+                                Capsule().stroke(AppTheme.primaryText.opacity(0.15), lineWidth: 1)
                             )
                     }
                     .disabled(isLoading)

@@ -27,7 +27,7 @@ struct ExperienceTierPicker: View {
                             .lineLimit(1)
 
                         Text(level.detail)
-                            .font(.caption)
+                            .font(AppTheme.body(12))
                             .foregroundStyle(PlanTheme.textSecondary)
                             .multilineTextAlignment(.leading)
                             .lineLimit(2)

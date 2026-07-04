@@ -11,6 +11,9 @@ import GoogleSignIn
 
 @main
 struct RunRightApp: App {
+    /// "dark" (default) or "light" — the white mode toggle lives in Profile.
+    @AppStorage("gaita.appearance") private var appearance = "dark"
+
     init() {
         #if DEBUG
         AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
@@ -29,9 +32,9 @@ struct RunRightApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                // Every screen is styled dark; without this, system chrome
-                // (status bar, sheets, alerts, keyboard) rendered light-mode.
-                .preferredColorScheme(.dark)
+                // Pins system chrome (status bar, sheets, alerts, keyboard) to
+                // the chosen appearance; AppTheme colors resolve off this trait.
+                .preferredColorScheme(appearance == "light" ? .light : .dark)
                 .onOpenURL { url in
                     // Required for Google Sign In to complete its OAuth flow
                     GIDSignIn.sharedInstance.handle(url)

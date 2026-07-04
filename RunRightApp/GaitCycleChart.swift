@@ -25,8 +25,8 @@ struct GaitCycleReferenceChart: View {
     var userAtStrike: Double? = nil
     /// Optional full measured curve (11 deciles, same units) from the user's run.
     var userCurve: [Double]? = nil
-    /// Colour for the measured line.
-    var userAccent: Color = .white
+    /// Colour for the measured line. Adapts: ink on paper, white on dark.
+    var userAccent: Color = AppTheme.primaryText
 
     var body: some View {
         let allMean = ref.mean
@@ -51,10 +51,10 @@ struct GaitCycleReferenceChart: View {
             HStack {
                 Text(ref.name.uppercased())
                     .font(AppTheme.sectionTitleFont)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Text("OPTIMAL RANGE")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(8))
                     .foregroundColor(accent.opacity(0.9))
             }
 
@@ -65,23 +65,23 @@ struct GaitCycleReferenceChart: View {
 
             // Landmark legend + cycle axis.
             HStack {
-                Text("FOOT STRIKE").font(.system(size: 7, weight: .bold, design: .monospaced))
+                Text("FOOT STRIKE").font(AppTheme.meta(7))
                 Spacer()
-                Text("SWING").font(.system(size: 7, weight: .bold, design: .monospaced))
+                Text("SWING").font(AppTheme.meta(7))
                 Spacer()
-                Text("NEXT STRIKE").font(.system(size: 7, weight: .bold, design: .monospaced))
+                Text("NEXT STRIKE").font(AppTheme.meta(7))
             }
-            .foregroundColor(.white.opacity(0.3))
+            .foregroundColor(AppTheme.primaryText.opacity(0.3))
 
             if userPlausible || userAtStrike != nil {
                 HStack(spacing: 12) {
                     HStack(spacing: 5) {
                         Rectangle().fill(userAccent).frame(width: 12, height: 2)
-                        Text("Your run").font(.system(size: 9, weight: .medium)).foregroundColor(.white.opacity(0.5))
+                        Text("Your run").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
                     HStack(spacing: 5) {
                         Rectangle().fill(accent.opacity(0.5)).frame(width: 12, height: 6)
-                        Text("Optimal range").font(.system(size: 9, weight: .medium)).foregroundColor(.white.opacity(0.5))
+                        Text("Optimal range").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
                 }
             }
@@ -126,7 +126,7 @@ struct GaitCycleReferenceChart: View {
                     p.move(to: CGPoint(x: 0, y: y(0)))
                     p.addLine(to: CGPoint(x: w, y: y(0)))
                 }
-                .stroke(Color.white.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                .stroke(AppTheme.primaryText.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
             }
 
             // Shaded optimal band — smooth upper edge, smooth back along lower.
@@ -147,7 +147,7 @@ struct GaitCycleReferenceChart: View {
                     p.move(to: CGPoint(x: px, y: 0))
                     p.addLine(to: CGPoint(x: px, y: h))
                 }
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                .stroke(AppTheme.primaryText.opacity(0.10), lineWidth: 1)
             }
 
             // Measured curve from the user's run — only when plausible (real,
@@ -195,24 +195,24 @@ struct ComparisonTrack: View {
             HStack(spacing: 6) {
                 Text(label)
                     .font(AppTheme.sectionTitleFont)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.primaryText)
                 if modeled {
                     Text("MODELED")
-                        .font(.system(size: 7, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.3))
+                        .font(AppTheme.meta(7))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.3))
                         .padding(.horizontal, 4).padding(.vertical, 1)
-                        .background(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
+                        .background(Capsule().stroke(AppTheme.primaryText.opacity(0.18), lineWidth: 1))
                 }
                 Spacer()
                 Text(String(format: "%.\(decimals)f", value) + " " + unit)
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
-                    .foregroundColor(inZone ? accent : .white)
+                    .font(AppTheme.head(15))
+                    .foregroundColor(inZone ? accent : AppTheme.primaryText)
             }
 
             GeometryReader { geo in
                 let w = geo.size.width
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Color.white.opacity(0.06)).frame(height: 6)
+                    Capsule().fill(AppTheme.primaryText.opacity(0.06)).frame(height: 6)
                     // Optimal zone.
                     Capsule().fill(accent.opacity(0.35))
                         .frame(width: max(w * (frac(zoneHi) - frac(zoneLo)), 3), height: 6)
@@ -220,7 +220,7 @@ struct ComparisonTrack: View {
                     // "Optimal" tick label under the zone center.
                     // User marker.
                     Circle()
-                        .fill(inZone ? accent : Color.white)
+                        .fill(inZone ? accent : AppTheme.primaryText)
                         .frame(width: 13, height: 13)
                         .overlay(Circle().stroke(AppTheme.cardBg, lineWidth: 2))
                         .offset(x: w * frac(value) - 6.5)
@@ -231,17 +231,17 @@ struct ComparisonTrack: View {
 
             HStack {
                 Text("OPTIMAL \(String(format: "%.\(decimals)f", zoneLo))–\(String(format: "%.\(decimals)f", zoneHi)) \(unit)")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(8))
                     .foregroundColor(accent.opacity(0.8))
                 Spacer()
                 Text(inZone ? "IN RANGE" : "OUTSIDE")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundColor(inZone ? accent.opacity(0.8) : .white.opacity(0.4))
+                    .font(AppTheme.meta(8))
+                    .foregroundColor(inZone ? accent.opacity(0.8) : AppTheme.primaryText.opacity(0.4))
             }
 
             Text(readout)
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.45))
+                .font(AppTheme.body(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.45))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
@@ -270,10 +270,10 @@ struct TargetZoneChart: View {
             HStack {
                 Text(title.uppercased())
                     .font(AppTheme.sectionTitleFont)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Text("TARGET \(Int(target.lo))–\(Int(target.hi)) \(target.unit)")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(8))
                     .foregroundColor(accent.opacity(0.9))
             }
 
@@ -283,8 +283,8 @@ struct TargetZoneChart: View {
             .frame(height: 64)
 
             Text(target.note)
-                .font(.system(size: 10))
-                .foregroundColor(.white.opacity(0.45))
+                .font(AppTheme.body(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.45))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
@@ -307,7 +307,7 @@ struct TargetZoneChart: View {
                         if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
                     }
                 }
-                .stroke(Color.white.opacity(0.85), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                .stroke(AppTheme.primaryText.opacity(0.85), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
             }
         }
     }

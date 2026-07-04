@@ -20,13 +20,13 @@ import QuartzCore
 import Combine
 
 private extension Font {
-    static let analyzeSection: Font = .system(size: 14, weight: .heavy)
-    static let analyzeButton: Font = .system(size: 17, weight: .semibold)
-    static let analyzeBody: Font = .system(size: 14, weight: .regular)
-    static let analyzeCaption: Font = .system(size: 13, weight: .regular)
-    static let analyzeMetric: Font = .system(size: 15, weight: .bold)
-    static let analyzeMeta: Font = .system(size: 11, weight: .bold)
-    static let analyzeTiny: Font = .system(size: 9, weight: .bold)
+    static let analyzeSection: Font = AppTheme.head(14)
+    static let analyzeButton: Font = AppTheme.bodySemibold(17)
+    static let analyzeBody: Font = AppTheme.body(14)
+    static let analyzeCaption: Font = AppTheme.body(13)
+    static let analyzeMetric: Font = AppTheme.head(15)
+    static let analyzeMeta: Font = AppTheme.meta(11)
+    static let analyzeTiny: Font = AppTheme.meta(9)
 }
 
 // MARK: - Analysis history (local, on-device)
@@ -352,9 +352,9 @@ struct AnalyzeView: View {
         Button(action: { showAllHistory = true }) {
             HStack(spacing: 5) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(AppTheme.meta(11))
                 Text("HISTORY")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(11))
                     .minimumScaleFactor(0.7)
                     .lineLimit(1)
             }
@@ -385,7 +385,7 @@ struct AnalyzeView: View {
                     .overlay(alignment: .topLeading) {
                         if let date = currentForm?.date {
                             Text(Self.recentDateFormatter.string(from: date))
-                                .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                .font(AppTheme.meta(10))
                                 .foregroundColor(.white.opacity(0.9))
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 4)
@@ -401,9 +401,9 @@ struct AnalyzeView: View {
                             Button(action: { showingInstructions = true }) {
                                 HStack(spacing: 5) {
                                     Image(systemName: "exclamationmark.triangle.fill")
-                                        .font(.system(size: 9, weight: .bold))
+                                        .font(AppTheme.meta(9))
                                     Text("HARD TO READ. TAP FOR FILMING TIPS")
-                                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                        .font(AppTheme.meta(9))
                                         .lineLimit(2)
                                         .multilineTextAlignment(.leading)
                                 }
@@ -433,16 +433,16 @@ struct AnalyzeView: View {
                     VStack(alignment: .leading, spacing: 0) {
                         Spacer()
                         Text("ANALYZE")
-                            .font(.system(size: 30, weight: .bold, design: .monospaced))
+                            .font(AppTheme.display(30))
                             .foregroundColor(AppTheme.onAccentPrimary)
                             .minimumScaleFactor(0.7)
                             .lineLimit(1)
                         Text("Upload a running clip")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(AppTheme.bodyMedium(12))
                             .foregroundColor(AppTheme.onAccentPrimary.opacity(0.7))
                             .padding(.top, 4)
                         Text("SIDE ON · 60 FPS")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .font(AppTheme.meta(10))
                             .foregroundColor(AppTheme.onAccentPrimary.opacity(0.6))
                             .padding(.top, 12)
                         Spacer().frame(height: 30)
@@ -461,7 +461,7 @@ struct AnalyzeView: View {
             .overlay(alignment: .bottomLeading) {
                 Button(action: { showingInstructions = true }) {
                     Text("HOW TO FILM")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .font(AppTheme.meta(10))
                         .tracking(1)
                         .foregroundColor(AppTheme.onAccentPrimary.opacity(0.85))
                         .padding(.horizontal, 10)
@@ -476,7 +476,7 @@ struct AnalyzeView: View {
 
     private func analyzeHeroChip(_ icon: String, onAccent: Bool = false) -> some View {
         Image(systemName: icon)
-            .font(.system(size: 12, weight: .bold))
+            .font(AppTheme.meta(12))
             .foregroundColor(onAccent ? AppTheme.analyzePink : .white)
             .frame(width: 30, height: 30)
             .background(Circle().fill(Color.black.opacity(onAccent ? 0.75 : 0.45)))
@@ -496,13 +496,13 @@ struct AnalyzeView: View {
                 HStack {
                     Spacer()
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.meta(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                 }
                 Spacer()
                 Text("View full metrics")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.meta(11))
+                    .foregroundColor(AppTheme.primaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(12)
@@ -561,32 +561,32 @@ struct AnalyzeView: View {
             VStack(spacing: 8) {
                 ZStack {
                     Circle()
-                        .stroke(Color.white.opacity(0.1), lineWidth: 7)
+                        .stroke(AppTheme.primaryText.opacity(0.1), lineWidth: 7)
                     Circle()
                         .trim(from: 0, to: Double(min(max(score ?? 0, 0), 100)) / 100)
                         .stroke(arcColor, style: StrokeStyle(lineWidth: 7, lineCap: .round))
                         .rotationEffect(.degrees(-90))
                     Text(score.map(String.init) ?? "--")
-                        .font(.system(size: 21, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .font(AppTheme.display(21))
+                        .foregroundColor(AppTheme.primaryText)
                 }
                 .frame(width: 62, height: 62)
                 Text(label)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(10))
                     .tracking(1)
-                    .foregroundColor(.white.opacity(0.4))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 // Trend caption — arrow + points changed since the last analysis.
                 if let d = delta, d != 0 {
                     HStack(spacing: 2) {
                         Image(systemName: d > 0 ? "arrow.up" : "arrow.down")
-                            .font(.system(size: 8, weight: .bold))
+                            .font(AppTheme.meta(8))
                         Text("\(abs(d))")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .font(AppTheme.meta(10))
                     }
                     .foregroundColor(d > 0 ? AppTheme.accentGreen : AppTheme.formRed)
                 } else {
                     // Reserve the row so tiles stay the same height with/without a trend.
-                    Text(" ").font(.system(size: 10, weight: .bold, design: .monospaced))
+                    Text(" ").font(AppTheme.meta(10))
                 }
             }
             .frame(maxWidth: .infinity)
@@ -623,16 +623,16 @@ struct AnalyzeView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 7) {
                 Text(title)
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(10))
                     .tracking(1)
                     .foregroundColor(AppTheme.onAccentPrimary.opacity(0.75))
                 Spacer(minLength: 0)
                 Text(value.map(String.init) ?? "--")
-                    .font(.system(size: 20, weight: .bold, design: .monospaced))
+                    .font(AppTheme.display(20))
                     .foregroundColor(AppTheme.onAccentPrimary)
             }
             Text(brief ?? "No analysis yet.")
-                .font(.system(size: 11))
+                .font(AppTheme.body(11))
                 .foregroundColor(AppTheme.onAccentPrimary.opacity(0.8))
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -662,15 +662,15 @@ struct AnalyzeView: View {
                 VStack(alignment: .leading, spacing: 28) {
                     HStack {
                         Text("FULL METRICS")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
+                            .font(AppTheme.head(20))
+                            .foregroundColor(AppTheme.primaryText)
                         Spacer()
                         Button(action: { showFullMetrics = false }) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white.opacity(0.6))
+                                .font(AppTheme.meta(13))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.6))
                                 .frame(width: 30, height: 30)
-                                .background(Circle().fill(Color.white.opacity(0.08)))
+                                .background(Circle().fill(AppTheme.primaryText.opacity(0.08)))
                         }
                         .buttonStyle(.plain)
                     }
@@ -701,21 +701,21 @@ struct AnalyzeView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("ANGLES + TARGETS")
                                 .font(AppTheme.sectionTitleFont)
-                                .foregroundColor(.white)
+                                .foregroundColor(AppTheme.primaryText)
                             ForEach(form.metrics, id: \.label) { m in
                                 let statusColor = (FormStatus(rawValue: m.status) ?? .warn).color
                                 HStack(spacing: 10) {
                                     Text(m.label)
-                                        .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                        .foregroundColor(.white)
+                                        .font(AppTheme.head(14))
+                                        .foregroundColor(AppTheme.primaryText)
                                     Spacer()
                                     // Value color-coded red→green by how close to optimal.
                                     Text(m.value)
-                                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                        .font(AppTheme.head(14))
                                         .foregroundColor(statusColor)
                                     Text(m.optimal)
-                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                        .foregroundColor(.white.opacity(0.7))
+                                        .font(AppTheme.meta(12))
+                                        .foregroundColor(AppTheme.primaryText.opacity(0.7))
                                         .frame(width: 76, alignment: .trailing)
                                 }
                             }
@@ -730,7 +730,7 @@ struct AnalyzeView: View {
                     } else {
                         Text("Run an analysis to fill this in.")
                             .font(.analyzeCaption)
-                            .foregroundColor(.white.opacity(0.5))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                             .padding(.horizontal, 20)
                     }
 
@@ -768,7 +768,7 @@ struct AnalyzeView: View {
         return VStack(alignment: .leading, spacing: 12) {
             Text("OPTIMAL CONTACT PHASE")
                 .font(AppTheme.sectionTitleFont)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.primaryText)
 
             if let ms = form.contactMs, ms.isFinite {
                 ComparisonTrack(
@@ -808,8 +808,8 @@ struct AnalyzeView: View {
                     decimals: 0)
             }
             Text("Timing and geometry the camera can measure. Force is a spring-mass estimate, not a force-plate trace.")
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.3))
+                .font(AppTheme.body(9))
+                .foregroundColor(AppTheme.primaryText.opacity(0.3))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -835,19 +835,19 @@ struct AnalyzeView: View {
         return VStack(alignment: .leading, spacing: 12) {
             Text(userCurves.isEmpty ? "OPTIMAL FORM SHAPE" : "YOUR RUN VS OPTIMAL")
                 .font(AppTheme.sectionTitleFont)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.primaryText)
             ForEach(FormReference.joints(fullMetricsMode).indices, id: \.self) { i in
                 let ref = FormReference.joints(fullMetricsMode)[i]
                 GaitCycleReferenceChart(
                     ref: ref,
                     accent: blue,
                     userCurve: userCurves[ref.name],
-                    userAccent: .white
+                    userAccent: AppTheme.primaryText
                 )
             }
             Text("Optimal bands from published running kinematics (Novacheck, Schache, Nagahara). Good form is a range, not one line. Your line is your run's cycle average.")
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.3))
+                .font(AppTheme.body(9))
+                .foregroundColor(AppTheme.primaryText.opacity(0.3))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -900,7 +900,7 @@ struct AnalyzeView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Text(chart.0)
                             .font(AppTheme.sectionTitleFont)
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.primaryText)
                         TrendChartView(dataPoints: points,
                                        accent: AppTheme.analyzePink, bg: AppTheme.cardBg)
                             .frame(height: 64)
@@ -958,14 +958,14 @@ struct AnalyzeView: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("RECENT")
                 .font(.analyzeTiny)
-                .foregroundColor(.white.opacity(0.35))
+                .foregroundColor(AppTheme.primaryText.opacity(0.35))
                 .padding(.bottom, 6)
 
             let recent = Array(history.records.prefix(3))
             if recent.isEmpty {
                 Text("No analyses yet.")
                     .font(.analyzeCaption)
-                    .foregroundColor(.white.opacity(0.5))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     .padding(.top, 6)
             } else {
                 ForEach(recent) { record in
@@ -977,10 +977,10 @@ struct AnalyzeView: View {
                         HStack(spacing: 6) {
                             if !subscriptions.isPremium {
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(AppTheme.meta(10))
                             }
                             Text("SEE ALL")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(AppTheme.meta(11))
                         }
                         .foregroundColor(AppTheme.analyzePink)
                         .padding(.vertical, 10)
@@ -1057,21 +1057,21 @@ struct AnalyzeView: View {
         HStack(spacing: 12) {
             Text(Self.recentDateFormatter.string(from: record.date))
                 .font(.analyzeCaption.weight(.medium))
-                .foregroundColor(.white.opacity(0.85))
+                .foregroundColor(AppTheme.primaryText.opacity(0.85))
             Spacer()
             if hasExport(for: record.id) {
                 ShareLink(item: csvFileURL(for: record.id)) {
                     HStack(spacing: 4) {
                         Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(AppTheme.bodySemibold(11))
                         Text("Data")
                             .font(.analyzeMeta)
                     }
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.85))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Capsule().fill(Color.white.opacity(0.08)))
-                    .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
+                    .background(Capsule().fill(AppTheme.primaryText.opacity(0.08)))
+                    .overlay(Capsule().stroke(AppTheme.primaryText.opacity(0.12), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
             }
@@ -1085,17 +1085,17 @@ struct AnalyzeView: View {
     private var analyzeErrorTile: some View {
         VStack(spacing: 10) {
             Text("Analysis failed")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundColor(.white)
+                .font(AppTheme.bodySemibold(15))
+                .foregroundColor(AppTheme.primaryText)
             if let error = processor.error {
                 Text(error)
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.55))
+                    .font(AppTheme.body(11))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.55))
                     .multilineTextAlignment(.center)
                     .lineLimit(4)
             }
             Button("Try again") { resetProcessor() }
-                .font(.system(size: 13, weight: .semibold))
+                .font(AppTheme.bodySemibold(13))
                 .foregroundColor(AppTheme.analyzePink)
         }
         .padding(14)
@@ -1126,8 +1126,8 @@ struct AnalyzeView: View {
             .frame(height: 272)
 
             HStack(spacing: 5) {
-                Circle().fill(Color.white.opacity(shoeCardPage == 0 ? 0.75 : 0.22)).frame(width: 5, height: 5)
-                Circle().fill(Color.white.opacity(shoeCardPage == 1 ? 0.75 : 0.22)).frame(width: 5, height: 5)
+                Circle().fill(AppTheme.primaryText.opacity(shoeCardPage == 0 ? 0.75 : 0.22)).frame(width: 5, height: 5)
+                Circle().fill(AppTheme.primaryText.opacity(shoeCardPage == 1 ? 0.75 : 0.22)).frame(width: 5, height: 5)
             }
             .frame(maxWidth: .infinity, alignment: .center)
         }
@@ -1154,7 +1154,7 @@ struct AnalyzeView: View {
             HStack {
                 Text("SHOE HEAT GRID")
                     .font(.analyzeSection)
-                    .foregroundColor(.white)
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Menu {
                     ForEach(analyzeShoeList, id: \.self) { shoe in
@@ -1163,12 +1163,12 @@ struct AnalyzeView: View {
                 } label: {
                     HStack(spacing: 5) {
                         Text(shoeForTrend.isEmpty ? "Select shoe" : shoeForTrend)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.75))
+                            .font(AppTheme.bodyMedium(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.75))
                             .lineLimit(1)
                         Image(systemName: "chevron.down")
-                            .font(.system(size: 8, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.bodySemibold(8))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -1191,12 +1191,12 @@ struct AnalyzeView: View {
                         HStack(spacing: 5) {
                             if !subscriptions.isPremium {
                                 Image(systemName: "lock.fill")
-                                    .font(.system(size: 8, weight: .bold))
+                                    .font(AppTheme.meta(8))
                             }
                             Text("TAP TO SCAN YOUR SHOES")
                                 .font(.analyzeTiny)
                         }
-                        .foregroundColor(.white.opacity(0.45))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.45))
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
@@ -1215,7 +1215,7 @@ struct AnalyzeView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("SHOE HEALTH")
                 .font(.analyzeSection)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.primaryText)
 
             HStack(spacing: 10) {
                 analyzeShoeStatBox(label: "GAIT", value: gaitType?.uppercased() ?? "--")
@@ -1226,24 +1226,24 @@ struct AnalyzeView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text("WEAR OVER TIME")
                     .font(.analyzeTiny)
-                    .foregroundColor(.white.opacity(0.4))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
 
                 if scanTrend.hasTrend {
                     TrendChartView(dataPoints: scanTrend.trendPoints, accent: AppTheme.analyzePink, bg: AppTheme.bgColor)
                         .frame(height: 70)
                     HStack {
                         if let first = scanTrend.trendLabels.first {
-                            Text(first).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.4))
+                            Text(first).font(AppTheme.bodyMedium(10)).foregroundColor(AppTheme.primaryText.opacity(0.4))
                         }
                         Spacer()
                         if let last = scanTrend.trendLabels.last {
-                            Text(last).font(.system(size: 10, weight: .medium)).foregroundColor(.white.opacity(0.4))
+                            Text(last).font(AppTheme.bodyMedium(10)).foregroundColor(AppTheme.primaryText.opacity(0.4))
                         }
                     }
                 } else {
                     Text("Scan a few more times to see a trend.")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.35))
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.35))
                         .frame(maxWidth: .infinity, alignment: .center)
                         .frame(height: 70)
                 }
@@ -1258,7 +1258,7 @@ struct AnalyzeView: View {
         VStack(spacing: 4) {
             Text(value)
                 .font(.analyzeMetric)
-                .foregroundColor(.white)
+                .foregroundColor(AppTheme.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(label)
@@ -1310,19 +1310,19 @@ struct AnalyzeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     Text("Form ")
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.primaryText)
                     Text("Analysis")
-                        .foregroundColor(.white)
+                        .foregroundColor(AppTheme.primaryText)
                 }
                 .font(.largeTitle.weight(.bold))
             }
             Spacer(minLength: 8)
             Button(action: { showingSettings = true }) {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.45))
+                    .font(AppTheme.bodySemibold(14))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.45))
                     .frame(width: 34, height: 34)
-                    .background(Circle().fill(Color.white.opacity(0.07)))
+                    .background(Circle().fill(AppTheme.primaryText.opacity(0.07)))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Analysis settings")
@@ -1590,14 +1590,14 @@ struct AnalyzeView: View {
             
             VStack(spacing: 24) {
                 Text("Settings")
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(24))
+                    .foregroundColor(AppTheme.primaryText)
                 
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
                         Text("Body Height")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.9))
+                            .font(AppTheme.bodyMedium(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.9))
                         
                         Spacer()
                         
@@ -1631,8 +1631,8 @@ struct AnalyzeView: View {
                                 .clipped()
                                 
                                 Text("ft")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .font(AppTheme.body(14))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
                             }
                             
                             HStack(spacing: 4) {
@@ -1646,8 +1646,8 @@ struct AnalyzeView: View {
                                 .clipped()
                                 
                                 Text("in")
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white.opacity(0.6))
+                                    .font(AppTheme.body(14))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
                             }
                         }
                         .onChange(of: heightFeet) { _ in
@@ -1658,8 +1658,8 @@ struct AnalyzeView: View {
                         }
                         
                         Text("\(heightFeet)'\(heightInches)\" = \(String(format: "%.2f", userBodyHeightMeters)) m")
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.body(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     } else {
                         HStack {
                             TextField("Height (meters)", value: $userBodyHeightMeters, format: .number)
@@ -1668,24 +1668,24 @@ struct AnalyzeView: View {
                                 .frame(maxWidth: .infinity)
                             
                             Text("m")
-                                .font(.system(size: 14))
-                                .foregroundColor(.white.opacity(0.6))
+                                .font(AppTheme.body(14))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.6))
                                 .frame(width: 30)
                         }
                         
                         Text("Enter your height in meters (e.g., 1.75 for 175 cm)")
-                            .font(.system(size: 12))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.body(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
                 }
                 .padding()
-                .background(Color.white.opacity(0.05))
+                .background(AppTheme.primaryText.opacity(0.05))
                 .cornerRadius(12)
                 
                 VStack(alignment: .leading, spacing: 16) {
                     Text("Treadmill Distance")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
+                        .font(AppTheme.bodyMedium(14))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.9))
                     
                     HStack {
                         TextField("Distance (meters)", value: $treadmillDistanceMeters, format: .number)
@@ -1694,17 +1694,17 @@ struct AnalyzeView: View {
                             .frame(maxWidth: .infinity)
                         
                         Text("m")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(AppTheme.body(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
                             .frame(width: 30)
                     }
                     
                     Text("Distance from camera to treadmill center")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                 }
                 .padding()
-                .background(Color.white.opacity(0.05))
+                .background(AppTheme.primaryText.opacity(0.05))
                 .cornerRadius(12)
                 
                 Button(action: {
@@ -1714,7 +1714,7 @@ struct AnalyzeView: View {
                     showingSettings = false
                 }) {
                     Text("Done")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(AppTheme.bodySemibold(16))
                         .foregroundColor(AppTheme.onAccentPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -1753,13 +1753,13 @@ struct AnalyzeView: View {
             VStack(spacing: 22) {
                 HStack {
                     Text("HOW TO RECORD")
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .font(AppTheme.head(15))
+                        .foregroundColor(AppTheme.primaryText)
                     Spacer()
                     Button(action: { showingInstructions = false }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.head(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
                 }
 
@@ -1767,30 +1767,30 @@ struct AnalyzeView: View {
                 HStack(spacing: 16) {
                     VStack(spacing: 5) {
                         Image(systemName: "iphone")
-                            .font(.system(size: 30))
+                            .font(AppTheme.body(30))
                             .foregroundColor(AppTheme.analyzePink)
                         Text("CAMERA")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.meta(8))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
                     Image(systemName: "arrow.right")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundColor(.white.opacity(0.3))
+                        .font(AppTheme.head(14))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.3))
                     VStack(spacing: 5) {
                         Image(systemName: "figure.run")
-                            .font(.system(size: 42))
-                            .foregroundColor(.white)
+                            .font(AppTheme.body(42))
+                            .foregroundColor(AppTheme.primaryText)
                         RoundedRectangle(cornerRadius: 2)
-                            .fill(Color.white.opacity(0.3))
+                            .fill(AppTheme.primaryText.opacity(0.3))
                             .frame(width: 72, height: 3)
                         Text("TREADMILL")
-                            .font(.system(size: 8, weight: .bold, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.meta(8))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
-                .background(RoundedRectangle(cornerRadius: 16).fill(Color.white.opacity(0.04)))
+                .background(RoundedRectangle(cornerRadius: 16).fill(AppTheme.primaryText.opacity(0.04)))
 
                 // Steps
                 VStack(alignment: .leading, spacing: 14) {
@@ -1802,26 +1802,26 @@ struct AnalyzeView: View {
 
                 // How it works
                 Text("We track your joints frame-by-frame to measure your stride, posture, landing impact, and power.")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.55))
+                    .font(AppTheme.body(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.55))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(24)
             .frame(width: UIScreen.main.bounds.width * 0.88)
-            .background(RoundedRectangle(cornerRadius: 22).fill(Color(hex: "#161618")))
+            .background(RoundedRectangle(cornerRadius: 22).fill(AppTheme.cardBgAlt))
         }
     }
 
     private func instructionLine(icon: String, text: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .semibold))
+                .font(AppTheme.bodySemibold(14))
                 .foregroundColor(AppTheme.analyzePink)
                 .frame(width: 22)
             Text(text)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white.opacity(0.85))
+                .font(AppTheme.bodyMedium(13))
+                .foregroundColor(AppTheme.primaryText.opacity(0.85))
             Spacer(minLength: 0)
         }
     }
@@ -1940,7 +1940,7 @@ struct AnalyzeView: View {
             VStack(spacing: 20) {
                 ZStack {
                     Circle()
-                        .stroke(Color.white.opacity(0.15), lineWidth: 6)
+                        .stroke(AppTheme.primaryText.opacity(0.15), lineWidth: 6)
                     Circle()
                         .trim(from: 0, to: min(max(processor.progress, 0), 1))
                         .stroke(
@@ -1949,15 +1949,14 @@ struct AnalyzeView: View {
                         )
                         .rotationEffect(.degrees(-90))
                     Text("\(Int((processor.progress * 100).rounded()))%")
-                        .font(.system(size: 18, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
-                        .monospacedDigit()
+                        .font(AppTheme.displayTabular(18))
+                        .foregroundColor(AppTheme.primaryText)
                 }
                 .frame(width: 88, height: 88)
                 
                 Text(loadingStatusMessage)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodyMedium(16))
+                    .foregroundColor(AppTheme.primaryText)
             }
         }
     }
@@ -2063,7 +2062,7 @@ struct AnalyzeVideoCard: View {
                     .scaledToFit()
                 if player != nil {
                     Image(systemName: "play.fill")
-                        .font(.system(size: 18, weight: .bold))
+                        .font(AppTheme.head(18))
                         .foregroundColor(.white)
                         .frame(width: 52, height: 52)
                         .background(Circle().fill(Color.black.opacity(0.55)))
@@ -2171,8 +2170,8 @@ private struct InfoSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 Text(description)
-                    .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.9))
+                    .font(AppTheme.body(15))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.9))
                     .lineSpacing(4)
                 Spacer()
             }
@@ -2216,7 +2215,7 @@ private struct GraphBadge: View {
     
     var body: some View {
         Text(text)
-            .font(.system(size: 10, weight: .semibold))
+            .font(AppTheme.bodySemibold(10))
             .foregroundColor(.black)
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
@@ -2268,12 +2267,12 @@ private struct GroundContactCard: View {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
                     Text("Ground Contact")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white.opacity(0.9))
+                        .font(AppTheme.bodySemibold(16))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.9))
                     Button(action: { showGuide = true }) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.body(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -2287,18 +2286,18 @@ private struct GroundContactCard: View {
 
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("\(Int(avg.rounded()))")
-                        .font(.system(size: 30, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white)
+                        .font(AppTheme.display(30))
+                        .foregroundColor(AppTheme.primaryText)
                     Text("MS AVG")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.meta(10))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     Spacer()
                     if hasBoth {
                         let avgL = leftVals.reduce(0, +) / Double(leftVals.count)
                         let avgR = rightVals.reduce(0, +) / Double(rightVals.count)
                         Text("L \(Int(avgL.rounded()))  R \(Int(avgR.rounded()))")
-                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.55))
+                            .font(AppTheme.meta(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.55))
                     }
                 }
 
@@ -2308,9 +2307,9 @@ private struct GroundContactCard: View {
                 Text(uncertaintyMs >= 20
                      ? "ONE BAR PER STEP. TIMING GOOD TO ABOUT ±\(Int(uncertaintyMs.rounded())) MS AT THIS FRAME RATE."
                      : "ONE BAR PER STEP.")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(8))
                     .tracking(0.5)
-                    .foregroundColor(.white.opacity(0.3))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
             }
             .padding(.horizontal, 20)
             .sheet(isPresented: $showGuide) {
@@ -2323,8 +2322,8 @@ private struct GroundContactCard: View {
         HStack(spacing: 4) {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(label)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.45))
+                .font(AppTheme.meta(9))
+                .foregroundColor(AppTheme.primaryText.opacity(0.45))
         }
     }
 
@@ -2344,10 +2343,10 @@ private struct GroundContactCard: View {
                         p.move(to: CGPoint(x: 0, y: y))
                         p.addLine(to: CGPoint(x: w, y: y))
                     }
-                    .stroke(Color.white.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
+                    .stroke(AppTheme.primaryText.opacity(0.12), style: StrokeStyle(lineWidth: 1, dash: [3, 4]))
                     Text("\(g.label) \(Int(g.value))")
-                        .font(.system(size: 8, weight: .bold, design: .monospaced))
-                        .foregroundColor(.white.opacity(0.3))
+                        .font(AppTheme.meta(8))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.3))
                         .position(x: w - 34, y: max(8, y - 8))
                 }
                 ForEach(steps.indices, id: \.self) { i in
@@ -2381,8 +2380,8 @@ private struct GraphCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Text(title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.9))
+                    .font(AppTheme.bodySemibold(16))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.9))
                 
                 if isEstimate {
                     GraphBadge(text: "3D Estimate", color: .yellow)
@@ -2395,8 +2394,8 @@ private struct GraphCard: View {
                 if !info.isEmpty {
                     Button(action: { showInfo = true }) {
                         Image(systemName: "info.circle")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.body(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
                     .buttonStyle(.plain)
                 }
@@ -2404,8 +2403,8 @@ private struct GraphCard: View {
             
             if series.isEmpty {
                 Text("No data")
-                    .font(.system(size: 14))
-                    .foregroundColor(.white.opacity(0.45))
+                    .font(AppTheme.body(14))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.45))
                     .frame(height: 360)
             } else {
                 // Graph content - no cursor, no scrolling
@@ -2478,7 +2477,7 @@ private struct SparklineView: View {
                             path.addLine(to: CGPoint(x: x, y: plotInset.top + plotHeight))
                         }
                     }
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(AppTheme.primaryText.opacity(0.08), lineWidth: 1)
                     
                     // Axes
                     Path { path in
@@ -2486,7 +2485,7 @@ private struct SparklineView: View {
                         path.addLine(to: CGPoint(x: plotInset.leading, y: plotInset.top + plotHeight))
                         path.addLine(to: CGPoint(x: plotInset.leading + plotWidth, y: plotInset.top + plotHeight))
                     }
-                    .stroke(Color.white.opacity(0.25), lineWidth: 1)
+                    .stroke(AppTheme.primaryText.opacity(0.25), lineWidth: 1)
                 }
                 
                 if attachAxes, !referenceBands.isEmpty {
@@ -2543,7 +2542,7 @@ private struct SparklineView: View {
                         path.move(to: CGPoint(x: cursorX, y: plotInset.top))
                         path.addLine(to: CGPoint(x: cursorX, y: plotInset.top + plotHeight))
                     }
-                    .stroke(Color.white, lineWidth: 2.5)
+                    .stroke(AppTheme.primaryText, lineWidth: 2.5)
                     .opacity(0.9)
                     .allowsHitTesting(false)  // Don't block scrolling
                 }
@@ -2552,16 +2551,16 @@ private struct SparklineView: View {
                     // Y-axis labels (min/mid/max) - positioned on left side
                     VStack(alignment: .leading, spacing: 0) {
                         Text(formatValue(maxVal))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
+                            .font(AppTheme.bodyMedium(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.8))
                         Spacer()
                         Text(formatValue((maxVal + minVal) / 2))
-                            .font(.system(size: 11))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(AppTheme.body(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
                         Spacer()
                         Text(formatValue(minVal))
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
+                            .font(AppTheme.bodyMedium(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.8))
                     }
                     .frame(width: 60, alignment: .trailing)
                     .padding(.top, plotInset.top)
@@ -2573,16 +2572,16 @@ private struct SparklineView: View {
                         Spacer()
                         HStack {
                             Text(timeLabel(0))
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white.opacity(0.8))
+                                .font(AppTheme.bodyMedium(12))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.8))
                             Spacer()
                             Text(timeLabel(midSeconds))
-                                .font(.system(size: 11))
-                                .foregroundColor(.white.opacity(0.6))
+                                .font(AppTheme.body(11))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.6))
                             Spacer()
                             Text(timeLabel(totalSeconds))
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white.opacity(0.8))
+                                .font(AppTheme.bodyMedium(12))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.8))
                         }
                         .padding(.leading, plotInset.leading)
                         .padding(.trailing, plotInset.trailing)
@@ -2590,16 +2589,16 @@ private struct SparklineView: View {
                         
                         // X-axis title
                         Text("Time (s)")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.bodyMedium(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                             .padding(.bottom, 4)
                     }
                     
                     // Y-axis title - rotated on the left
                     VStack {
                         Text(unit)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.bodyMedium(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                             .rotationEffect(.degrees(-90))
                             .fixedSize()
                         Spacer()
@@ -2668,7 +2667,7 @@ struct GaugeDial: View {
     var body: some View {
         ZStack {
             GaugeArcShape(startAngle: 180, endAngle: 360)
-                .stroke(Color.white.opacity(0.15), style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .stroke(AppTheme.primaryText.opacity(0.15), style: StrokeStyle(lineWidth: 5, lineCap: .round))
                 .frame(width: 56, height: 28)
             if filledEndAngle > 180 {
                 GaugeArcShape(startAngle: 180, endAngle: filledEndAngle)
@@ -2687,8 +2686,8 @@ struct GaugeDial: View {
                     .frame(width: 56, height: 28)
             }
             Text("\(score)")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .font(AppTheme.head(15))
+                .foregroundColor(AppTheme.primaryText)
                 .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 1)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -2738,7 +2737,7 @@ struct RunningEfficiencyDial: View {
                 // Background arc
                 GaugeArcShape(startAngle: 180, endAngle: 360)
                     .stroke(
-                        Color.white.opacity(0.12),
+                        AppTheme.primaryText.opacity(0.12),
                         style: StrokeStyle(lineWidth: 12, lineCap: .round)
                     )
                     .frame(width: 160, height: 80)
@@ -2767,12 +2766,12 @@ struct RunningEfficiencyDial: View {
                 VStack(spacing: 2) {
                     if let s = score {
                         Text("\(s)")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                            .font(AppTheme.display(36))
+                            .foregroundColor(AppTheme.primaryText)
                     } else {
                         Text("--")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(.white.opacity(0.35))
+                            .font(AppTheme.display(36))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.35))
                     }
                 }
                 .offset(y: 20)
@@ -2780,7 +2779,7 @@ struct RunningEfficiencyDial: View {
             .frame(width: 160, height: 100)
 
             Text(scoreLabel)
-                .font(.system(size: 13, weight: .medium))
+                .font(AppTheme.bodyMedium(13))
                 .foregroundColor(scoreColor.opacity(0.9))
         }
     }
@@ -2818,7 +2817,7 @@ struct SprintPowerDial: View {
         VStack(spacing: 8) {
             ZStack {
                 GaugeArcShape(startAngle: 180, endAngle: 360)
-                    .stroke(Color.white.opacity(0.12), style: StrokeStyle(lineWidth: 12, lineCap: .round))
+                    .stroke(AppTheme.primaryText.opacity(0.12), style: StrokeStyle(lineWidth: 12, lineCap: .round))
                     .frame(width: 160, height: 80)
                 
                 if score != nil && filledEndAngle > 180 {
@@ -2843,12 +2842,12 @@ struct SprintPowerDial: View {
                 VStack(spacing: 2) {
                     if let s = score {
                         Text("\(s)")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                            .font(AppTheme.display(36))
+                            .foregroundColor(AppTheme.primaryText)
                     } else {
                         Text("--")
-                            .font(.system(size: 36, weight: .bold, design: .rounded))
-                            .foregroundColor(.white.opacity(0.35))
+                            .font(AppTheme.display(36))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.35))
                     }
                 }
                 .offset(y: 20)
@@ -2856,7 +2855,7 @@ struct SprintPowerDial: View {
             .frame(width: 160, height: 100)
             
             Text(scoreLabel)
-                .font(.system(size: 13, weight: .medium))
+                .font(AppTheme.bodyMedium(13))
                 .foregroundColor(scoreColor.opacity(0.9))
         }
     }
@@ -2878,12 +2877,12 @@ struct SuggestionCard: View {
                         .fill(color)
                         .frame(width: 10, height: 10)
                     Text(metricName)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.bodySemibold(15))
+                        .foregroundColor(AppTheme.primaryText)
                 }
                 Text(tip)
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.8))
+                    .font(AppTheme.body(13))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.8))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -2891,7 +2890,7 @@ struct SuggestionCard: View {
                 .padding(.top, 2)
         }
         .padding(12)
-        .background(Color.white.opacity(0.08))
+        .background(AppTheme.primaryText.opacity(0.08))
         .cornerRadius(10)
     }
 }
@@ -2917,10 +2916,10 @@ struct SprintMetricCard: View {
                 HStack(spacing: 8) {
                     Circle().fill(color).frame(width: 10, height: 10)
                     Text(cls.category)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.bodySemibold(15))
+                        .foregroundColor(AppTheme.primaryText)
                     Text(cls.label)
-                        .font(.system(size: 12, weight: .medium))
+                        .font(AppTheme.bodyMedium(12))
                         .foregroundColor(color)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
@@ -2928,13 +2927,13 @@ struct SprintMetricCard: View {
                         .cornerRadius(4)
                     if let d = detail {
                         Text(d)
-                            .font(.system(size: 12, weight: .medium, design: .monospaced))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(AppTheme.meta(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
                     }
                 }
                 Text(cls.tip)
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.8))
+                    .font(AppTheme.body(13))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.8))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -2942,7 +2941,7 @@ struct SprintMetricCard: View {
                 .padding(.top, 2)
         }
         .padding(12)
-        .background(Color.white.opacity(0.08))
+        .background(AppTheme.primaryText.opacity(0.08))
         .cornerRadius(10)
     }
 }
@@ -2964,11 +2963,11 @@ struct FootPlacementCard: View {
                     .fill(accentColor)
                     .frame(width: 10, height: 10)
                 Text("Foot Placement")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer(minLength: 0)
                 Text(label)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(AppTheme.bodySemibold(13))
                     .foregroundColor(accentColor)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
@@ -2976,12 +2975,12 @@ struct FootPlacementCard: View {
                     .cornerRadius(8)
             }
             Text(tip)
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.8))
+                .font(AppTheme.body(13))
+                .foregroundColor(AppTheme.primaryText.opacity(0.8))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
-        .background(Color.white.opacity(0.08))
+        .background(AppTheme.primaryText.opacity(0.08))
         .cornerRadius(10)
     }
 }
@@ -3015,13 +3014,13 @@ struct SnapshotView: View {
                             .padding(.top, 20)
                         
                         Text("Skeleton at Contact Point")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.8))
+                            .font(AppTheme.bodyMedium(16))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.8))
                             .padding(.horizontal, 20)
                         
                         Text("This snapshot shows your running form at the moment of heel strike (ground contact).")
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(AppTheme.body(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 20)
                             .padding(.bottom, 20)
@@ -3033,14 +3032,14 @@ struct SnapshotView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: onDismiss) {
                         Image(systemName: "xmark")
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.primaryText)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if let imageData = image.pngData() {
                         ShareLink(item: imageData, preview: SharePreview("Skeleton Snapshot")) {
                             Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(.white)
+                                .foregroundColor(AppTheme.primaryText)
                         }
                     }
                 }
@@ -3079,18 +3078,18 @@ struct AnalysisHistorySheet: View {
                 if history.records.isEmpty {
                     VStack(spacing: 10) {
                         Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 30))
-                            .foregroundColor(.white.opacity(0.3))
+                            .font(AppTheme.body(30))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.3))
                         Text("No analyses yet")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(AppTheme.bodyMedium(15))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
                     }
                 } else {
                     List {
                         ForEach(history.records) { record in
                             row(record)
-                                .listRowBackground(Color.white.opacity(0.04))
-                                .listRowSeparatorTint(Color.white.opacity(0.08))
+                                .listRowBackground(AppTheme.primaryText.opacity(0.04))
+                                .listRowSeparatorTint(AppTheme.primaryText.opacity(0.08))
                         }
                         .onDelete { offsets in
                             for i in offsets { history.delete(id: history.records[i].id) }
@@ -3118,8 +3117,8 @@ struct AnalysisHistorySheet: View {
                 if let png = record.form?.snapshotPNG, let img = UIImage(data: png) {
                     Image(uiImage: img).resizable().scaledToFill()
                 } else {
-                    RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(0.06))
-                        .overlay(Image(systemName: "figure.run").foregroundColor(.white.opacity(0.3)))
+                    RoundedRectangle(cornerRadius: 8).fill(AppTheme.primaryText.opacity(0.06))
+                        .overlay(Image(systemName: "figure.run").foregroundColor(AppTheme.primaryText.opacity(0.3)))
                 }
             }
             .frame(width: 46, height: 46)
@@ -3127,8 +3126,8 @@ struct AnalysisHistorySheet: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(Self.dateFormatter.string(from: record.date))
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodyMedium(13))
+                    .foregroundColor(AppTheme.primaryText)
                 HStack(spacing: 10) {
                     scoreChip("DRIVE", record.power)
                     scoreChip("IMPACT", record.impact)
@@ -3137,7 +3136,7 @@ struct AnalysisHistorySheet: View {
             }
             Spacer()
             Text(record.overall.map(String.init) ?? "—")
-                .font(.system(size: 20, weight: .bold, design: .monospaced))
+                .font(AppTheme.display(20))
                 .foregroundColor(AppTheme.analyzePink)
         }
         .padding(.vertical, 6)
@@ -3145,8 +3144,8 @@ struct AnalysisHistorySheet: View {
 
     private func scoreChip(_ label: String, _ v: Int?) -> some View {
         Text("\(label) \(v.map(String.init) ?? "--")")
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
-            .foregroundColor(.white.opacity(0.5))
+            .font(AppTheme.meta(9))
+            .foregroundColor(AppTheme.primaryText.opacity(0.5))
     }
 }
 

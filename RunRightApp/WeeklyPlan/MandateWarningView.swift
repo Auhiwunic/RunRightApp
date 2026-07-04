@@ -28,7 +28,7 @@ struct MandateWarningView: View {
                 .frame(width: 3)
 
             Text(mandate.message)
-                .font(.caption)
+                .font(AppTheme.body(12))
                 .foregroundStyle(mandate.severity == .critical
                                  ? Color(red: 1, green: 0.5, blue: 0.5)
                                  : Color(red: 1, green: 0.85, blue: 0.45))

@@ -33,8 +33,8 @@ struct ActiveRunView: View {
     private var mileSplits: [MileSplit] { session.mileSplits }
     
     private let accentOrange = Color(hex: "#FF8C00")   // Run-tab accent (Z4 orange)
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
     private let metersPerMile: Double = 1609.344
     
     var body: some View {
@@ -76,9 +76,9 @@ struct ActiveRunView: View {
                         Spacer()
                         HStack(spacing: 4) {
                             Image(systemName: "location.fill")
-                                .font(.system(size: 10))
+                                .font(AppTheme.body(10))
                             Text("GPS")
-                                .font(.system(size: 11, weight: .semibold))
+                                .font(AppTheme.bodySemibold(11))
                         }
                         .foregroundColor(.black)
                         .padding(.horizontal, 10)
@@ -92,7 +92,7 @@ struct ActiveRunView: View {
                     // Gaita's most recent spoken cue (visible confirmation of coaching).
                     if coach.isEnabled, let cue = coach.lastSpoken {
                         Text(cue)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(AppTheme.bodyMedium(12))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 14)
@@ -117,7 +117,7 @@ struct ActiveRunView: View {
     private var minimizeButton: some View {
         Button(action: { RunSession.shared.minimize() }) {
             Image(systemName: "chevron.down")
-                .font(.system(size: 13, weight: .bold))
+                .font(AppTheme.meta(13))
                 .foregroundColor(.white)
                 .padding(8)
                 .background(Color.black.opacity(0.55))
@@ -130,9 +130,9 @@ struct ActiveRunView: View {
         Button(action: { coach.isEnabled.toggle() }) {
             HStack(spacing: 5) {
                 Image(systemName: coach.isEnabled ? "waveform" : "speaker.slash.fill")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(AppTheme.meta(11))
                 Text("GAITA")
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(11))
             }
             .foregroundColor(coach.isEnabled ? .black : .white)
             .padding(.horizontal, 10)
@@ -146,33 +146,32 @@ struct ActiveRunView: View {
     private var compactStatsBar: some View {
         VStack(spacing: 0) {
             RoundedRectangle(cornerRadius: 3)
-                .fill(Color.white.opacity(0.4))
+                .fill(AppTheme.primaryText.opacity(0.4))
                 .frame(width: 40, height: 5)
                 .padding(.top, 12)
                 .padding(.bottom, 8)
             
             Text(formatTime(elapsedTime))
-                .font(.system(size: 48, weight: .regular))
-                .monospacedDigit()
-                .foregroundColor(.white)
+                .font(AppTheme.displayTabular(48))
+                .foregroundColor(AppTheme.primaryText)
             
             HStack(spacing: 32) {
                 VStack(spacing: 2) {
                     Text(formatMiles(tracker.liveSummary?.distance ?? 0))
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(.white)
+                        .font(AppTheme.bodyMedium(24))
+                        .foregroundColor(AppTheme.primaryText)
                     Text("mi")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                 }
                 
                 VStack(spacing: 2) {
                     Text(formatPacePerMile(tracker.liveSummary?.averageSpeed ?? 0))
-                        .font(.system(size: 24, weight: .medium))
-                        .foregroundColor(.white)
+                        .font(AppTheme.bodyMedium(24))
+                        .foregroundColor(AppTheme.primaryText)
                     Text("/mi")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                 }
             }
             .padding(.top, 8)
@@ -184,7 +183,7 @@ struct ActiveRunView: View {
                     .frame(width: 72, height: 72)
                     .overlay(
                         Image(systemName: "pause.fill")
-                            .font(.system(size: 28, weight: .bold))
+                            .font(AppTheme.display(28))
                             .foregroundColor(.black)
                     )
             }
@@ -261,12 +260,11 @@ struct ActiveRunView: View {
             }
             
             Text(isPaused ? "Paused" : "Running")
-                .font(.system(size: 15, weight: .semibold))
+                .font(AppTheme.bodySemibold(15))
                 .foregroundColor(.black)
             
             Text(formatTimeWithHours(elapsedTime))
-                .font(.system(size: 56, weight: .bold, design: .default))
-                .monospacedDigit()
+                .font(AppTheme.displayTabular(56))
                 .foregroundColor(.black)
         }
         .frame(maxWidth: .infinity)
@@ -280,7 +278,7 @@ struct ActiveRunView: View {
                 }
             }) {
                 Image(systemName: "arrow.down.right.and.arrow.up.left")
-                    .font(.system(size: 18, weight: .medium))
+                    .font(AppTheme.bodyMedium(18))
                     .foregroundColor(.black.opacity(0.7))
                     .padding(12)
             }
@@ -298,36 +296,34 @@ struct ActiveRunView: View {
                 if tracker.liveSummary?.averageSpeed ?? 0 < 0.5 {
                     HStack(spacing: 4) {
                         Text("--")
-                            .font(.system(size: 72, weight: .regular))
-                            .foregroundColor(.white)
+                            .font(AppTheme.body(72))
+                            .foregroundColor(AppTheme.primaryText)
                         Text(":")
-                            .font(.system(size: 72, weight: .regular))
-                            .foregroundColor(.white)
+                            .font(AppTheme.body(72))
+                            .foregroundColor(AppTheme.primaryText)
                         Text("--")
-                            .font(.system(size: 72, weight: .regular))
-                            .foregroundColor(.white)
+                            .font(AppTheme.body(72))
+                            .foregroundColor(AppTheme.primaryText)
                     }
                 } else {
                     Text(formatPacePerMile(tracker.liveSummary?.averageSpeed ?? 0))
-                        .font(.system(size: 72, weight: .regular))
-                        .monospacedDigit()
-                        .foregroundColor(.white)
+                        .font(AppTheme.displayTabular(72))
+                        .foregroundColor(AppTheme.primaryText)
                 }
                 
                 Text("Avg. pace (/mi)")
-                    .font(.system(size: 17, weight: .regular))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(17))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
             }
             
             VStack(spacing: 8) {
                 Text(formatMiles(tracker.liveSummary?.distance ?? 0))
-                    .font(.system(size: 96, weight: .regular))
-                    .monospacedDigit()
-                    .foregroundColor(.white)
+                    .font(AppTheme.displayTabular(96))
+                    .foregroundColor(AppTheme.primaryText)
                 
                 Text("Distance (mi)")
-                    .font(.system(size: 17, weight: .regular))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(17))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
             }
             
             Spacer()
@@ -343,18 +339,18 @@ struct ActiveRunView: View {
             if mileSplits.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "chart.bar.fill")
-                        .font(.system(size: 48))
+                        .font(AppTheme.body(48))
                         .foregroundColor(cardBackground)
                     
                     Text("Complete your first mile to see splits")
-                        .font(.system(size: 15))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.body(15))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 }
             } else {
                 VStack(spacing: 16) {
                     Text("Splits (mi)")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.bodySemibold(17))
+                        .foregroundColor(AppTheme.primaryText)
                     
                     HStack(alignment: .bottom, spacing: 8) {
                         ForEach(mileSplits.indices, id: \.self) { index in
@@ -364,8 +360,8 @@ struct ActiveRunView: View {
                                     .frame(width: 40, height: barHeight(for: mileSplits[index].time))
                                 
                                 Text("\(index + 1)")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.white.opacity(0.4))
+                                    .font(AppTheme.body(12))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
                             }
                         }
                     }
@@ -375,20 +371,20 @@ struct ActiveRunView: View {
                         ForEach(mileSplits.indices, id: \.self) { index in
                             HStack {
                                 Text("Mile \(index + 1)")
-                                    .font(.system(size: 15))
-                                    .foregroundColor(.white)
+                                    .font(AppTheme.body(15))
+                                    .foregroundColor(AppTheme.primaryText)
                                 
                                 Spacer()
                                 
                                 Text(formatPaceFromSplit(mileSplits[index].time))
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(AppTheme.bodySemibold(15))
                                     .foregroundColor(paceColor(mileSplits[index].time))
                             }
                             .padding(.vertical, 12)
                             .padding(.horizontal, 20)
                             
                             if index < mileSplits.count - 1 {
-                                Divider().background(Color.white.opacity(0.08))
+                                Divider().background(AppTheme.primaryText.opacity(0.08))
                             }
                         }
                     }
@@ -423,9 +419,9 @@ struct ActiveRunView: View {
                 Button(action: resumeRun) {
                     HStack(spacing: 8) {
                         Image(systemName: "play.fill")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(AppTheme.head(18))
                         Text("Resume")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(AppTheme.bodySemibold(17))
                     }
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
@@ -437,28 +433,28 @@ struct ActiveRunView: View {
                 Button(action: finishRun) {
                     HStack(spacing: 8) {
                         Image(systemName: "flag.checkered")
-                            .font(.system(size: 16, weight: .medium))
+                            .font(AppTheme.bodyMedium(16))
                         Text("Finish")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(AppTheme.bodySemibold(17))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(AppTheme.bgColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Color.white)
+                    .background(AppTheme.primaryText)
                     .cornerRadius(28)
                 }
             } else {
                 Button(action: pauseRun) {
                     HStack(spacing: 8) {
                         Image(systemName: "pause.fill")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(AppTheme.head(18))
                         Text("Pause")
-                            .font(.system(size: 17, weight: .semibold))
+                            .font(AppTheme.bodySemibold(17))
                     }
-                    .foregroundColor(.black)
+                    .foregroundColor(AppTheme.bgColor)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Color.white)
+                    .background(AppTheme.primaryText)
                     .cornerRadius(28)
                 }
             }
@@ -486,12 +482,12 @@ struct ActiveRunView: View {
                     
                     VStack(spacing: 4) {
                         Text("Run Complete!")
-                            .font(.system(size: 24, weight: .bold))
-                            .foregroundColor(.white)
+                            .font(AppTheme.head(24))
+                            .foregroundColor(AppTheme.primaryText)
                         
                         Text(Date(), style: .date)
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.body(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
                     .padding(.top, 24)
                     
@@ -506,16 +502,16 @@ struct ActiveRunView: View {
                     if !mileSplits.isEmpty {
                         VStack(alignment: .leading, spacing: 16) {
                             Text("Mile Splits")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundColor(.white)
+                                .font(AppTheme.head(18))
+                                .foregroundColor(AppTheme.primaryText)
                             
                             ForEach(mileSplits.indices, id: \.self) { index in
                                 HStack {
                                     Text("Mile \(index + 1)")
-                                        .foregroundColor(.white)
+                                        .foregroundColor(AppTheme.primaryText)
                                     Spacer()
                                     Text(formatPaceFromSplit(mileSplits[index].time))
-                                        .font(.system(size: 16, weight: .semibold))
+                                        .font(AppTheme.bodySemibold(16))
                                         .foregroundColor(paceColor(mileSplits[index].time))
                                 }
                             }
@@ -535,8 +531,8 @@ struct ActiveRunView: View {
                 HStack(spacing: 12) {
                     Button(action: { RunSession.shared.dismissSession() }) {
                         Text("Discard")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
+                            .font(AppTheme.bodySemibold(16))
+                            .foregroundColor(AppTheme.primaryText)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
                             .appRaisedSurface(fill: cardBackground, cornerRadius: 27, shadowRadius: 9, x: 5, y: 5)
@@ -564,7 +560,7 @@ struct ActiveRunView: View {
                         }
                     }) {
                         Text(isSaving ? "Saving..." : "Save")
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(AppTheme.bodySemibold(16))
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
                             .frame(height: 54)
@@ -583,17 +579,17 @@ struct ActiveRunView: View {
         VStack(spacing: 4) {
             HStack(alignment: .lastTextBaseline, spacing: 2) {
                 Text(value)
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.display(28))
+                    .foregroundColor(AppTheme.primaryText)
                 if !unit.isEmpty {
                     Text(unit)
-                        .font(.system(size: 14))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.body(14))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 }
             }
             Text(label)
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.body(13))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
     }
     

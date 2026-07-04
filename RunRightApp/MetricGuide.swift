@@ -119,23 +119,23 @@ struct MetricGuideSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     HStack {
                         Text(entry.title.uppercased())
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.white)
+                            .font(AppTheme.head(20))
+                            .foregroundColor(AppTheme.primaryText)
                         Spacer()
                         Button(action: { dismiss() }) {
                             Image(systemName: "xmark")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.white.opacity(0.6))
+                                .font(AppTheme.meta(13))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.6))
                                 .frame(width: 30, height: 30)
-                                .background(Circle().fill(Color.white.opacity(0.08)))
+                                .background(Circle().fill(AppTheme.primaryText.opacity(0.08)))
                         }
                         .buttonStyle(.plain)
                     }
                     .padding(.top, 20)
 
-                    guideSection("WHAT IT IS", entry.what, labelColor: .white.opacity(0.35))
-                    guideSection("WHY IT MATTERS", entry.why, labelColor: .white.opacity(0.35))
-                    guideSection("TARGET", entry.target, labelColor: .white.opacity(0.35))
+                    guideSection("WHAT IT IS", entry.what, labelColor: AppTheme.primaryText.opacity(0.35))
+                    guideSection("WHY IT MATTERS", entry.why, labelColor: AppTheme.primaryText.opacity(0.35))
+                    guideSection("TARGET", entry.target, labelColor: AppTheme.primaryText.opacity(0.35))
                     guideSection("FIX IT WITH FORM", entry.fix, labelColor: accent)
 
                     Spacer(minLength: 24)
@@ -151,12 +151,12 @@ struct MetricGuideSheet: View {
     private func guideSection(_ label: String, _ body: String, labelColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(10))
                 .tracking(1.5)
                 .foregroundColor(labelColor)
             Text(body)
-                .font(.system(size: 14))
-                .foregroundColor(.white.opacity(0.85))
+                .font(AppTheme.body(14))
+                .foregroundColor(AppTheme.primaryText.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

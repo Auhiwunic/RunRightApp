@@ -45,6 +45,13 @@
 		A100000C /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000D /* AppTheme.swift */; };
 		A100000D /* AnalyzeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000E /* AnalyzeView.swift */; };
 		A100000E /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000F /* ScanView.swift */; };
+		A1000F10 /* ArchivoDisplay.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F10 /* ArchivoDisplay.ttf */; };
+		A1000F11 /* ArchivoHead.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F11 /* ArchivoHead.ttf */; };
+		A1000F12 /* ArchivoHeadBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F12 /* ArchivoHeadBold.ttf */; };
+		A1000F13 /* ArchivoMeta.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F13 /* ArchivoMeta.ttf */; };
+		A1000F14 /* Switzer-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F14 /* Switzer-Regular.ttf */; };
+		A1000F15 /* Switzer-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F15 /* Switzer-Medium.ttf */; };
+		A1000F16 /* Switzer-Semibold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F16 /* Switzer-Semibold.ttf */; };
 		A1000E01 /* PastRunsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E01 /* PastRunsSection.swift */; };
 		A1000E02 /* FormGaitCrossReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E02 /* FormGaitCrossReference.swift */; };
 		A1000E03 /* DrillsLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E03 /* DrillsLibrary.swift */; };
@@ -143,6 +150,13 @@
 		A200000D /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		A200000E /* AnalyzeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeView.swift; sourceTree = "<group>"; };
 		A200000F /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
+		A2000F10 /* ArchivoDisplay.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoDisplay.ttf"; sourceTree = "<group>"; };
+		A2000F11 /* ArchivoHead.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoHead.ttf"; sourceTree = "<group>"; };
+		A2000F12 /* ArchivoHeadBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoHeadBold.ttf"; sourceTree = "<group>"; };
+		A2000F13 /* ArchivoMeta.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoMeta.ttf"; sourceTree = "<group>"; };
+		A2000F14 /* Switzer-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Regular.ttf"; sourceTree = "<group>"; };
+		A2000F15 /* Switzer-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Medium.ttf"; sourceTree = "<group>"; };
+		A2000F16 /* Switzer-Semibold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Semibold.ttf"; sourceTree = "<group>"; };
 		A2000E01 /* PastRunsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastRunsSection.swift; sourceTree = "<group>"; };
 		A2000E02 /* FormGaitCrossReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormGaitCrossReference.swift; sourceTree = "<group>"; };
 		A2000E03 /* DrillsLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillsLibrary.swift; sourceTree = "<group>"; };
@@ -277,6 +291,20 @@
 			path = WeeklyPlan;
 			sourceTree = "<group>";
 		};
+		A3000F10 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				A2000F10 /* ArchivoDisplay.ttf */,
+				A2000F11 /* ArchivoHead.ttf */,
+				A2000F12 /* ArchivoHeadBold.ttf */,
+				A2000F13 /* ArchivoMeta.ttf */,
+				A2000F14 /* Switzer-Regular.ttf */,
+				A2000F15 /* Switzer-Medium.ttf */,
+				A2000F16 /* Switzer-Semibold.ttf */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
 		A5000001 = {
 			isa = PBXGroup;
 			children = (
@@ -291,6 +319,7 @@
 			isa = PBXGroup;
 			children = (
 				06B9DBF02F80C4CF00EA973F /* RunRightApp.entitlements */,
+				A3000F10 /* Fonts */,
 				A2000001 /* RunRightApp.swift */,
 				A2000021 /* RootView.swift */,
 				A2000022 /* FirebaseAuthManager.swift */,
@@ -451,6 +480,13 @@
 				A1000FA3 /* TERMS_AND_CONDITIONS.md in Resources */,
 				A1000FA4 /* LICENSES.md in Resources */,
 				A1000039 /* PrivacyInfo.xcprivacy in Resources */,
+				A1000F10 /* ArchivoDisplay.ttf in Resources */,
+				A1000F11 /* ArchivoHead.ttf in Resources */,
+				A1000F12 /* ArchivoHeadBold.ttf in Resources */,
+				A1000F13 /* ArchivoMeta.ttf in Resources */,
+				A1000F14 /* Switzer-Regular.ttf in Resources */,
+				A1000F15 /* Switzer-Medium.ttf in Resources */,
+				A1000F16 /* Switzer-Semibold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

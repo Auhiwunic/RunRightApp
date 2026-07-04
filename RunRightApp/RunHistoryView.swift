@@ -13,8 +13,8 @@ struct RunHistoryView: View {
     @State private var isLoading = true
 
     private let accentLime = Color(hex: "#FF8C00")   // Run-tab orange (Z4)
-    private let backgroundColor = Color(hex: "#1A1A1C")
-    private let cardBackground = Color(hex: "#2A2A2E")
+    private let backgroundColor = AppTheme.bgColor
+    private let cardBackground = AppTheme.cardBg
 
     var body: some View {
         ZStack {
@@ -25,20 +25,20 @@ struct RunHistoryView: View {
                 HStack {
                     Button(action: { dismiss() }) {
                         Image(systemName: "chevron.left")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white)
+                            .font(AppTheme.bodyMedium(16))
+                            .foregroundColor(AppTheme.primaryText)
                             .padding(8)
                     }
 
                     Text("Run History")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.head(24))
+                        .foregroundColor(AppTheme.primaryText)
 
                     Spacer()
 
                     Text("\(runs.count) runs")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.bodyMedium(13))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
@@ -59,7 +59,7 @@ struct RunHistoryView: View {
                             ForEach(groupedRuns, id: \.month) { group in
                                 // Month header
                                 Text(group.month)
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(AppTheme.bodySemibold(13))
                                     .foregroundColor(accentLime)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .padding(.horizontal, 20)
@@ -135,14 +135,14 @@ struct RunHistoryView: View {
                     .fill(accentLime.opacity(0.12))
                     .frame(width: 42, height: 42)
                 Image(systemName: "figure.run")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(AppTheme.bodySemibold(16))
                     .foregroundColor(accentLime)
             }
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(dateLabel(run.startTime))
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(14))
+                    .foregroundColor(AppTheme.primaryText)
 
                 HStack(spacing: 12) {
                     Label(String(format: "%.2f mi", run.distanceMiles), systemImage: "location.fill")
@@ -151,8 +151,8 @@ struct RunHistoryView: View {
                         Label(shoe, systemImage: "shoe.fill")
                     }
                 }
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.bodyMedium(11))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
             }
 
             Spacer()
@@ -160,16 +160,16 @@ struct RunHistoryView: View {
             // Pace
             VStack(alignment: .trailing, spacing: 2) {
                 Text(formatPace(run.avgSpeedMps))
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(15))
+                    .foregroundColor(AppTheme.primaryText)
                 Text("/mi")
-                    .font(.system(size: 10))
-                    .foregroundColor(.white.opacity(0.35))
+                    .font(AppTheme.body(10))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.35))
             }
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.2))
+                .font(AppTheme.bodyMedium(12))
+                .foregroundColor(AppTheme.primaryText.opacity(0.2))
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
@@ -182,14 +182,14 @@ struct RunHistoryView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "figure.run.circle")
-                .font(.system(size: 56))
+                .font(AppTheme.body(56))
                 .foregroundColor(accentLime.opacity(0.3))
             Text("No runs yet")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundColor(.white)
+                .font(AppTheme.bodySemibold(18))
+                .foregroundColor(AppTheme.primaryText)
             Text("Complete your first run to see it here!")
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.body(13))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
     }
 

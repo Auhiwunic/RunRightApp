@@ -196,7 +196,7 @@ struct ShoeCameraView: View {
                 HStack {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(AppTheme.head(15))
                             .foregroundColor(.white)
                             .frame(width: 38, height: 38)
                             .background(Color.black.opacity(0.45))
@@ -204,12 +204,12 @@ struct ShoeCameraView: View {
                     }
                     Spacer()
                     Text("Scan \(side.capitalized) Sole")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(AppTheme.bodySemibold(16))
                         .foregroundColor(.white)
                     Spacer()
                     Button(action: { camera.toggleTorch() }) {
                         Image(systemName: camera.isTorchOn ? "bolt.fill" : "bolt.slash")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(AppTheme.head(15))
                             .foregroundColor(camera.isTorchOn ? accentLime : .white)
                             .frame(width: 38, height: 38)
                             .background(Color.black.opacity(0.45))
@@ -222,9 +222,9 @@ struct ShoeCameraView: View {
                 // Level hint
                 HStack(spacing: 6) {
                     Image(systemName: camera.isLevel ? "checkmark.circle.fill" : "level")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(AppTheme.bodySemibold(12))
                     Text(camera.isLevel ? "Level — good to go" : "Hold phone flat above the shoe")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(AppTheme.bodySemibold(12))
                 }
                 .foregroundColor(camera.isLevel ? .black : .white)
                 .padding(.horizontal, 14)
@@ -237,7 +237,7 @@ struct ShoeCameraView: View {
                 Spacer()
 
                 Text("Fill the outline with the sole, toe at the top")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(AppTheme.bodyMedium(12))
                     .foregroundColor(.white.opacity(0.85))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 7)
@@ -249,7 +249,7 @@ struct ShoeCameraView: View {
                 HStack {
                     PhotosPicker(selection: $libraryItem, matching: .images) {
                         Image(systemName: "photo.on.rectangle")
-                            .font(.system(size: 19))
+                            .font(AppTheme.body(19))
                             .foregroundColor(.white)
                             .frame(width: 46, height: 46)
                             .background(Color.black.opacity(0.45))
@@ -304,7 +304,7 @@ struct ShoeCameraView: View {
                     libraryItem = nil
                 }) {
                     Text("Retake")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(AppTheme.bodySemibold(15))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
@@ -317,7 +317,7 @@ struct ShoeCameraView: View {
                     onCapture(image)
                 }) {
                     Text("Use Photo")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(AppTheme.bodySemibold(15))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
@@ -337,7 +337,7 @@ struct ShoeCameraView: View {
             HStack {
                 Button(action: { dismiss() }) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(AppTheme.head(15))
                         .foregroundColor(.white)
                         .frame(width: 38, height: 38)
                         .background(Color.white.opacity(0.1))
@@ -351,20 +351,20 @@ struct ShoeCameraView: View {
             Spacer()
 
             Image(systemName: "camera.fill")
-                .font(.system(size: 40))
+                .font(AppTheme.body(40))
                 .foregroundColor(.white.opacity(0.3))
 
             Text(camera.isAuthorized
                  ? "Camera not available on this device."
                  : "Camera access is off. Enable it in Settings, or pick a photo instead.")
-                .font(.system(size: 14))
+                .font(AppTheme.body(14))
                 .foregroundColor(.white.opacity(0.6))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
 
             PhotosPicker(selection: $libraryItem, matching: .images) {
                 Label("Choose from Library", systemImage: "photo.on.rectangle")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(AppTheme.bodySemibold(15))
                     .foregroundColor(.black)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 14)

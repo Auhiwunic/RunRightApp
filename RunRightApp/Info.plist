@@ -27,6 +27,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>COACH_CHAT_ENDPOINT</key>
+	<string>https://us-central1-corsa-51d8f.cloudfunctions.net/coachChat</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSCameraUsageDescription</key>
@@ -43,16 +45,18 @@
 	<string>Gaita saves processed running-form videos to your photo library only when you tap Save.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Gaita uses photo library access so you can choose shoe photos or running videos for analysis.</string>
-	<!-- OpenAI key removed — it must never ship in the app binary. The shoe scanner
-	     calls the Firebase analyzeShoe Cloud Function, which verifies Firebase Auth
-	     and holds the key server-side. -->
 	<key>SHOE_ANALYSIS_ENDPOINT</key>
 	<string>https://us-central1-corsa-51d8f.cloudfunctions.net/analyzeShoe</string>
-	<!-- Coach chat proxy. Deploy a coachChat Firebase function (mirror analyzeShoe:
-	     verify the Firebase ID token, hold the OpenAI key server-side). Expects
-	     {message, context, history} and returns {reply}. -->
-	<key>COACH_CHAT_ENDPOINT</key>
-	<string>https://us-central1-corsa-51d8f.cloudfunctions.net/coachChat</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>ArchivoDisplay.ttf</string>
+		<string>ArchivoHead.ttf</string>
+		<string>ArchivoHeadBold.ttf</string>
+		<string>ArchivoMeta.ttf</string>
+		<string>Switzer-Regular.ttf</string>
+		<string>Switzer-Medium.ttf</string>
+		<string>Switzer-Semibold.ttf</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>

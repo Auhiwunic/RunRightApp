@@ -168,8 +168,8 @@ struct CoachChatView: View {
                     .animation(store.sending ? .linear(duration: 1.1).repeatForever(autoreverses: false) : nil, value: store.sending)
 
                 Text("GAITA")
-                    .font(.system(size: embedded ? 18 : 24, weight: .bold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(embedded ? 18 : 24))
+                    .foregroundColor(AppTheme.primaryText)
 
                 Spacer()
             }
@@ -185,8 +185,8 @@ struct CoachChatView: View {
                         if store.sending {
                             HStack {
                                 Text("…")
-                                    .font(.system(size: 16, weight: .bold))
-                                    .foregroundColor(.white.opacity(0.5))
+                                    .font(AppTheme.head(16))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                     .padding(.horizontal, 16).padding(.vertical, 10)
                                     .background(AppTheme.raisedFill)
                                     .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -210,7 +210,7 @@ struct CoachChatView: View {
                             HStack {
                                 Spacer(minLength: 46)
                                 Text(prompt)
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(AppTheme.bodySemibold(13))
                                     .foregroundColor(.black)
                                     .multilineTextAlignment(.trailing)
                                     .padding(.horizontal, 14)
@@ -229,8 +229,8 @@ struct CoachChatView: View {
 
             HStack(spacing: 10) {
                 TextField(voiceInput.phase == .recording ? "Listening…" : "Message Gaita", text: $input, axis: .vertical)
-                    .font(.system(size: 14))
-                    .foregroundColor(.white)
+                    .font(AppTheme.body(14))
+                    .foregroundColor(AppTheme.primaryText)
                     .lineLimit(1...4)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
@@ -242,7 +242,7 @@ struct CoachChatView: View {
                 if CoachVoiceInput.isSupported {
                     Button(action: { voiceMessageTapped() }) {
                         Image(systemName: voiceInput.phase == .recording ? "stop.circle.fill" : "mic.circle.fill")
-                            .font(.system(size: 30))
+                            .font(AppTheme.body(30))
                             .foregroundColor(voiceInput.phase == .recording ? Color(hex: "#FF5252") : Color(hex: "#00FF7F").opacity(isLocked ? 1 : 0.85))
                             .symbolEffect(.pulse, isActive: voiceInput.phase == .recording)
                     }
@@ -250,8 +250,8 @@ struct CoachChatView: View {
                 }
                 Button(action: { send() }) {
                     Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
-                        .foregroundColor(canSend || isLocked ? Color(hex: "#00FF7F") : .white.opacity(0.2))
+                        .font(AppTheme.body(30))
+                        .foregroundColor(canSend || isLocked ? Color(hex: "#00FF7F") : AppTheme.primaryText.opacity(0.2))
                 }
                 .disabled(!canSend && !isLocked)
             }
@@ -261,21 +261,21 @@ struct CoachChatView: View {
 
             if voiceInput.phase == .transcribing {
                 Text("Transcribing on device…")
-                    .font(.system(size: 9))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(9))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.bottom, 4)
             } else if case .downloading(let f) = voiceEngine.state {
                 Text("Downloading coach voice \(Int(f * 100))%")
-                    .font(.system(size: 9))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(9))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.bottom, 4)
             }
 
             Text("General fitness guidance, not medical advice. See a professional for pain or injury. Voice messages are transcribed on your device; only the text is sent to your coach.")
-                .font(.system(size: 9))
-                .foregroundColor(.white.opacity(0.3))
+                .font(AppTheme.body(9))
+                .foregroundColor(AppTheme.primaryText.opacity(0.3))
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.horizontal, embedded ? 14 : 16)
@@ -343,8 +343,8 @@ struct CoachChatView: View {
         HStack {
             if m.role == .user { Spacer(minLength: 40) }
             Text(m.text)
-                .font(.system(size: 14))
-                .foregroundColor(m.role == .user ? .black : .white.opacity(0.85))
+                .font(AppTheme.body(14))
+                .foregroundColor(m.role == .user ? .black : AppTheme.primaryText.opacity(0.85))
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(m.role == .user ? Color(hex: "#00FF7F") : AppTheme.raisedFill)
@@ -369,12 +369,12 @@ struct TrainingZonesCard: View {
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("TRAINING ZONES")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(14))
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Text("Max \(zones.maxHeartRate) bpm")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundColor(.white.opacity(0.3))
+                    .font(AppTheme.bodyMedium(10))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
             }
             VStack(spacing: 6) {
                 ForEach(zones.zones, id: \.id) { zone in
@@ -394,12 +394,12 @@ struct TrainingZonesCard: View {
     private func zoneBar(name: String, bpm: String, percent: CGFloat, color: Color) -> some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
-                RoundedRectangle(cornerRadius: 6).fill(Color.white.opacity(0.06))
+                RoundedRectangle(cornerRadius: 6).fill(AppTheme.primaryText.opacity(0.06))
                 RoundedRectangle(cornerRadius: 6).fill(color)
                     .frame(width: geo.size.width * percent)
                 HStack(spacing: 6) {
-                    Text(name).font(.system(size: 11, weight: .semibold)).foregroundColor(.white)
-                    Text(bpm).font(.system(size: 10, weight: .bold)).foregroundColor(.white.opacity(0.9))
+                    Text(name).font(AppTheme.bodySemibold(11)).foregroundColor(AppTheme.primaryText)
+                    Text(bpm).font(AppTheme.meta(10)).foregroundColor(AppTheme.primaryText.opacity(0.9))
                 }
                 .padding(.leading, 8)
             }
@@ -424,8 +424,8 @@ struct CoachTabView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("COACH")
-                            .font(.system(size: 32, weight: .bold))
-                            .foregroundColor(.white)
+                            .font(AppTheme.display(32))
+                            .foregroundColor(AppTheme.primaryText)
                     }
                     .padding(.top, 20)
 
@@ -459,11 +459,11 @@ struct CoachTabView: View {
     private var emptyToday: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("TODAY")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
-                .foregroundColor(.white)
+                .font(AppTheme.head(14))
+                .foregroundColor(AppTheme.primaryText)
             Text("Analyze a run on the Analyze tab and your focus list shows up here.")
-                .font(.system(size: 13))
-                .foregroundColor(.white.opacity(0.5))
+                .font(AppTheme.body(13))
+                .foregroundColor(AppTheme.primaryText.opacity(0.5))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
@@ -473,8 +473,8 @@ struct CoachTabView: View {
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title)
-            .font(.system(size: 14, weight: .bold, design: .monospaced))
-            .foregroundColor(.white)
+            .font(AppTheme.head(14))
+            .foregroundColor(AppTheme.primaryText)
         .padding(.top, 4)
     }
 
@@ -483,15 +483,15 @@ struct CoachTabView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Text(insight.corroboration.label)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(9))
                     .foregroundColor(color)
                     .padding(.horizontal, 7).padding(.vertical, 3)
                     .background(Capsule().fill(color.opacity(0.14)))
                     .overlay(Capsule().stroke(color.opacity(0.5), lineWidth: 1))
-                Text(insight.title).font(.system(size: 15, weight: .semibold)).foregroundColor(.white)
+                Text(insight.title).font(AppTheme.bodySemibold(15)).foregroundColor(AppTheme.primaryText)
                 Spacer(minLength: 0)
             }
-            Text(insight.detail).font(.system(size: 12)).foregroundColor(.white.opacity(0.6))
+            Text(insight.detail).font(AppTheme.body(12)).foregroundColor(AppTheme.primaryText.opacity(0.6))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
@@ -545,7 +545,7 @@ struct CoachTabView: View {
         return VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 8) {
                 Text(drill.target)
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .font(AppTheme.meta(9))
                     .foregroundColor(color)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
@@ -554,14 +554,14 @@ struct CoachTabView: View {
                 Spacer(minLength: 0)
             }
             Text(drill.title)
-                .font(.system(size: 16, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.head(16))
+                .foregroundColor(AppTheme.primaryText)
             Text(drill.how)
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.72))
+                .font(AppTheme.body(12))
+                .foregroundColor(AppTheme.primaryText.opacity(0.72))
                 .fixedSize(horizontal: false, vertical: true)
             Text(drill.dose.uppercased())
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(10))
                 .foregroundColor(color)
                 .padding(.top, 1)
         }

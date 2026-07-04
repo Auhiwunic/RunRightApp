@@ -24,24 +24,24 @@ struct RootView: View {
                 // (only seen on very first install with no cached session)
                 VStack(spacing: 16) {
                     Image(systemName: "figure.run.circle.fill")
-                        .font(.system(size: 56))
-                        .foregroundColor(.white)
+                        .font(AppTheme.body(56))
+                        .foregroundColor(AppTheme.primaryText)
 
                     ProgressView()
-                        .tint(.white)
+                        .tint(AppTheme.primaryText)
                         .scaleEffect(1.2)
 
                     if let error = auth.errorMessage {
                         Text(error)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.75))
+                            .font(AppTheme.bodyMedium(13))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.75))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
                             .padding(.top, 4)
                     } else {
                         Text("Getting ready…")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.bodyMedium(13))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -149,16 +149,16 @@ private struct ConsentGateView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Privacy")
-                            .font(.system(size: 42, weight: .bold))
+                            .font(AppTheme.display(42))
                             .foregroundStyle(PlanTheme.textPrimary)
                         Text("check-in.")
-                            .font(.system(size: 42, weight: .bold))
+                            .font(AppTheme.display(42))
                             .foregroundStyle(accent)
                     }
                     .padding(.top, 48)
 
                     Text("Confirm these once so Gaita can keep using health, location, and video features for your training.")
-                        .font(.body)
+                        .font(AppTheme.body(17))
                         .foregroundStyle(PlanTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
 
@@ -193,7 +193,7 @@ private struct ConsentGateView: View {
                                 ProgressView().tint(.black)
                             } else {
                                 Text("Continue")
-                                    .font(.headline)
+                                    .font(AppTheme.bodySemibold(17))
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -256,10 +256,10 @@ private struct ConsentGateView: View {
         Toggle(isOn: isOn) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .font(AppTheme.bodySemibold(17))
                     .foregroundStyle(PlanTheme.textPrimary)
                 Text(text)
-                    .font(.footnote)
+                    .font(AppTheme.body(13))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -322,22 +322,22 @@ private struct SyncPromptCard: View {
 
             VStack(spacing: 18) {
                 Image(systemName: "icloud.and.arrow.up")
-                    .font(.system(size: 40, weight: .semibold))
+                    .font(AppTheme.bodySemibold(40))
                     .foregroundColor(lime)
 
                 VStack(spacing: 8) {
                     Text("Sync across devices")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.head(20))
+                        .foregroundColor(AppTheme.primaryText)
                     Text("Sign in to back up your runs and scans and pick up on any device. You can always do this later in Profile.")
-                        .font(.system(size: 13))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.body(13))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                         .multilineTextAlignment(.center)
                 }
 
                 Button(action: onSignIn) {
                     Text("Sign in")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(AppTheme.head(15))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
@@ -348,15 +348,15 @@ private struct SyncPromptCard: View {
 
                 Button(action: onClose) {
                     Text("Not now")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.45))
+                        .font(AppTheme.bodyMedium(14))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.45))
                 }
                 .buttonStyle(.plain)
             }
             .padding(28)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(Color(hex: "#1C1C1E"))
+                    .fill(AppTheme.cardBg)
             )
             .padding(.horizontal, 36)
         }
@@ -377,9 +377,9 @@ struct AuthSheet: View {
     @State private var showForgotPassword = false
     @State private var resetEmail = ""
 
-    private var lime: Color { Color.white }
-    private var bg: Color { Color(hex: "#1A1A1C") }
-    private var card: Color { Color(hex: "#2A2A2E") }
+    private var lime: Color { AppTheme.primaryText }
+    private var bg: Color { AppTheme.bgColor }
+    private var card: Color { AppTheme.cardBg }
 
     var body: some View {
         ZStack {
@@ -390,14 +390,14 @@ struct AuthSheet: View {
 
                     // Header
                     Text(isSignUp ? "Create Account" : "Sign In")
-                        .font(.system(size: 26, weight: .bold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.display(26))
+                        .foregroundColor(AppTheme.primaryText)
                         .padding(.top, 32)
 
                     // Error message
                     if let error = auth.errorMessage {
                         Text(error)
-                            .font(.system(size: 12, weight: .medium))
+                            .font(AppTheme.bodyMedium(12))
                             .foregroundColor(Color(hex: "#FF6B6B"))
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 4)
@@ -413,7 +413,7 @@ struct AuthSheet: View {
                         }
                     }) {
                         Text("Continue with Google")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(AppTheme.bodySemibold(15))
                             .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
@@ -431,14 +431,14 @@ struct AuthSheet: View {
                         }
                     }) {
                         Text("Continue with Apple")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.white)
+                            .font(AppTheme.bodySemibold(15))
+                            .foregroundColor(AppTheme.primaryText)
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
                             .background(Color.black)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14)
-                                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                                    .stroke(AppTheme.primaryText.opacity(0.18), lineWidth: 1)
                             )
                             .cornerRadius(14)
                     }
@@ -446,25 +446,25 @@ struct AuthSheet: View {
 
                     // Divider
                     HStack(spacing: 10) {
-                        Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
-                        Text("or").font(.system(size: 12)).foregroundColor(.white.opacity(0.3))
-                        Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
+                        Rectangle().fill(AppTheme.primaryText.opacity(0.12)).frame(height: 1)
+                        Text("or").font(AppTheme.body(12)).foregroundColor(AppTheme.primaryText.opacity(0.3))
+                        Rectangle().fill(AppTheme.primaryText.opacity(0.12)).frame(height: 1)
                     }
 
                     // Email / Password fields
                     VStack(spacing: 12) {
-                        TextField("", text: $email, prompt: Text("Email").foregroundColor(.white.opacity(0.3)))
+                        TextField("", text: $email, prompt: Text("Email").foregroundColor(AppTheme.primaryText.opacity(0.3)))
                             .keyboardType(.emailAddress)
                             .autocapitalization(.none)
                             .autocorrectionDisabled()
-                            .foregroundColor(.white)
+                            .foregroundColor(AppTheme.primaryText)
                             .padding(.horizontal, 14)
                             .frame(height: 50)
                             .background(card)
                             .cornerRadius(12)
 
-                        SecureField("", text: $password, prompt: Text("Password").foregroundColor(.white.opacity(0.3)))
-                            .foregroundColor(.white)
+                        SecureField("", text: $password, prompt: Text("Password").foregroundColor(AppTheme.primaryText.opacity(0.3)))
+                            .foregroundColor(AppTheme.primaryText)
                             .padding(.horizontal, 14)
                             .frame(height: 50)
                             .background(card)
@@ -479,7 +479,7 @@ struct AuthSheet: View {
                                 resetEmail = email
                                 showForgotPassword = true
                             }
-                            .font(.system(size: 12, weight: .medium))
+                            .font(AppTheme.bodyMedium(12))
                             .foregroundColor(lime.opacity(0.8))
                         }
                     }
@@ -503,11 +503,11 @@ struct AuthSheet: View {
                     }) {
                         ZStack {
                             if isLoading {
-                                ProgressView().tint(.black)
+                                ProgressView().tint(AppTheme.bgColor)
                             } else {
                                 Text(isSignUp ? "Create Account" : "Sign In")
-                                    .font(.system(size: 15, weight: .bold))
-                                    .foregroundColor(.black)
+                                    .font(AppTheme.head(15))
+                                    .foregroundColor(AppTheme.bgColor)
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -524,11 +524,11 @@ struct AuthSheet: View {
                     }) {
                         HStack(spacing: 4) {
                             Text(isSignUp ? "Already have an account?" : "Don't have an account?")
-                                .foregroundColor(.white.opacity(0.4))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.4))
                             Text(isSignUp ? "Sign In" : "Create one")
                                 .foregroundColor(lime)
                         }
-                        .font(.system(size: 13, weight: .medium))
+                        .font(AppTheme.bodyMedium(13))
                     }
                     .padding(.bottom, 32)
                 }

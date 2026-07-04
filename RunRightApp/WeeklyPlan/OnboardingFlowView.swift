@@ -92,7 +92,7 @@ struct OnboardingFlowView: View {
         questionContainer(top: "What should", accent: "we call you?", scrollable: false) {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Shown on your home screen.")
-                    .font(.subheadline)
+                    .font(AppTheme.body(15))
                     .foregroundStyle(PlanTheme.textSecondary)
 
                 TextField("", text: $name, prompt: Text("Your name").foregroundStyle(PlanTheme.textSecondary))
@@ -110,7 +110,7 @@ struct OnboardingFlowView: View {
         questionContainer(top: "Before we", accent: "get started.", scrollable: false) {
             VStack(alignment: .leading, spacing: 18) {
                 Text("Gaita is for runners old enough to consent to health, location, and video analysis.")
-                    .font(.subheadline)
+                    .font(AppTheme.body(15))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -218,7 +218,7 @@ struct OnboardingFlowView: View {
         questionContainer(top: "Personalise your", accent: "heart-rate zones.") {
             VStack(alignment: .leading, spacing: 24) {
                 Text("Used to calculate your training zones. You can change this later in Profile.")
-                    .font(.subheadline)
+                    .font(AppTheme.body(15))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -296,10 +296,10 @@ struct OnboardingFlowView: View {
         Toggle(isOn: isOn) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.headline)
+                    .font(AppTheme.bodySemibold(17))
                     .foregroundStyle(PlanTheme.textPrimary)
                 Text(text)
-                    .font(.footnote)
+                    .font(AppTheme.body(13))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -326,7 +326,7 @@ struct OnboardingFlowView: View {
                     advance()
                 }
             }
-            .font(.headline)
+            .font(AppTheme.bodySemibold(17))
             .padding(.horizontal, 32)
             .padding(.vertical, 14)
             .background(canAdvance ? currentAccent : currentAccent.opacity(0.35))
@@ -390,11 +390,11 @@ struct OnboardingFlowView: View {
     private func stepHeader(_ top: String, _ accent: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(top)
-                .font(.system(size: 34, weight: .bold))
+                .font(AppTheme.display(34))
                 .foregroundStyle(PlanTheme.textPrimary)
 
             Text(accent)
-                .font(.system(size: 34, weight: .bold))
+                .font(AppTheme.display(34))
                 .foregroundStyle(currentAccent)
         }
     }

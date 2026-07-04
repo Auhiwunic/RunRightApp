@@ -44,7 +44,7 @@ struct WeeklyPlanView: View {
     private var continueButton: some View {
         Button(action: onDone) {
             Text("Continue")
-                .font(.headline)
+                .font(AppTheme.bodySemibold(17))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
                 .background(PlanTheme.accent)
@@ -72,11 +72,11 @@ struct WeeklyPlanView: View {
     private var focusCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(plan.focusTitle)
-                .font(.headline)
+                .font(AppTheme.bodySemibold(17))
                 .foregroundStyle(PlanTheme.textPrimary)
 
             Text(plan.focusDetail)
-                .font(.subheadline)
+                .font(AppTheme.body(15))
                 .foregroundStyle(PlanTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -93,7 +93,7 @@ struct WeeklyPlanView: View {
     private var runsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Schedule")
-                .font(.headline)
+                .font(AppTheme.bodySemibold(17))
                 .foregroundStyle(PlanTheme.textPrimary)
 
             ForEach(plan.runs) { run in
@@ -139,7 +139,7 @@ struct WeeklyPlanView: View {
                 runTypeTag(run.runType)
 
                 Text(run.detail)
-                    .font(.caption)
+                    .font(AppTheme.body(12))
                     .foregroundStyle(PlanTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -153,7 +153,7 @@ struct WeeklyPlanView: View {
 
     private func runTypeTag(_ runType: RunType) -> some View {
         Text(runType.rawValue)
-            .font(.system(size: 10, weight: .bold, design: .monospaced))
+            .font(AppTheme.meta(10))
             .foregroundStyle(runType.isHighIntensity ? Color.black : PlanTheme.textSecondary)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -170,7 +170,7 @@ struct WeeklyPlanView: View {
     private var restartButton: some View {
         Button(action: onRestart) {
             Text("Restart onboarding")
-                .font(.headline)
+                .font(AppTheme.bodySemibold(17))
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(PlanTheme.card)

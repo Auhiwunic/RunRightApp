@@ -29,7 +29,7 @@ struct MileagePicker: View {
                             .foregroundStyle(PlanTheme.textPrimary)
 
                         Text(range.unitLabel)
-                            .font(.caption)
+                            .font(AppTheme.body(12))
                             .foregroundStyle(PlanTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity, minHeight: 100)

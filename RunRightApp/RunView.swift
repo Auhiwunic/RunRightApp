@@ -67,11 +67,11 @@ struct RunView: View {
                     Button(action: { showPlanSheet = true }) {
                         HStack(spacing: 6) {
                             Image(systemName: "calendar")
-                                .font(.system(size: 12, weight: .semibold))
+                                .font(AppTheme.bodySemibold(12))
                             Text("Edit weekly plan")
-                                .font(.system(size: 14, weight: .medium))
+                                .font(AppTheme.bodyMedium(14))
                         }
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                     }
@@ -90,11 +90,11 @@ struct RunView: View {
                         Button(action: { tracker.reset() }) {
                             HStack(spacing: 6) {
                                 Image(systemName: "trash")
-                                    .font(.system(size: 12))
+                                    .font(AppTheme.body(12))
                                 Text("Clear Last Run")
-                                    .font(.system(size: 13, weight: .medium))
+                                    .font(AppTheme.bodyMedium(13))
                             }
-                            .foregroundColor(.white.opacity(0.35))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.35))
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                         }
@@ -220,8 +220,8 @@ struct RunView: View {
     private var runHeader: some View {
         HStack {
             Text("Start Running")
-                .font(.system(size: 32, weight: .bold))
-                .foregroundColor(.white)
+                .font(AppTheme.display(32))
+                .foregroundColor(AppTheme.primaryText)
             Spacer()
         }
     }
@@ -242,9 +242,9 @@ struct RunView: View {
         Button(action: startRun) {
             VStack(spacing: 8) {
                 Image(systemName: "play.fill")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(AppTheme.display(26))
                 Text("START")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
+                    .font(AppTheme.head(16))
             }
             .foregroundColor(.black)
             .frame(width: 76)
@@ -258,12 +258,12 @@ struct RunView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("PAST RUNS")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(14))
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Text("\(pastRuns.count)")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundColor(.white.opacity(0.35))
+                    .font(AppTheme.meta(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.35))
             }
             .padding(.horizontal, 20)
 
@@ -298,8 +298,8 @@ struct RunView: View {
         runCard {
             VStack(alignment: .leading, spacing: 12) {
                 Text("LAST RUN")
-                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(.white)
+                    .font(AppTheme.head(14))
+                    .foregroundColor(AppTheme.primaryText)
                 
                 HStack(spacing: 0) {
                     RunStatItem(
@@ -324,7 +324,7 @@ struct RunView: View {
         HStack(spacing: 12) {
             // Current shoe in big retro game type
             Text(selectedShoe.isEmpty ? "ADD SHOE" : selectedShoe.uppercased())
-                .font(.system(size: 26, weight: .bold, design: .monospaced))
+                .font(AppTheme.display(26))
                 .foregroundColor(.black)
                 .lineLimit(1)
                 .minimumScaleFactor(0.45)
@@ -335,12 +335,12 @@ struct RunView: View {
             HStack(spacing: 14) {
                 if shoes.count > 1 {
                     Image(systemName: "arrow.left.and.right")
-                        .font(.system(size: 15, weight: .bold))
+                        .font(AppTheme.head(15))
                         .foregroundColor(.black.opacity(0.55))
                 }
                 Button(action: { showAddShoeAlert = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 18, weight: .heavy))
+                        .font(AppTheme.head(18))
                         .foregroundColor(.black)
                 }
             }
@@ -382,12 +382,12 @@ struct RunView: View {
                 Text(userVDOT == nil
                      ? "Find your training paces"
                      : "VDOT \(String(format: "%.1f", userVDOT!))")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white.opacity(0.35))
+                    .font(AppTheme.bodySemibold(13))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.35))
             }
             .padding(16)
             .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
@@ -423,8 +423,8 @@ struct RunView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     if todayPlan.isRest {
                         Text("Recovery is part of training.")
-                            .font(.system(size: 13))
-                            .foregroundColor(.white.opacity(0.5))
+                            .font(AppTheme.body(13))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     } else {
                         // Distance + target — two clean stats, evenly spaced
                         HStack(spacing: 0) {
@@ -437,12 +437,12 @@ struct RunView: View {
                                 ForEach(todayPlan.segments.indices, id: \.self) { i in
                                     HStack {
                                         Text(todayPlan.segments[i].name)
-                                            .foregroundColor(.white)
+                                            .foregroundColor(AppTheme.primaryText)
                                         Spacer()
                                         Text("\(todayPlan.segments[i].distance) · \(todayPlan.segments[i].pace)")
-                                            .foregroundColor(.white.opacity(0.5))
+                                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                     }
-                                    .font(.system(size: 13))
+                                    .font(AppTheme.body(13))
                                 }
                             }
                         }
@@ -455,12 +455,12 @@ struct RunView: View {
                                             .fill(Color(hex: zone.colorHex))
                                             .frame(width: 10, height: 10)
                                         Text(zone.zoneName)
-                                            .foregroundColor(.white)
+                                            .foregroundColor(AppTheme.primaryText)
                                         Spacer()
                                         Text("\(zone.minutes) min")
-                                            .foregroundColor(.white.opacity(0.5))
+                                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                     }
-                                    .font(.system(size: 13))
+                                    .font(AppTheme.body(13))
                                 }
                             }
                         }
@@ -480,8 +480,8 @@ struct RunView: View {
     private func planSection<Content: View>(title: String, @ViewBuilder rows: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title.uppercased())
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
-                .foregroundColor(.white.opacity(0.5))
+                .font(AppTheme.meta(12))
+                .foregroundColor(AppTheme.primaryText.opacity(0.5))
             rows()
         }
     }
@@ -489,11 +489,11 @@ struct RunView: View {
     private func workoutStat(value: String, label: String) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(value)
-                .font(.system(size: 20, weight: .semibold))
-                .foregroundColor(.white)
+                .font(AppTheme.bodySemibold(20))
+                .foregroundColor(AppTheme.primaryText)
             Text(label)
-                .font(.system(size: 12))
-                .foregroundColor(.white.opacity(0.5))
+                .font(AppTheme.body(12))
+                .foregroundColor(AppTheme.primaryText.opacity(0.5))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -539,12 +539,12 @@ struct RunStatItem: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: 22, weight: .semibold))
-                .foregroundColor(.white)
+                .font(AppTheme.bodySemibold(22))
+                .foregroundColor(AppTheme.primaryText)
             
             Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white.opacity(0.4))
+                .font(AppTheme.bodyMedium(11))
+                .foregroundColor(AppTheme.primaryText.opacity(0.4))
         }
         .frame(maxWidth: .infinity)
     }
@@ -559,8 +559,8 @@ struct ToggleRow: View {
     var body: some View {
         HStack {
             Text(label.uppercased())
-                .font(.system(size: 22, weight: .bold, design: .monospaced))
-                .foregroundColor(.white)
+                .font(AppTheme.display(22))
+                .foregroundColor(AppTheme.primaryText)
             
             Spacer()
             
@@ -701,15 +701,15 @@ struct WeeklyPlannerSheet: View {
                 HStack {
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(AppTheme.bodyMedium(16))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
                     }
                     
                     Spacer()
                     
                     Text("Weekly Plan")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.bodySemibold(18))
+                        .foregroundColor(AppTheme.primaryText)
                     
                     Spacer()
                     
@@ -732,7 +732,7 @@ struct WeeklyPlannerSheet: View {
                         }
                     }) {
                         Text("Done")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(AppTheme.bodySemibold(14))
                             .foregroundColor(accentLime)
                     }
                 }
@@ -775,29 +775,29 @@ struct WeeklyPlannerSheet: View {
             }) {
                                     HStack {
                     Text(plan.dayName)
-                        .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.white)
+                        .font(AppTheme.bodySemibold(15))
+                                    .foregroundColor(AppTheme.primaryText)
                                 
                                         Spacer()
                                         
                     if plan.isRest {
                         Text("Rest")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white.opacity(0.35))
+                            .font(AppTheme.bodyMedium(13))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.35))
                     } else {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(plan.runType)
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(AppTheme.bodySemibold(13))
                                 .foregroundColor(accentLime)
                             Text(plan.totalDistance)
-                                            .font(.system(size: 11))
-                                .foregroundColor(.white.opacity(0.4))
+                                            .font(AppTheme.body(11))
+                                .foregroundColor(AppTheme.primaryText.opacity(0.4))
                         }
                     }
                     
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                                                                .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.3))
+                                                                .font(AppTheme.body(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.3))
                         .padding(.leading, 6)
                 }
                 .padding(.vertical, 14)
@@ -807,13 +807,13 @@ struct WeeklyPlannerSheet: View {
             if isExpanded {
                 VStack(alignment: .leading, spacing: 14) {
                     Rectangle()
-                        .fill(Color.white.opacity(0.06))
+                        .fill(AppTheme.primaryText.opacity(0.06))
                         .frame(height: 1)
                     
                     // Run type picker
                     Text("RUN TYPE")
-                        .font(.system(size: 10, weight: .semibold))
-                                                                .foregroundColor(.white.opacity(0.3))
+                        .font(AppTheme.bodySemibold(10))
+                                                                .foregroundColor(AppTheme.primaryText.opacity(0.3))
                         .tracking(1)
                     
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -823,8 +823,8 @@ struct WeeklyPlannerSheet: View {
                                     applyPreset(type: type, at: index)
                                 }) {
                                     Text(type)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .foregroundColor(plan.runType == type ? .black : .white.opacity(0.6))
+                                        .font(AppTheme.bodySemibold(12))
+                                        .foregroundColor(plan.runType == type ? .black : AppTheme.primaryText.opacity(0.6))
                                                     .padding(.horizontal, 12)
                                         .padding(.vertical, 6)
                                         .background(plan.runType == type ? accentLime : cardBackgroundSoft)
@@ -839,8 +839,8 @@ struct WeeklyPlannerSheet: View {
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Distance")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.3))
+                                    .font(AppTheme.bodySemibold(10))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
                                 dropdownPicker(
                                     value: $weeklyPlans[index].totalDistance,
                                     options: distanceOptions
@@ -848,8 +848,8 @@ struct WeeklyPlannerSheet: View {
                             }
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("Target Pace")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.3))
+                                    .font(AppTheme.bodySemibold(10))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
                                 dropdownPicker(
                                     value: $weeklyPlans[index].targetPace,
                                     options: paceOptions
@@ -861,8 +861,8 @@ struct WeeklyPlannerSheet: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     HStack {
                                 Text("SEGMENTS")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.3))
+                                    .font(AppTheme.bodySemibold(10))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
                                     .tracking(1)
                                         
                                         Spacer()
@@ -873,7 +873,7 @@ struct WeeklyPlannerSheet: View {
                                     )
                                 }) {
                                     Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 16))
+                                        .font(AppTheme.body(16))
                                         .foregroundColor(accentLime)
                                 }
                             }
@@ -887,12 +887,12 @@ struct WeeklyPlannerSheet: View {
                                         }
                                     } label: {
                                         Text(weeklyPlans[index].segments[si].name)
-                                            .font(.system(size: 11, weight: .medium))
-                                                                .foregroundColor(.white)
+                                            .font(AppTheme.bodyMedium(11))
+                                                                .foregroundColor(AppTheme.primaryText)
                                             .lineLimit(1)
                                         Image(systemName: "chevron.down")
-                                            .font(.system(size: 7))
-                                            .foregroundColor(.white.opacity(0.3))
+                                            .font(AppTheme.body(7))
+                                            .foregroundColor(AppTheme.primaryText.opacity(0.3))
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     
@@ -903,8 +903,8 @@ struct WeeklyPlannerSheet: View {
                                         }
                                     } label: {
                                         Text(weeklyPlans[index].segments[si].distance)
-                                                                .font(.system(size: 11))
-                                            .foregroundColor(.white.opacity(0.7))
+                                                                .font(AppTheme.body(11))
+                                            .foregroundColor(AppTheme.primaryText.opacity(0.7))
                                     }
                                     .frame(width: 52, alignment: .trailing)
                                     
@@ -915,8 +915,8 @@ struct WeeklyPlannerSheet: View {
                                         }
                                     } label: {
                                         Text(weeklyPlans[index].segments[si].pace)
-                                            .font(.system(size: 11, weight: .semibold))
-                                            .foregroundColor(.white.opacity(0.7))
+                                            .font(AppTheme.bodySemibold(11))
+                                            .foregroundColor(AppTheme.primaryText.opacity(0.7))
                                     }
                                     .frame(width: 62, alignment: .trailing)
                                     
@@ -924,7 +924,7 @@ struct WeeklyPlannerSheet: View {
                                         weeklyPlans[index].segments.remove(at: si)
                                     }) {
                                         Image(systemName: "minus.circle")
-                                            .font(.system(size: 14))
+                                            .font(AppTheme.body(14))
                                             .foregroundColor(Color(hex: "#E83030").opacity(0.6))
                                     }
                                 }
@@ -938,8 +938,8 @@ struct WeeklyPlannerSheet: View {
                         if !plan.zoneTargets.isEmpty {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("ZONE TARGETS")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .foregroundColor(.white.opacity(0.3))
+                                    .font(AppTheme.bodySemibold(10))
+                                    .foregroundColor(AppTheme.primaryText.opacity(0.3))
                                     .tracking(1)
                                 
                                 ForEach(plan.zoneTargets) { zone in
@@ -948,12 +948,12 @@ struct WeeklyPlannerSheet: View {
                                             .fill(Color(hex: zone.colorHex))
                                             .frame(width: 12, height: 12)
                                         Text(zone.zoneName)
-                                            .font(.system(size: 12, weight: .medium))
-                                                                .foregroundColor(.white)
+                                            .font(AppTheme.bodyMedium(12))
+                                                                .foregroundColor(AppTheme.primaryText)
                                     Spacer()
                                         Text("\(zone.minutes) min")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.5))
+                                        .font(AppTheme.body(12))
+                                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                 }
                                 }
                             }
@@ -1050,12 +1050,12 @@ struct WeeklyPlannerSheet: View {
         } label: {
                                                     HStack {
                 Text(value.wrappedValue)
-                                                                .font(.system(size: 14, weight: .medium))
-                                                                .foregroundColor(.white)
+                                                                .font(AppTheme.bodyMedium(14))
+                                                                .foregroundColor(AppTheme.primaryText)
                 Spacer()
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 9))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.body(9))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
             }
             .padding(10)
             .background(cardBackgroundSoft)
@@ -1116,8 +1116,8 @@ struct DiagnosticRunSheet: View {
                                     HStack {
                 Button(action: { dismiss() }) {
                     Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.6))
+                        .font(AppTheme.bodyMedium(16))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.6))
                 }
                                                         Spacer()
             }
@@ -1126,10 +1126,10 @@ struct DiagnosticRunSheet: View {
             
             VStack(spacing: 6) {
                 Text("What are you")
-                    .font(.system(size: 28, weight: .regular))
-                                            .foregroundColor(.white)
+                    .font(AppTheme.body(28))
+                                            .foregroundColor(AppTheme.primaryText)
                 Text("training for?")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(AppTheme.display(28))
                     .foregroundColor(accentLime)
             }
             .padding(.top, 10)
@@ -1140,19 +1140,19 @@ struct DiagnosticRunSheet: View {
                     Button(action: { selectedGoal = goal }) {
                         HStack(spacing: 14) {
                             Image(systemName: goal.icon)
-                                .font(.system(size: 20))
+                                .font(AppTheme.body(20))
                                 .foregroundColor(selectedGoal == goal ? .black : accentLime)
                                 .frame(width: 40)
                             
                             Text(goal.rawValue)
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(selectedGoal == goal ? .black : .white)
+                                .font(AppTheme.bodySemibold(16))
+                                .foregroundColor(selectedGoal == goal ? .black : AppTheme.primaryText)
                             
                             Spacer()
                             
                             if selectedGoal == goal {
                                                             Image(systemName: "checkmark.circle.fill")
-                                                                .font(.system(size: 18))
+                                                                .font(AppTheme.body(18))
                                     .foregroundColor(.black)
                             }
                         }
@@ -1169,7 +1169,7 @@ struct DiagnosticRunSheet: View {
             // Next button
             Button(action: { withAnimation { step = 1 } }) {
                 Text("Next")
-                    .font(.system(size: 16, weight: .bold))
+                    .font(AppTheme.head(16))
                     .foregroundColor(.black)
                     .frame(maxWidth: .infinity)
                     .frame(height: 54)
@@ -1187,8 +1187,8 @@ struct DiagnosticRunSheet: View {
             HStack {
                 Button(action: { withAnimation { step = 0 } }) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.6))
+                        .font(AppTheme.bodyMedium(16))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.6))
                 }
                 Spacer()
             }
@@ -1198,15 +1198,15 @@ struct DiagnosticRunSheet: View {
             // Title block — left-aligned, natural line flow
             VStack(alignment: .leading, spacing: 8) {
                 Text("Let's find your")
-                    .font(.system(size: 28, weight: .regular))
-                    .foregroundColor(.white)
+                    .font(AppTheme.body(28))
+                    .foregroundColor(AppTheme.primaryText)
                 Text("baseline")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(AppTheme.display(28))
                     .foregroundColor(accentLime)
 
                 Text("One hard mile is all it takes. Your time sets the training paces for every run in your plan.")
-                    .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.55))
+                    .font(AppTheme.body(15))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.55))
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 6)
@@ -1231,7 +1231,7 @@ struct DiagnosticRunSheet: View {
             VStack(spacing: 14) {
                 Button(action: { startDiagnosticRun() }) {
                     Text("Start Time Trial")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(AppTheme.head(16))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
@@ -1241,8 +1241,8 @@ struct DiagnosticRunSheet: View {
 
                 Button(action: { withAnimation { step = 4 } }) {
                     Text("Skip for now")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(.white.opacity(0.5))
+                        .font(AppTheme.bodyMedium(15))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                 }
             }
             .padding(.horizontal, 20)
@@ -1254,7 +1254,7 @@ struct DiagnosticRunSheet: View {
     private func stepRow(number: String, title: String, detail: String) -> some View {
         HStack(alignment: .top, spacing: 14) {
             Text(number)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(AppTheme.head(15))
                 .foregroundColor(accentLime)
                 .frame(width: 30, height: 30)
                 .background(
@@ -1263,11 +1263,11 @@ struct DiagnosticRunSheet: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(AppTheme.primaryText)
                 Text(detail)
-                    .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.45))
+                    .font(AppTheme.body(13))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.45))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -1282,8 +1282,8 @@ struct DiagnosticRunSheet: View {
             HStack {
                 Button(action: { withAnimation { step = 1 } }) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.6))
+                        .font(AppTheme.bodyMedium(16))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.6))
                 }
                 Spacer()
             }
@@ -1292,15 +1292,15 @@ struct DiagnosticRunSheet: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Text("How would you")
-                    .font(.system(size: 28, weight: .regular))
-                    .foregroundColor(.white)
+                    .font(AppTheme.body(28))
+                    .foregroundColor(AppTheme.primaryText)
                 Text("describe your running?")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(AppTheme.display(28))
                     .foregroundColor(accentLime)
 
                 Text("We'll estimate your paces from this. Run the time trial anytime to dial them in.")
-                    .font(.system(size: 15))
-                    .foregroundColor(.white.opacity(0.55))
+                    .font(AppTheme.body(15))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.55))
                     .lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 6)
@@ -1332,16 +1332,16 @@ struct DiagnosticRunSheet: View {
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
+                        .font(AppTheme.bodySemibold(16))
+                        .foregroundColor(AppTheme.primaryText)
                     Text(detail)
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.45))
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.45))
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
                 Text(mileTime)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .font(AppTheme.bodyMedium(12))
                     .foregroundColor(accentLime)
             }
             .padding(16)
@@ -1370,18 +1370,16 @@ struct DiagnosticRunSheet: View {
             
             VStack(spacing: 8) {
                 Text(String(format: "%.2f", remaining))
-                    .font(.system(size: 80, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                                        .foregroundColor(.white)
+                    .font(AppTheme.displayTabular(80))
+                                        .foregroundColor(AppTheme.primaryText)
                 Text("miles remaining")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white.opacity(0.4))
+                    .font(AppTheme.bodyMedium(16))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.4))
             }
             
             // Timer
             Text(formatTime(elapsedTime))
-                .font(.system(size: 42, weight: .regular))
-                .monospacedDigit()
+                .font(AppTheme.displayTabular(42))
                 .foregroundColor(accentLime)
             
             // Progress bar
@@ -1404,9 +1402,9 @@ struct DiagnosticRunSheet: View {
             // GPS indicator
             HStack(spacing: 6) {
                 Image(systemName: "location.fill")
-                    .font(.system(size: 10))
+                    .font(AppTheme.body(10))
                 Text("GPS Tracking Active")
-                    .font(.system(size: 12, weight: .medium))
+                    .font(AppTheme.bodyMedium(12))
             }
             .foregroundColor(accentLime)
                     .padding(.bottom, 40)
@@ -1428,8 +1426,8 @@ struct DiagnosticRunSheet: View {
                                     Spacer()
                     Button(action: { dismiss() }) {
                         Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.white.opacity(0.6))
+                            .font(AppTheme.bodyMedium(16))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -1439,17 +1437,17 @@ struct DiagnosticRunSheet: View {
                 if let vdot = calculatedVDOT {
                     VStack(spacing: 8) {
                         Text("Your VDOT")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.white.opacity(0.4))
+                            .font(AppTheme.bodyMedium(14))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                         
                         Text(String(format: "%.1f", vdot))
-                            .font(.system(size: 64, weight: .bold, design: .rounded))
+                            .font(AppTheme.display(64))
                             .foregroundColor(accentLime)
                         
                         if let time = finishedMileTime {
                             Text("1-Mile Time: \(formatTime(time))")
-                                .font(.system(size: 14))
-                                        .foregroundColor(.white.opacity(0.5))
+                                .font(AppTheme.body(14))
+                                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
                                 }
                     }
                     .padding(.top, 10)
@@ -1459,8 +1457,8 @@ struct DiagnosticRunSheet: View {
                 if let paces = calculatedPaces {
         VStack(alignment: .leading, spacing: 12) {
                         Text("YOUR TRAINING PACES")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(.white.opacity(0.3))
+                            .font(AppTheme.bodySemibold(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.3))
                             .tracking(1)
                         
                         paceRow(name: "Easy", pace: paces.easy, color: "#5ECC3A", desc: "Recovery & base runs")
@@ -1477,10 +1475,10 @@ struct DiagnosticRunSheet: View {
                 // Goal reminder
                 VStack(spacing: 4) {
                     Text("Training for")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     Text(selectedGoal.rawValue)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(AppTheme.bodySemibold(16))
                         .foregroundColor(accentLime)
                 }
                 .padding(.top, 8)
@@ -1488,7 +1486,7 @@ struct DiagnosticRunSheet: View {
                 // Apply button
                 Button(action: applyToWeeklyPlan) {
                     Text("Apply to Weekly Plan")
-                        .font(.system(size: 16, weight: .bold))
+                        .font(AppTheme.head(16))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 54)
@@ -1506,8 +1504,8 @@ struct DiagnosticRunSheet: View {
                     withAnimation { step = 1 }
                 }) {
                     Text("Retake Test")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.4))
+                        .font(AppTheme.bodyMedium(14))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
                 }
                 .padding(.bottom, 40)
             }
@@ -1522,19 +1520,18 @@ struct DiagnosticRunSheet: View {
             
             VStack(alignment: .leading, spacing: 2) {
                 Text(name)
-                    .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.white)
+                    .font(AppTheme.bodySemibold(14))
+                .foregroundColor(AppTheme.primaryText)
                 Text(desc)
-                    .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.35))
+                    .font(AppTheme.body(11))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.35))
             }
             
             Spacer()
             
             Text(pace)
-                .font(.system(size: 16, weight: .bold, design: .rounded))
-                .monospacedDigit()
-                .foregroundColor(.white)
+                .font(AppTheme.displayTabular(16))
+                .foregroundColor(AppTheme.primaryText)
         }
         .padding(.vertical, 2)
     }
