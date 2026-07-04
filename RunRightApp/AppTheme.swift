@@ -166,23 +166,28 @@ struct AppTheme {
     // copy. The four Archivo cuts are static instances of the variable font at
     // the site's exact weight/width values.
 
+    // Every token passes `relativeTo:` so the custom faces SCALE with the user's
+    // Dynamic Type setting (accessibility) instead of being pinned to one size.
+    // The relativeTo style is chosen by the token's role, not the call-site size.
+
     /// Massive display caps and big number readouts — Archivo 650, 90% width.
     /// Site `.display-caps`. Pair with `.tracking(size * -0.02)` on standalone Text.
-    static func display(_ size: CGFloat) -> Font { .custom("Archivo-Display", size: size) }
+    static func display(_ size: CGFloat) -> Font { .custom("Archivo-Display", size: size, relativeTo: .title) }
     /// Section heads — Archivo 600, 93% width. Site `.head-caps`.
-    static func head(_ size: CGFloat) -> Font { .custom("Archivo-Head", size: size) }
+    static func head(_ size: CGFloat) -> Font { .custom("Archivo-Head", size: size, relativeTo: .headline) }
     /// Screen titles / logo weight — Archivo 700, 93% width.
-    static func headBold(_ size: CGFloat) -> Font { .custom("Archivo-HeadBold", size: size) }
+    static func headBold(_ size: CGFloat) -> Font { .custom("Archivo-HeadBold", size: size, relativeTo: .title) }
     /// Tiny wide-tracked meta labels — Archivo 500, never condensed. Site `.meta`.
     /// Pair with `.tracking(size * 0.12)` for the site's letterspacing.
-    static func meta(_ size: CGFloat) -> Font { .custom("Archivo-Meta", size: size) }
+    static func meta(_ size: CGFloat) -> Font { .custom("Archivo-Meta", size: size, relativeTo: .caption) }
     /// Body copy — Switzer 400 / 500 / 600.
-    static func body(_ size: CGFloat) -> Font { .custom("Switzer-Regular", size: size) }
-    static func bodyMedium(_ size: CGFloat) -> Font { .custom("Switzer-Medium", size: size) }
-    static func bodySemibold(_ size: CGFloat) -> Font { .custom("Switzer-Semibold", size: size) }
+    static func body(_ size: CGFloat) -> Font { .custom("Switzer-Regular", size: size, relativeTo: .body) }
+    static func bodyMedium(_ size: CGFloat) -> Font { .custom("Switzer-Medium", size: size, relativeTo: .body) }
+    static func bodySemibold(_ size: CGFloat) -> Font { .custom("Switzer-Semibold", size: size, relativeTo: .body) }
 
     /// Display cut with tabular figures — for live readouts (timers, paces,
     /// tickers) whose digits must not jitter as values change. Site `.tabular`.
+    /// UIFontMetrics scales it with Dynamic Type to match the other tokens.
     static func displayTabular(_ size: CGFloat) -> Font {
         let descriptor = UIFontDescriptor(fontAttributes: [
             .name: "Archivo-Display",
@@ -191,7 +196,9 @@ struct AppTheme {
                 UIFontDescriptor.FeatureKey.selector: kMonospacedNumbersSelector
             ]]
         ])
-        return Font(UIFont(descriptor: descriptor, size: size))
+        let base = UIFont(descriptor: descriptor, size: size)
+        let scaled = UIFontMetrics(forTextStyle: .title1).scaledFont(for: base)
+        return Font(scaled)
     }
 
     // MARK: - Font tokens (sizes unchanged; faces now match the site)

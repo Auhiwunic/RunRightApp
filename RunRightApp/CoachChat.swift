@@ -247,6 +247,7 @@ struct CoachChatView: View {
                             .symbolEffect(.pulse, isActive: voiceInput.phase == .recording)
                     }
                     .disabled(voiceInput.phase == .transcribing || store.sending)
+                    .accessibilityLabel(voiceInput.phase == .recording ? "Stop recording" : "Dictate a message")
                 }
                 Button(action: { send() }) {
                     Image(systemName: "arrow.up.circle.fill")
@@ -254,6 +255,7 @@ struct CoachChatView: View {
                         .foregroundColor(canSend || isLocked ? AppTheme.accentColor : AppTheme.primaryText.opacity(0.2))
                 }
                 .disabled(!canSend && !isLocked)
+                .accessibilityLabel("Send message")
             }
             .padding(.horizontal, embedded ? 14 : 16)
             .padding(.top, embedded ? 14 : 16)

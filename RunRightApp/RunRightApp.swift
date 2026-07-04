@@ -35,6 +35,10 @@ struct RunRightApp: App {
                 // Pins system chrome (status bar, sheets, alerts, keyboard) to
                 // the chosen appearance; AppTheme colors resolve off this trait.
                 .preferredColorScheme(appearance == "light" ? .light : .dark)
+                // Dynamic Type: the font tokens scale via `relativeTo:`, capped
+                // here so low-vision users get a large enlargement without the
+                // dense numeric dashboards overflowing their fixed frames.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                 .onOpenURL { url in
                     // Required for Google Sign In to complete its OAuth flow
                     GIDSignIn.sharedInstance.handle(url)

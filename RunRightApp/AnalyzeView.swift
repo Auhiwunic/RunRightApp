@@ -480,6 +480,8 @@ struct AnalyzeView: View {
             .foregroundColor(onAccent ? AppTheme.accentColor : .white)
             .frame(width: 30, height: 30)
             .background(Circle().fill(Color.black.opacity(onAccent ? 0.75 : 0.45)))
+            .accessibilityLabel(icon == "plus" ? "Upload a running video"
+                : icon == "camera.fill" ? "Record a running video" : "")
     }
 
     private func analyzeStartRecording() {

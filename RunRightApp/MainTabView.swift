@@ -171,6 +171,9 @@ struct TabBarItem: View {
         }
         .frame(maxWidth: .infinity)
         .animation(.easeInOut(duration: 0.18), value: isSelected)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 }
 
