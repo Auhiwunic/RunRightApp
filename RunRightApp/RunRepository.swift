@@ -1,6 +1,7 @@
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
+import CoreLocation
 
 final class RunRepository {
     static let shared = RunRepository()
@@ -18,7 +19,8 @@ final class RunRepository {
         try await doc.setData(dto.toFirestore(), merge: true)
     }
 
-    func saveRunSummary(_ summary: ActivitySummary, shoeName: String? = nil) async throws {
+    func saveRunSummary(_ summary: ActivitySummary, shoeName: String? = nil,
+                        route: [CLLocationCoordinate2D] = []) async throws {
         guard let uid = Auth.auth().currentUser?.uid else {
             throw NSError(domain: "RunRepository", code: 1,
                           userInfo: [NSLocalizedDescriptionKey: "Not signed in — unable to save run."])
@@ -33,7 +35,8 @@ final class RunRepository {
             durationSeconds: summary.duration,
             avgSpeedMps: summary.averageSpeed,
             avgHeartRateBpm: nil,
-            shoeName: shoeName
+            shoeName: shoeName,
+            routeLatLng: RunSummaryDTO.downsampleRoute(route)
         )
 
         try await runDoc.setData(dto.toFirestore(), merge: true)

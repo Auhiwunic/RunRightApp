@@ -545,7 +545,11 @@ struct ActiveRunView: View {
 
                         Task {
                             do {
-                                try await RunRepository.shared.saveRunSummary(summary, shoeName: shoeName)
+                                try await RunRepository.shared.saveRunSummary(
+                                    summary,
+                                    shoeName: shoeName,
+                                    route: tracker.trackedLocations.map { $0.coordinate }
+                                )
                                 await MainActor.run {
                                     isSaving = false
                                     NotificationCenter.default.post(name: .runSaved, object: nil)

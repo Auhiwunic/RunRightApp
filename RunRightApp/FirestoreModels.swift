@@ -1,5 +1,6 @@
 import Foundation
 import FirebaseFirestore
+import CoreLocation
 
 // MARK: - Firestore DTOs
 // Uses Codable where practical; retains toFirestore() for fields that need
@@ -15,15 +16,42 @@ struct RunSummaryDTO: Codable {
     let shoeName: String?
     /// "app" = recorded in Gaita, "healthkit" = synced from Apple Health
     let source: String?
+    /// Downsampled GPS path as [lat, lng] pairs (empty when no route was
+    /// recorded, e.g. HealthKit imports or treadmill runs). [[Double]] keeps
+    /// the DTO Codable; Firestore stores it as a GeoPoint array.
+    let routeLatLng: [[Double]]
 
     init(runId: String, startTime: Date, distanceMeters: Double,
          durationSeconds: TimeInterval, avgSpeedMps: Double,
          avgHeartRateBpm: Int? = nil, shoeName: String? = nil,
-         source: String? = "app") {
+         source: String? = "app", routeLatLng: [[Double]] = []) {
         self.runId = runId; self.startTime = startTime
         self.distanceMeters = distanceMeters; self.durationSeconds = durationSeconds
         self.avgSpeedMps = avgSpeedMps; self.avgHeartRateBpm = avgHeartRateBpm
         self.shoeName = shoeName; self.source = source
+        self.routeLatLng = routeLatLng
+    }
+
+    /// The recorded path as map coordinates (empty if none).
+    var routeCoordinates: [CLLocationCoordinate2D] {
+        routeLatLng.compactMap {
+            $0.count == 2 ? CLLocationCoordinate2D(latitude: $0[0], longitude: $0[1]) : nil
+        }
+    }
+
+    /// Evenly thin a raw GPS track to at most `maxPoints`, keeping the
+    /// endpoints, so a run's route stays small in Firestore (doc size + cost)
+    /// while still drawing a faithful thumbnail.
+    static func downsampleRoute(_ coords: [CLLocationCoordinate2D], maxPoints: Int = 150) -> [[Double]] {
+        let valid = coords.filter { CLLocationCoordinate2DIsValid($0) }
+        guard valid.count > maxPoints, maxPoints > 2 else {
+            return valid.map { [$0.latitude, $0.longitude] }
+        }
+        let step = Double(valid.count - 1) / Double(maxPoints - 1)
+        return (0..<maxPoints).map { i in
+            let c = valid[Int((Double(i) * step).rounded())]
+            return [c.latitude, c.longitude]
+        }
     }
 
     func toFirestore() -> [String: Any] {
@@ -36,6 +64,9 @@ struct RunSummaryDTO: Codable {
         ]
         if let hr = avgHeartRateBpm { dict["avgHeartRateBpm"] = hr }
         if let shoe = shoeName      { dict["shoeName"] = shoe }
+        if !routeLatLng.isEmpty {
+            dict["route"] = routeLatLng.map { GeoPoint(latitude: $0[0], longitude: $0[1]) }
+        }
         return dict
     }
 
@@ -54,6 +85,8 @@ struct RunSummaryDTO: Codable {
               let avgSpeedMps = data["avgSpeedMps"] as? Double
         else { return nil }
 
+        let route = (data["route"] as? [GeoPoint])?.map { [$0.latitude, $0.longitude] } ?? []
+
         return RunSummaryDTO(
             runId: runId,
             startTime: startTime,
@@ -62,7 +95,8 @@ struct RunSummaryDTO: Codable {
             avgSpeedMps: avgSpeedMps,
             avgHeartRateBpm: data["avgHeartRateBpm"] as? Int,
             shoeName: data["shoeName"] as? String,
-            source: data["source"] as? String ?? "app"
+            source: data["source"] as? String ?? "app",
+            routeLatLng: route
         )
     }
 

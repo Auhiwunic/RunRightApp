@@ -27,13 +27,15 @@ struct PastRunItem: Identifiable {
         self.durationSeconds = durationSeconds; self.route = route; self.dto = dto
     }
 
-    /// Build from a stored run summary (no route persisted yet → map placeholder).
+    /// Build from a stored run summary. Real app-recorded runs carry a
+    /// downsampled GPS route (→ a real map thumbnail); HealthKit imports and
+    /// treadmill runs have none (→ the placeholder).
     init(dto: RunSummaryDTO) {
         self.id = dto.runId
         self.date = dto.startTime
         self.distanceMiles = dto.distanceMeters / 1609.34
         self.durationSeconds = dto.durationSeconds
-        self.route = []
+        self.route = dto.routeCoordinates
         self.dto = dto
     }
 
