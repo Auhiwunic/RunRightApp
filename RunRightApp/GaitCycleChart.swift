@@ -27,9 +27,19 @@ struct GaitCycleReferenceChart: View {
     var userCurve: [Double]? = nil
     /// Colour for the measured line. Adapts: ink on paper, white on dark.
     var userAccent: Color = AppTheme.primaryText
+    /// Personalized band (blend of population + the user's own history). When
+    /// set, it replaces the fixed band center/width and the population norm is
+    /// drawn as a dim second trace so "consistent" never reads as "correct".
+    var personalCenter: [Double]? = nil
+    var personalHalfWidth: [Double]? = nil
+    /// 0…1 personalization weight, only used to label the band honestly.
+    var wSelf: Double = 0
+
+    private var personalized: Bool { personalCenter?.count == 11 && personalHalfWidth?.count == 11 }
 
     var body: some View {
-        let allMean = ref.mean
+        // Band center = personalized blend when we have history, else population.
+        let allMean = personalized ? (personalCenter ?? ref.mean) : ref.mean
         // FIXED research axis — the optimal band renders identically every scan;
         // the user's line is clamped into this frame rather than rescaling it.
         let lo = ref.axisLo
@@ -42,9 +52,12 @@ struct GaitCycleReferenceChart: View {
         let userPlausible: Bool = {
             guard let uc = userCurve, uc.count == 11, uc.allSatisfy({ $0.isFinite }) else { return false }
             let s = uc.sorted()
-            let median = s[5]
             let range = s[10] - s[0]
-            return median >= lo && median <= hi && range >= 2
+            // The line is drawn mean-centered into the band, so its absolute level
+            // is irrelevant — a run offset out of the axis purely by the markerless
+            // DC bias (exactly what centering cancels) must NOT be dropped. Gate
+            // only on it being real data: finite and not a degenerate flat line.
+            return range >= 2
         }()
 
         return VStack(alignment: .leading, spacing: 8) {
@@ -53,7 +66,7 @@ struct GaitCycleReferenceChart: View {
                     .font(AppTheme.sectionTitleFont)
                     .foregroundColor(AppTheme.primaryText)
                 Spacer()
-                Text("TYPICAL RANGE")
+                Text(personalized && wSelf >= 0.4 ? "YOUR RANGE" : "TYPICAL RANGE")
                     .font(AppTheme.meta(8))
                     .foregroundColor(accent.opacity(0.9))
             }
@@ -73,15 +86,27 @@ struct GaitCycleReferenceChart: View {
             }
             .foregroundColor(AppTheme.primaryText.opacity(0.3))
 
-            if userPlausible || userAtStrike != nil {
+            // Show the legend whenever anything beyond the bare band is drawn —
+            // including when the band is personalized (which also draws the dim
+            // population trace), so that trace is never rendered without its key.
+            if userPlausible || userAtStrike != nil || personalized {
                 HStack(spacing: 12) {
-                    HStack(spacing: 5) {
-                        Rectangle().fill(userAccent).frame(width: 12, height: 2)
-                        Text("Your run").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
+                    if userPlausible || userAtStrike != nil {
+                        HStack(spacing: 5) {
+                            Rectangle().fill(userAccent).frame(width: 12, height: 2)
+                            Text("Your run").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
+                        }
                     }
                     HStack(spacing: 5) {
                         Rectangle().fill(accent.opacity(0.5)).frame(width: 12, height: 6)
-                        Text("Typical range").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
+                        Text(personalized && wSelf >= 0.4 ? "Your typical range" : "Typical range")
+                            .font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
+                    }
+                    if personalized {
+                        HStack(spacing: 5) {
+                            Rectangle().fill(AppTheme.primaryText.opacity(0.28)).frame(width: 12, height: 1.5)
+                            Text("All runners").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
+                        }
                     }
                 }
             }
@@ -112,10 +137,12 @@ struct GaitCycleReferenceChart: View {
         func x(_ i: Int) -> CGFloat { w * CGFloat(i) / 10 }
         func y(_ v: Double) -> CGFloat { h * CGFloat(1 - (v - lo) / span) }
 
-        // MUCH more lenient band: form varies a lot runner-to-runner, so widen
-        // the research half-widths (2.5x, with a generous per-axis floor) and
-        // clamp to the fixed axis so the shaded range never paints off-card.
-        func bandW(_ i: Int) -> Double { max(ref.band[i] * 2.5, span * 0.13) }
+        // Band half-width: personalized (blend of the runner's own consistency +
+        // population) when history exists, else the lenient fixed width. Form
+        // varies a lot runner-to-runner, so the fixed fallback widens the
+        // research half-widths (2.5x, with a generous per-axis floor); both clamp
+        // to the fixed axis so the shaded range never paints off-card.
+        func bandW(_ i: Int) -> Double { personalHalfWidth?[i] ?? max(ref.band[i] * 2.5, span * 0.13) }
         let upper = (0...10).map { CGPoint(x: x($0), y: y(min(mean[$0] + bandW($0), hi))) }
         let lower = (0...10).map { CGPoint(x: x($0), y: y(max(mean[$0] - bandW($0), lo))) }
 
@@ -138,6 +165,17 @@ struct GaitCycleReferenceChart: View {
                 p.closeSubpath()
             }
             .fill(accent.opacity(0.16))
+
+            // Guardrail: when the band is personalized, always draw the POPULATION
+            // center as a dim dashed line. This keeps "you're consistent" (your
+            // band) and "you match healthy norms" (this line) as two separate
+            // readouts, so a very consistent bad habit can't render as all-green.
+            if personalized {
+                let popPts = (0...10).map { CGPoint(x: x($0), y: y(min(max(ref.mean[$0], lo), hi))) }
+                Path { p in Self.smooth(&p, popPts, close: false) }
+                .stroke(AppTheme.primaryText.opacity(0.28),
+                        style: StrokeStyle(lineWidth: 1.5, lineCap: .round, dash: [3, 3]))
+            }
 
             // Landmarks: faint vertical guides only (no dot on a mean line).
             ForEach(ref.landmarks.indices, id: \.self) { k in

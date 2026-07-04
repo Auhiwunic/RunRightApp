@@ -791,11 +791,20 @@ struct AnalyzeView: View {
         }
     }
 
-    /// The headline: research-backed OPTIMAL form for the selected run type,
-    /// drawn as shaded gait-cycle bands (knee, hip, ankle) with cited landmarks.
-    /// The pipeline stores per-contact scalars, not full joint waveforms, so we
-    /// show the optimal reference honestly rather than fake a user curve — but
-    /// where a measured landing angle exists we drop it on the curve.
+    /// Map a joint chart's reference name to that joint's stored 11-decile curve.
+    private static func jointCurve(_ form: StoredScorecardForm, refName: String) -> [Double]? {
+        switch refName {
+        case "Knee flexion": return form.kneeCycle
+        case "Ankle":        return form.ankleCycle
+        default:             return nil
+        }
+    }
+
+    /// The headline: research-backed reference form, drawn as a shaded gait-cycle
+    /// band (knee, ankle) that ADAPTS to the runner's own history once they have
+    /// a few analyses, blended with the population norm and compared in shape
+    /// space. The pipeline stores per-contact scalars plus these cycle curves, so
+    /// the user's measured line is dropped on the band where it exists.
     private var analyzeOptimalForm: some View {
         // The user's own measured gait-cycle curves, if the last analysis stored
         // them. Same curve regardless of mode — only the optimal band switches.
@@ -811,17 +820,28 @@ struct AnalyzeView: View {
         }()
         let blue = AppTheme.accentColor   // signature cyan/blue
 
+        // The runner's PAST analyses (everything except the current one) drive the
+        // personalized band: the reference adapts to what they already do, blended
+        // with the population norm and capped so it can't become pure self-
+        // endorsement. Cold start (no history) → the fixed population band.
+        let pastForms: [StoredScorecardForm] = history.records.dropFirst().compactMap { $0.form }
+
         return VStack(alignment: .leading, spacing: 12) {
             Text(userCurves.isEmpty ? "TYPICAL FORM SHAPE" : "YOUR RUN VS TYPICAL")
                 .font(AppTheme.sectionTitleFont)
                 .foregroundColor(AppTheme.primaryText)
             ForEach(FormReference.joints(fullMetricsMode).indices, id: \.self) { i in
                 let ref = FormReference.joints(fullMetricsMode)[i]
+                let past = pastForms.compactMap { Self.jointCurve($0, refName: ref.name) }
+                let overlay = AdaptiveForm.overlay(joint: ref, pastCurves: past)
                 GaitCycleReferenceChart(
                     ref: ref,
                     accent: blue,
                     userCurve: userCurves[ref.name],
-                    userAccent: AppTheme.primaryText
+                    userAccent: AppTheme.primaryText,
+                    personalCenter: overlay?.center,
+                    personalHalfWidth: overlay?.halfWidth,
+                    wSelf: overlay?.wSelf ?? 0
                 )
             }
             Text("Shaded bands are the typical range from published running kinematics (Novacheck, Schache, Nagahara), not a target: good form is individual, not one line. Your line is this run's cycle average, aligned to the band to compare the shape of your motion since camera angle shifts the exact degrees. Ankle is the least reliable joint from a side view.")

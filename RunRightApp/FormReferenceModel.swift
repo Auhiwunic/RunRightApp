@@ -148,3 +148,81 @@ enum FormReference {
                         : "Sprinting adds height, but keep bounce small next to the long stride.")
     }
 }
+
+// MARK: - Adaptive (per-user) reference
+
+/// Blends the fixed population band with the runner's OWN history so the
+/// reference "adapts to what the person already does" without ever becoming
+/// pure self-endorsement. Everything is aligned to the population mean first so
+/// the systematic markerless offset (BlazePose joint centers ≠ anatomical, worst
+/// at the ankle) cancels and we compare SHAPE, not absolute degrees. Research-
+/// backed (Nigg preferred-movement-path; markerless-offset validation): a rigid
+/// absolute-angle band mislabels normal runners, but a purely self-referenced
+/// band can bless a bad habit — so we blend, cap the personalization, keep the
+/// band width honest to both the runner's consistency and the sensor's noise
+/// floor, and (in the chart) always show the population line as a second trace.
+enum AdaptiveForm {
+
+    struct Overlay {
+        let center: [Double]      // 11 deciles — band center, axis space
+        let halfWidth: [Double]   // 11 deciles — band half-width
+        let wSelf: Double         // 0…1 personalization weight (0 = pure population)
+        let nRuns: Int            // qualifying past runs used
+    }
+
+    private static func median(_ xs: [Double]) -> Double {
+        let s = xs.sorted()
+        guard !s.isEmpty else { return 0 }
+        let m = s.count / 2
+        return s.count % 2 == 0 ? (s[m - 1] + s[m]) / 2 : s[m]
+    }
+
+    /// Build the personalized band for one joint from the user's PAST curves
+    /// (exclude the current run). Returns nil → the chart falls back to the fixed
+    /// population band (cold start, run 1). `pastCurves` are raw measured
+    /// 11-decile curves in the joint's own units.
+    static func overlay(joint: JointReference, pastCurves: [[Double]]) -> Overlay? {
+        let popMean = joint.mean.reduce(0, +) / Double(joint.mean.count)
+        // Align each past curve to the population mean (removes the DC offset so
+        // history from different sessions/offsets stacks in one shape space).
+        let aligned: [[Double]] = pastCurves.compactMap { c in
+            guard c.count == 11, c.allSatisfy({ $0.isFinite }) else { return nil }
+            let m = c.reduce(0, +) / 11.0
+            let shift = popMean - m
+            return c.map { $0 + shift }
+        }
+        let n = aligned.count
+        // Need a few clean past runs before a per-user baseline is meaningful
+        // (research: 3-5). Below that, spread is undefined (a single run has MAD 0,
+        // which would falsely "tighten" on one sample) so we fall back to the
+        // fixed population band via a nil return.
+        guard n >= 3 else { return nil }
+
+        let span = max(joint.axisHi - joint.axisLo, 0.0001)
+        // Personalization weight grows to a hard cap of 0.85 by ~5 runs, so the
+        // population anchor never fully disappears (a guardrail in itself).
+        let wSelf = min(max(Double(n) / 5.0, 0), 0.85)
+
+        var center = [Double](repeating: 0, count: 11)
+        var half = [Double](repeating: 0, count: 11)
+        for k in 0..<11 {
+            let col = aligned.map { $0[k] }
+            let med = median(col)
+            let mad = median(col.map { abs($0 - med) })
+            let robustSD = 1.4826 * mad                       // MAD → SD
+            let popBand = max(joint.band[k] * 2.5, span * 0.13)  // matches the chart's lenient pop width
+            // Floor = sensor noise (can't resolve tighter). Ceiling = the
+            // population band ITSELF (per-joint, so it scales with the knee's
+            // larger range too): a very consistent runner tightens toward the
+            // floor, an inconsistent one widens back to the population width, and
+            // personalization can never force a band narrower than population for
+            // a genuinely variable runner (a fixed 12deg cap did, on the knee).
+            let userBand = min(max(1.75 * robustSD, 4.0), popBand)
+            center[k] = (1 - wSelf) * joint.mean[k] + wSelf * med
+            // Hard physiologic clamp: personalize only inside the sane axis range.
+            center[k] = min(max(center[k], joint.axisLo), joint.axisHi)
+            half[k] = (1 - wSelf) * popBand + wSelf * userBand
+        }
+        return Overlay(center: center, halfWidth: half, wSelf: wSelf, nRuns: n)
+    }
+}
