@@ -2400,7 +2400,7 @@ private struct GraphCard: View {
                 
                 if !info.isEmpty {
                     Button(action: { showInfo = true }) {
-                        Image(systemName: "info.circle")
+                        Image(systemName: "info.circle").accessibilityLabel("About this metric")
                             .font(AppTheme.body(14))
                             .foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
@@ -3038,14 +3038,14 @@ struct SnapshotView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button(action: onDismiss) {
-                        Image(systemName: "xmark")
+                        Image(systemName: "xmark").accessibilityLabel("Close")
                             .foregroundColor(AppTheme.primaryText)
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if let imageData = image.pngData() {
                         ShareLink(item: imageData, preview: SharePreview("Skeleton Snapshot")) {
-                            Image(systemName: "square.and.arrow.up")
+                            Image(systemName: "square.and.arrow.up").accessibilityLabel("Share")
                                 .foregroundColor(AppTheme.primaryText)
                         }
                     }

@@ -116,7 +116,7 @@ struct ActiveRunView: View {
     // MARK: - Minimize (keep running, browse other tabs — Strava-style)
     private var minimizeButton: some View {
         Button(action: { RunSession.shared.minimize() }) {
-            Image(systemName: "chevron.down")
+            Image(systemName: "chevron.down").accessibilityLabel("Minimize run")
                 .font(AppTheme.meta(13))
                 .foregroundColor(.white)
                 .padding(8)
@@ -182,7 +182,7 @@ struct ActiveRunView: View {
                     .fill(accentOrange)
                     .frame(width: 72, height: 72)
                     .overlay(
-                        Image(systemName: "pause.fill")
+                        Image(systemName: "pause.fill").accessibilityLabel("Pause run")
                             .font(AppTheme.display(28))
                             .foregroundColor(.black)
                     )
@@ -277,7 +277,7 @@ struct ActiveRunView: View {
                     withAnimation(.easeInOut(duration: 0.3)) { isExpanded = false }
                 }
             }) {
-                Image(systemName: "arrow.down.right.and.arrow.up.left")
+                Image(systemName: "arrow.down.right.and.arrow.up.left").accessibilityLabel("Collapse run")
                     .font(AppTheme.bodyMedium(18))
                     .foregroundColor(.black.opacity(0.7))
                     .padding(12)

@@ -334,12 +334,12 @@ struct RunView: View {
             // Swipe affordance (left/right) + add-new
             HStack(spacing: 14) {
                 if shoes.count > 1 {
-                    Image(systemName: "arrow.left.and.right")
+                    Image(systemName: "arrow.left.and.right").accessibilityHidden(true)
                         .font(AppTheme.head(15))
                         .foregroundColor(.black.opacity(0.55))
                 }
                 Button(action: { showAddShoeAlert = true }) {
-                    Image(systemName: "plus")
+                    Image(systemName: "plus").accessibilityLabel("Add shoe")
                         .font(AppTheme.head(18))
                         .foregroundColor(.black)
                 }
@@ -872,7 +872,7 @@ struct WeeklyPlannerSheet: View {
                                         WorkoutSegment(name: "Warm Up", distance: "0.5 mi", pace: "9:00/mi")
                                     )
                                 }) {
-                                    Image(systemName: "plus.circle.fill")
+                                    Image(systemName: "plus.circle.fill").accessibilityLabel("Add segment")
                                         .font(AppTheme.body(16))
                                         .foregroundColor(accentLime)
                                 }
@@ -1115,7 +1115,7 @@ struct DiagnosticRunSheet: View {
             // Header
                                     HStack {
                 Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
+                    Image(systemName: "xmark").accessibilityLabel("Close")
                         .font(AppTheme.bodyMedium(16))
                         .foregroundColor(AppTheme.primaryText.opacity(0.6))
                 }
@@ -1186,7 +1186,7 @@ struct DiagnosticRunSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Button(action: { withAnimation { step = 0 } }) {
-                    Image(systemName: "chevron.left")
+                    Image(systemName: "chevron.left").accessibilityLabel("Back")
                         .font(AppTheme.bodyMedium(16))
                         .foregroundColor(AppTheme.primaryText.opacity(0.6))
                 }
@@ -1281,7 +1281,7 @@ struct DiagnosticRunSheet: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Button(action: { withAnimation { step = 1 } }) {
-                    Image(systemName: "chevron.left")
+                    Image(systemName: "chevron.left").accessibilityLabel("Back")
                         .font(AppTheme.bodyMedium(16))
                         .foregroundColor(AppTheme.primaryText.opacity(0.6))
                 }
@@ -1425,7 +1425,7 @@ struct DiagnosticRunSheet: View {
                                 HStack {
                                     Spacer()
                     Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
+                        Image(systemName: "xmark").accessibilityLabel("Close")
                             .font(AppTheme.bodyMedium(16))
                             .foregroundColor(AppTheme.primaryText.opacity(0.6))
                     }

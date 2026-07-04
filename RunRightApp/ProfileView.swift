@@ -549,7 +549,7 @@ struct ProfileView: View {
                     .frame(height: 1)
                 Button(action: { legalDoc = doc }) {
                     settingsRow(label: doc.title, icon: "doc.text") {
-                        Image(systemName: "chevron.right")
+                        Image(systemName: "chevron.right").accessibilityHidden(true)
                             .font(AppTheme.bodySemibold(12))
                             .foregroundColor(AppTheme.primaryText.opacity(0.3))
                     }

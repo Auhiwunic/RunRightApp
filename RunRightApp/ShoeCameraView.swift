@@ -195,7 +195,7 @@ struct ShoeCameraView: View {
                 // Top bar
                 HStack {
                     Button(action: { dismiss() }) {
-                        Image(systemName: "xmark")
+                        Image(systemName: "xmark").accessibilityLabel("Close")
                             .font(AppTheme.head(15))
                             .foregroundColor(.white)
                             .frame(width: 38, height: 38)
@@ -336,7 +336,7 @@ struct ShoeCameraView: View {
         VStack(spacing: 18) {
             HStack {
                 Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
+                    Image(systemName: "xmark").accessibilityLabel("Close")
                         .font(AppTheme.head(15))
                         .foregroundColor(.white)
                         .frame(width: 38, height: 38)

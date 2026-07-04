@@ -572,7 +572,7 @@ struct ScorecardShareScreen: View {
         // share it (exportAndShare was never wired up) and no close control.
         .overlay(alignment: .topLeading) {
             Button(action: { onClose?() ?? dismiss() }) {
-                Image(systemName: "xmark")
+                Image(systemName: "xmark").accessibilityLabel("Close")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.white.opacity(0.8))
                     .frame(width: 36, height: 36)
