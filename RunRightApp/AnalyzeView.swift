@@ -757,48 +757,25 @@ struct AnalyzeView: View {
         .presentationBackground(AppTheme.bgColor)
     }
 
-    /// CONTACT PHASE — the honest "you vs optimal" comparison that answers the
-    /// force-curve question without faking a force waveform (a phone can't
-    /// resolve the impact transient). Contact time is the true analog of the
-    /// elite-vs-amateur force figure's x-axis; duty factor and leg spring carry
-    /// the "springy vs soft" message; peak force is a modeled magnitude only;
-    /// overstride is direct sagittal geometry. All mode-matched where it matters.
+    /// CONTACT PHASE — ground contact + overstride. Ground contact is a real
+    /// timing measurement, now taken from vertical foot motion (belt-invariant)
+    /// with sub-frame interpolation and a plausibility gate, so it reads true
+    /// stance rather than the inflated forward-reach span. Overstride is direct
+    /// sagittal geometry. We deliberately do NOT show modeled peak force or
+    /// leg-spring frequency here: those need force-plate-grade timing a phone
+    /// can't deliver, and read physically impossible when the timing is off
+    /// (Morin 2005, Young 2023 Sensors, Wille 2014).
     @ViewBuilder private func analyzeContactPhase(_ form: StoredScorecardForm) -> some View {
-        let sprint = fullMetricsMode == .sprint
         return VStack(alignment: .leading, spacing: 12) {
-            Text("OPTIMAL CONTACT PHASE")
+            Text("CONTACT PHASE")
                 .font(AppTheme.sectionTitleFont)
                 .foregroundColor(AppTheme.primaryText)
 
             if let ms = form.contactMs, ms.isFinite {
                 ComparisonTrack(
                     label: "GROUND CONTACT", value: ms, unit: "ms",
-                    axisLo: sprint ? 70 : 150, axisHi: sprint ? 200 : 340,
-                    zoneLo: sprint ? 85 : 200, zoneHi: sprint ? 120 : 250,
-                    readout: sprint
-                        ? "Time your foot is on the ground. Elite sprinters touch down under 120 ms with huge force."
-                        : "Time your foot is on the ground. Elite distance runners sit near 200 ms. Quicker, lighter steps cut it.")
-            }
-            if let duty = form.dutyFactor, duty.isFinite {
-                ComparisonTrack(
-                    label: "DUTY FACTOR", value: duty, unit: "",
-                    axisLo: 0.20, axisHi: 0.50, zoneLo: 0.28, zoneHi: 0.38,
-                    readout: "Share of each stride your foot is loading. Lower is springier and more economical.",
-                    decimals: 2)
-            }
-            if let hz = form.legSpringHz, hz.isFinite {
-                ComparisonTrack(
-                    label: "LEG SPRING", value: hz, unit: "Hz",
-                    axisLo: 1.5, axisHi: 4.5, zoneLo: 2.4, zoneHi: 3.8,
-                    readout: "Your legs' natural bounce rate. Stiffer legs store and return more energy each step.",
-                    decimals: 1)
-            }
-            if let f = form.peakForceBW, f.isFinite {
-                ComparisonTrack(
-                    label: "PEAK FORCE", value: f, unit: "×BW",
-                    axisLo: 1.5, axisHi: 3.5, zoneLo: 2.0, zoneHi: 2.9,
-                    readout: "Peak vertical force, modeled from your contact and flight timing. This is a magnitude, not a measured force trace.",
-                    modeled: true, decimals: 1)
+                    axisLo: 150, axisHi: 340, zoneLo: 200, zoneHi: 300,
+                    readout: "Time your foot is on the ground each step. Trained distance runners sit near 200 to 250 ms. Quicker, springier steps cut it.")
             }
             if let deg = form.overstrideDeg, deg.isFinite {
                 ComparisonTrack(
@@ -807,7 +784,7 @@ struct AnalyzeView: View {
                     readout: "Shin angle at contact. Positive means your foot lands ahead of your body. Lift cadence 5 to 10 percent to land under you.",
                     decimals: 0)
             }
-            Text("Timing and geometry the camera can measure. Force is a spring-mass estimate, not a force-plate trace.")
+            Text("Ground contact is a timing estimate (best at 60 fps or higher); overstride is direct sagittal geometry. We don't show modeled force or leg stiffness — a phone can't measure those without a force plate.")
                 .font(AppTheme.body(9))
                 .foregroundColor(AppTheme.primaryText.opacity(0.3))
                 .fixedSize(horizontal: false, vertical: true)
@@ -826,14 +803,16 @@ struct AnalyzeView: View {
             guard let f = currentForm else { return [:] }
             var out: [String: [Double]] = [:]
             if let k = f.kneeCycle, k.count == 11 { out["Knee flexion"] = k }
-            if let h = f.hipCycle, h.count == 11 { out["Hip flexion"] = h }
             if let a = f.ankleCycle, a.count == 11 { out["Ankle"] = a }
+            // Hip dropped: from a side view the hip angle is thigh-relative-to-
+            // trunk, so forward lean is baked into it with no way to separate the
+            // two. Its line was falling off its own axis for exactly this reason.
             return out
         }()
         let blue = AppTheme.accentColor   // signature cyan/blue
 
         return VStack(alignment: .leading, spacing: 12) {
-            Text(userCurves.isEmpty ? "OPTIMAL FORM SHAPE" : "YOUR RUN VS OPTIMAL")
+            Text(userCurves.isEmpty ? "TYPICAL FORM SHAPE" : "YOUR RUN VS TYPICAL")
                 .font(AppTheme.sectionTitleFont)
                 .foregroundColor(AppTheme.primaryText)
             ForEach(FormReference.joints(fullMetricsMode).indices, id: \.self) { i in
@@ -845,7 +824,7 @@ struct AnalyzeView: View {
                     userAccent: AppTheme.primaryText
                 )
             }
-            Text("Optimal bands from published running kinematics (Novacheck, Schache, Nagahara). Good form is a range, not one line. Your line is your run's cycle average.")
+            Text("Shaded bands are the typical range from published running kinematics (Novacheck, Schache, Nagahara), not a target: good form is individual, not one line. Your line is this run's cycle average. Ankle is the least reliable joint from a side view.")
                 .font(AppTheme.body(9))
                 .foregroundColor(AppTheme.primaryText.opacity(0.3))
                 .fixedSize(horizontal: false, vertical: true)
@@ -1484,11 +1463,16 @@ struct AnalyzeView: View {
             scorecardMetric(label: "TORSO", value: degreeText(series.torsoAngleMean), optimal: "3-12°", score: breakdown.torso.score),
             scorecardMetric(label: "SHIN", value: degreeText(abs(series.shankAngleAtContactSignedDeg)), optimal: "<12°", score: breakdown.shin.score),
             scorecardMetric(label: "KNEE", value: degreeText(series.kneeAngleMean), optimal: "128-160", score: kneeScore(series.kneeAngleMean)),
-            scorecardMetric(label: "HIP", value: degreeText(series.hipAngleMean), optimal: "135-172", score: hipScore(series.hipAngleMean)),
             scorecardMetric(label: "ELBOW", value: degreeText(series.elbowAngleMean), optimal: "55-105°", score: breakdown.elbow.score),
-            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "<300", score: avgGCT.map(groundContactScore) ?? 0),
-            scorecardMetric(label: "STRIKE", value: metrics.footStrikePattern.uppercased().prefix(4).description, optimal: "MID", score: analyzeSafeInt(metrics.footStrikeConfidence * 100))
+            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "200-300", score: avgGCT.map(groundContactScore) ?? 0),
+            scorecardMetric(label: "STRIKE", value: metrics.footStrikePattern.uppercased().prefix(4).description, optimal: "--", score: 80)
         ]
+        // HIP dropped: a side view has no vertical/pelvis reference, so hip angle
+        // = thigh-relative-to-trunk and bakes in forward lean (unmeasurable
+        // confound). GCT is now measured from vertical foot motion (plausibility-
+        // gated), so it reads real stance time instead of the inflated forward-
+        // reach span. STRIKE shown as a neutral observation, not graded (evidence
+        // doesn't support prescribing a foot-strike pattern).
 
         return StoredScorecardForm(
             date: Date(),
@@ -1516,12 +1500,12 @@ struct AnalyzeView: View {
                 .map { ($0.cue.rawValue, $0.score) },
                 uniquingKeysWith: { a, _ in a }),
             kneeCycle: robustCycle(.knee),
-            hipCycle: robustCycle(.hip),
+            hipCycle: nil,            // hip curve dropped (trunk-lean confound, no vertical reference)
             ankleCycle: robustCycle(.ankle),
-            contactMs: avgGCT,
-            dutyFactor: powerRead.dutyFactor,
-            legSpringHz: powerRead.naturalFreqHz,
-            peakForceBW: powerRead.peakForceBW,
+            contactMs: avgGCT,        // ground contact: measured from vertical foot motion, plausibility-gated
+            dutyFactor: nil,          // peak force + leg spring stay out: they need force-plate-grade
+            legSpringHz: nil,         // timing the spring-mass model can't get from a phone clip
+            peakForceBW: nil,
             overstrideDeg: series.shankAngleAtContactSignedDeg.isFinite
                 ? series.shankAngleAtContactSignedDeg : nil
         )
@@ -2255,13 +2239,15 @@ private struct GroundContactCard: View {
     private var steps: [ContactStep] {
         guard let gait else { return [] }
         var out: [ContactStep] = []
-        for c in gait.leftCycles {
-            let ms = (c.toeOffTime - c.startTime) * 1000
-            if (60...600).contains(ms) { out.append(ContactStep(time: c.startTime, ms: ms, isLeft: true)) }
+        // Use the vertical-motion stance time (contactMs), not toeOffTime-startTime:
+        // the cycle is anchored to the forward-reach peak, which precedes touchdown
+        // and inflates that difference (the reason this card read ~326 vs the true
+        // ~228). contactMs is plausibility-gated already; skip NaN/out-of-range.
+        for c in gait.leftCycles where c.contactMs.isFinite {
+            if (120...350).contains(c.contactMs) { out.append(ContactStep(time: c.startTime, ms: c.contactMs, isLeft: true)) }
         }
-        for c in gait.rightCycles {
-            let ms = (c.toeOffTime - c.startTime) * 1000
-            if (60...600).contains(ms) { out.append(ContactStep(time: c.startTime, ms: ms, isLeft: false)) }
+        for c in gait.rightCycles where c.contactMs.isFinite {
+            if (120...350).contains(c.contactMs) { out.append(ContactStep(time: c.startTime, ms: c.contactMs, isLeft: false)) }
         }
         return out.sorted { $0.time < $1.time }
     }

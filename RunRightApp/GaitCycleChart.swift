@@ -53,7 +53,7 @@ struct GaitCycleReferenceChart: View {
                     .font(AppTheme.sectionTitleFont)
                     .foregroundColor(AppTheme.primaryText)
                 Spacer()
-                Text("OPTIMAL RANGE")
+                Text("TYPICAL RANGE")
                     .font(AppTheme.meta(8))
                     .foregroundColor(accent.opacity(0.9))
             }
@@ -81,7 +81,7 @@ struct GaitCycleReferenceChart: View {
                     }
                     HStack(spacing: 5) {
                         Rectangle().fill(accent.opacity(0.5)).frame(width: 12, height: 6)
-                        Text("Optimal range").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
+                        Text("Typical range").font(AppTheme.bodyMedium(9)).foregroundColor(AppTheme.primaryText.opacity(0.5))
                     }
                 }
             }
@@ -230,7 +230,7 @@ struct ComparisonTrack: View {
             .frame(height: 13)
 
             HStack {
-                Text("OPTIMAL \(String(format: "%.\(decimals)f", zoneLo))–\(String(format: "%.\(decimals)f", zoneHi)) \(unit)")
+                Text("TARGET \(String(format: "%.\(decimals)f", zoneLo))–\(String(format: "%.\(decimals)f", zoneHi)) \(unit)")
                     .font(AppTheme.meta(8))
                     .foregroundColor(accent.opacity(0.8))
                 Spacer()

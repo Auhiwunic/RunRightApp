@@ -902,6 +902,10 @@ func stepContactFlightTimes(from gait: GaitCycleSeries?) -> (contact: [Double], 
     var tcs: [Double] = []
     var tfs: [Double] = []
     for c in gait.leftCycles + gait.rightCycles {
+        // Keep tc and tf as a CONSISTENT pair from the same toe-off frame — the
+        // Power composite is tuned around this pair. (The displayed ground-contact
+        // metric uses the accurate vertical-motion contactMs instead; mixing the
+        // two here gives a mismatched tf/tc ratio and destabilizes the score.)
         let tc = c.toeOffTime - c.startTime
         let tf = c.endTime - c.toeOffTime
         if tc > 0 { tcs.append(tc); tfs.append(max(0, tf)) }
@@ -1073,6 +1077,10 @@ struct GaitCycleInterval {
     let startTime: Double
     let endTime: Double
     let toeOffTime: Double
+    /// True stance duration (ms) from vertical foot motion, plausibility-gated.
+    /// NaN when it couldn't be measured. Prefer this over toeOffTime-startTime,
+    /// which is anchored to the forward-reach peak and over-counts contact.
+    var contactMs: Double = .nan
 }
 
 struct GaitCycleSeries {
@@ -3089,12 +3097,60 @@ class VideoProcessor: ObservableObject {
         let avgStride = (leftStrideSum + rightStrideSum) / Double(max(totalStrideCount, 1))
         let strideLength = avgStride
         
-        func groundContactTimes(from cycles: [CycleIndex]) -> [Double] {
-            cycles.map { (times[$0.toeOff] - times[$0.start]) * 1000 }
+        // Contact time from VERTICAL foot motion within each stride. The cycle is
+        // anchored to the foot-hip forward-reach PEAK (the foot's most-forward
+        // instant), which is right for phase alignment but precedes touchdown for
+        // a runner who lands under the body — so measuring stance from it inflates
+        // contact, worst for elites. Vertical motion is belt-invariant: the foot
+        // sits in a low band while planted and rises at toe-off. We take the first
+        // contiguous in-band run as stance, sub-frame interpolate both crossings to
+        // beat 30 fps quantization, and reject values outside a running-plausible
+        // window (120-350 ms) rather than display a wrong number.
+        func verticalContactMs(_ c: CycleIndex, footY: [Double], bandFraction: Double = 0.36) -> Double? {
+            let lo = c.start
+            let hi = min(c.end, footY.count - 1)
+            guard hi > lo + 2 else { return nil }
+            let win = (lo...hi).compactMap { footY[$0].isNaN ? nil : footY[$0] }
+            guard win.count > 3, let minY = win.min(), let maxY = win.max(),
+                  maxY - minY > 1e-6 else { return nil }
+            let band = minY + (maxY - minY) * bandFraction   // "planted" zone just above the stride low
+            var strike: Int? = nil
+            var idx = lo
+            while idx <= hi {
+                if !footY[idx].isNaN && footY[idx] <= band { strike = idx; break }
+                idx += 1
+            }
+            guard let s = strike else { return nil }
+            var toe = s
+            var j = s
+            while j <= hi {
+                if !footY[j].isNaN && footY[j] > band { break }
+                if !footY[j].isNaN { toe = j }
+                j += 1
+            }
+            guard toe > s else { return nil }
+            // Linear sub-frame interpolation of the band crossing between k-1 and k.
+            func crossTime(_ k: Int) -> Double {
+                let a = k - 1
+                guard a >= lo, !footY[a].isNaN, !footY[k].isNaN, footY[k] != footY[a] else { return times[k] }
+                let f = min(max((band - footY[a]) / (footY[k] - footY[a]), 0), 1)
+                return times[a] + (times[k] - times[a]) * f
+            }
+            let tStrike = crossTime(s)
+            let tToe = (toe + 1 <= hi) ? crossTime(toe + 1) : times[toe]
+            let ms = (tToe - tStrike) * 1000
+            return (ms >= 120 && ms <= 350) ? ms : nil
         }
-        
-        let gctLeft = groundContactTimes(from: leftCycles)
-        let gctRight = groundContactTimes(from: rightCycles)
+        func groundContactTimes(from cycles: [CycleIndex], footY: [Double]) -> [Double] {
+            cycles.compactMap { verticalContactMs($0, footY: footY) }
+        }
+
+        // Band fraction 0.36 was calibrated on an elite treadmill clip (cadence
+        // 182): a sweep gave band 0.20->155ms, 0.30->202, 0.40->245, 0.50->288,
+        // so 0.36 lands ~228ms (duty ~0.35), squarely in the trained-distance
+        // range — versus the old forward-reach method's inflated 321ms.
+        let gctLeft = groundContactTimes(from: leftCycles, footY: leftFootYSmooth)
+        let gctRight = groundContactTimes(from: rightCycles, footY: rightFootYSmooth)
         let avgGctLeft = gctLeft.isEmpty ? 0 : gctLeft.reduce(0, +) / Double(gctLeft.count)
         let avgGctRight = gctRight.isEmpty ? 0 : gctRight.reduce(0, +) / Double(gctRight.count)
         
@@ -3958,10 +4014,12 @@ class VideoProcessor: ObservableObject {
         let rightFootVelCycles = resampleCycle(values: filledRightVRel, cycles: rightCycles, bins: bins)
         
         let leftCyclesIntervals = leftCycles.map {
-            GaitCycleInterval(startTime: times[$0.start], endTime: times[$0.end], toeOffTime: times[$0.toeOff])
+            GaitCycleInterval(startTime: times[$0.start], endTime: times[$0.end], toeOffTime: times[$0.toeOff],
+                              contactMs: verticalContactMs($0, footY: leftFootYSmooth) ?? .nan)
         }
         let rightCyclesIntervals = rightCycles.map {
-            GaitCycleInterval(startTime: times[$0.start], endTime: times[$0.end], toeOffTime: times[$0.toeOff])
+            GaitCycleInterval(startTime: times[$0.start], endTime: times[$0.end], toeOffTime: times[$0.toeOff],
+                              contactMs: verticalContactMs($0, footY: rightFootYSmooth) ?? .nan)
         }
         
         let leftKneeAvg = averageCycles(leftKneeCycles, bins: bins)

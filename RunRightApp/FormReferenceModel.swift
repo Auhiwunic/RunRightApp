@@ -107,7 +107,12 @@ enum FormReference {
     }
 
     static func joints(_ mode: RunMode) -> [JointReference] {
-        [knee(mode), hip(mode), ankle(mode)]
+        // Hip intentionally excluded: from a single 2D side view the hip angle is
+        // thigh-relative-to-trunk, so any forward lean (which every runner has,
+        // and which changes with speed and fatigue) is baked into it with no
+        // vertical/pelvis reference to remove it. Knee is safe (thigh-vs-shank,
+        // no external reference); ankle is kept but flagged as least reliable.
+        [knee(mode), ankle(mode)]
     }
 
     // MARK: - Scalar target ranges (for target-zone bands on time series)
