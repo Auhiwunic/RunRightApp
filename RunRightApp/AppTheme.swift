@@ -68,7 +68,7 @@ struct AppTheme {
     // Light mode ("white mode"): the gaita-site palette — bone paper canvas,
     // ink type, shell recessed tiles. Elevation ladder keeps the same token
     // order in both modes: bgColor < cardBgAlt < cardBg < raisedFill.
-    static let bgColor = Color(lightHex: "#EAEAE7", darkHex: "#121518")
+    static let bgColor = Color(lightHex: "#E3E3DE", darkHex: "#121518")
     static let accentColor = Color(hex: "#00CED1")      // Cyan
     static let accentGreen = Color(hex: "#00FF7F")      // Spring green
     static let fitnessGreen = Color(hex: "#B7F75C")     // Apple Fitness+ green
@@ -81,14 +81,15 @@ struct AppTheme {
     static let secondaryText = Color(lightHex: "#6D6D68", darkHex: "#7A7A7A") // site mid
     /// Tertiary/meta text — site "soft".
     static let tertiaryText = Color(lightHex: "#A3A39E", darkHex: "#5F5F5F")
-    static let tabBarBg = Color(lightHex: "#ECECE9", darkHex: "#20262B")
+    static let tabBarBg = Color(lightHex: "#E6E6E2", darkHex: "#20262B")
     static let cardBg = Color(lightHex: "#FAFAF9", darkHex: "#252B31")
-    static let cardBgAlt = Color(lightHex: "#F1F1EF", darkHex: "#181D21")     // light = site bone
+    static let cardBgAlt = Color(lightHex: "#E8E8E3", darkHex: "#181D21")     // light = darkened paper (more card contrast)
     /// Fill for boxes raised above a card — one step lighter than cardBg so the
     /// lift reads as elevation, not decoration. No gradient, no shine.
     static let raisedFill = Color(lightHex: "#FFFFFF", darkHex: "#30373F")
-    /// Recessed/inset tile fill — light mode uses the site's "shell".
-    static let insetFill = Color(lightHex: "#E7E7E4", darkHex: "#181D21")
+    /// Recessed/inset tile fill — light mode a touch below the page bg so inset
+    /// tiles still read as recessed against the darkened background.
+    static let insetFill = Color(lightHex: "#DCDCD7", darkHex: "#181D21")
     static let dividerColor = Color(light: Color(hex: "#141412").opacity(0.10),
                                     dark: Color.white.opacity(0.08))
     static let subtleBorder = Color(light: Color(hex: "#141412").opacity(0.16),
