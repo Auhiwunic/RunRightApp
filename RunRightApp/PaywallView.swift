@@ -29,50 +29,62 @@ struct PaywallView: View {
         ZStack {
             AppTheme.bgColor.ignoresSafeArea()
             ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 18) {
-                    VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 22) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("GAITA PREMIUM")
-                            .font(AppTheme.head(13))
+                            .font(AppTheme.meta(12))
+                            .tracking(1.4)
                             .foregroundColor(green)
                         Text("Coach yourself to better form")
-                            .font(AppTheme.display(26))
+                            .font(AppTheme.display(30))
                             .foregroundColor(AppTheme.primaryText)
+                            .fixedSize(horizontal: false, vertical: true)
                         Text("Form analysis stays free forever. Premium unlocks the coaching around it.")
-                            .font(AppTheme.body(13))
+                            .font(AppTheme.body(14))
                             .foregroundColor(AppTheme.primaryText.opacity(0.5))
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.top, 24)
+                    .padding(.top, 26)
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        ForEach(perks, id: \.text) { perk in
-                            HStack(spacing: 12) {
+                    // Perks as a bare, hairline-ruled editorial list — no nested card.
+                    VStack(spacing: 0) {
+                        ForEach(Array(perks.enumerated()), id: \.element.text) { index, perk in
+                            if index > 0 {
+                                Rectangle().fill(AppTheme.dividerColor).frame(height: 1)
+                            }
+                            HStack(spacing: 14) {
                                 Image(systemName: perk.icon)
-                                    .font(AppTheme.head(15)).foregroundColor(green).frame(width: 24)
+                                    .font(AppTheme.head(15)).foregroundColor(green).frame(width: 22)
                                 Text(perk.text).font(AppTheme.bodyMedium(15)).foregroundColor(AppTheme.primaryText)
                                 Spacer()
-                                Image(systemName: "checkmark").font(AppTheme.meta(12)).foregroundColor(green)
                             }
+                            .padding(.vertical, 14)
                         }
                     }
-                    .padding(16)
-                    .appRaisedSurface(fill: AppTheme.cardBg, cornerRadius: 18, shadowRadius: 9, x: 5, y: 5)
 
-                    planRow(id: PremiumProduct.annual, title: "Annual", fallbackPrice: "$59.99", period: "year", badge: "BEST VALUE")
-                    planRow(id: PremiumProduct.monthly, title: "Monthly", fallbackPrice: "$7.99", period: "month", badge: nil)
+                    VStack(spacing: 10) {
+                        planRow(id: PremiumProduct.annual, title: "Annual", fallbackMonthly: "$5.00", fallbackFull: "$59.99", badge: savingsBadge)
+                        planRow(id: PremiumProduct.monthly, title: "Monthly", fallbackMonthly: "$7.99", fallbackFull: nil, badge: nil)
+                    }
 
                     let selectedProduct = subs.product(for: selectedID)
 
-                    Button(action: subscribe) {
-                        Text(purchasing ? "…" : selectedProduct == nil ? "Loading prices…" : "Start Premium")
-                            .font(AppTheme.head(16))
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 15)
-                            .background(green.opacity(selectedProduct == nil ? 0.45 : 1))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    VStack(spacing: 8) {
+                        Button(action: subscribe) {
+                            Text(purchasing ? "…" : selectedProduct == nil ? "Loading prices…" : "Start Premium")
+                                .font(AppTheme.head(16))
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(green.opacity(selectedProduct == nil ? 0.45 : 1))
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        }
+                        .disabled(purchasing || selectedProduct == nil)
+
+                        Text(ctaSubline)
+                            .font(AppTheme.body(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
                     }
-                    .disabled(purchasing || selectedProduct == nil)
 
                     HStack {
                         Button("Restore Purchases") { Task { await subs.restore(); if subs.isPremium { dismiss() } } }
@@ -120,14 +132,18 @@ struct PaywallView: View {
         .task { await subs.loadProducts() }
     }
 
-    private func planRow(id: String, title: String, fallbackPrice: String, period: String, badge: String?) -> some View {
-        let price = subs.product(for: id)?.displayPrice ?? fallbackPrice
+    private func planRow(id: String, title: String, fallbackMonthly: String, fallbackFull: String?, badge: String?) -> some View {
         let selected = selectedID == id
+        let monthly = perMonthPrice(id) ?? fallbackMonthly
+        // Annual shows its real yearly charge; monthly is billed as shown.
+        let subline = id == PremiumProduct.annual
+            ? "\(subs.product(for: id)?.displayPrice ?? fallbackFull ?? "") billed yearly"
+            : "billed monthly"
         return Button(action: { selectedID = id }) {
             HStack(spacing: 12) {
                 Image(systemName: selected ? "largecircle.fill.circle" : "circle")
-                    .font(AppTheme.body(18)).foregroundColor(selected ? green : AppTheme.primaryText.opacity(0.3))
-                VStack(alignment: .leading, spacing: 2) {
+                    .font(AppTheme.body(20)).foregroundColor(selected ? green : AppTheme.primaryText.opacity(0.3))
+                VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(title).font(AppTheme.head(15)).foregroundColor(AppTheme.primaryText)
                         if let badge {
@@ -136,9 +152,13 @@ struct PaywallView: View {
                                 .background(green).clipShape(Capsule())
                         }
                     }
-                    Text("\(price) / \(period)").font(AppTheme.body(12)).foregroundColor(AppTheme.primaryText.opacity(0.5))
+                    Text(subline).font(AppTheme.body(12)).foregroundColor(AppTheme.primaryText.opacity(0.45))
                 }
                 Spacer()
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text(monthly).font(AppTheme.displayTabular(24)).foregroundColor(AppTheme.primaryText)
+                    Text("/mo").font(AppTheme.meta(11)).foregroundColor(AppTheme.primaryText.opacity(0.45))
+                }
             }
             .padding(16)
             .appRaisedSurface(fill: selected ? AppTheme.raisedFill : AppTheme.cardBg, cornerRadius: 16, shadowRadius: 9, x: 5, y: 5)
@@ -146,6 +166,32 @@ struct PaywallView: View {
                 .stroke(selected ? green : Color.clear, lineWidth: 1.5))
         }
         .buttonStyle(.plain)
+    }
+
+    /// Per-month price for a plan. Annual divides its real price by 12 (in the
+    /// product's own currency/format), so both plans compare on the same axis.
+    private func perMonthPrice(_ id: String) -> String? {
+        guard let p = subs.product(for: id) else { return nil }
+        guard id == PremiumProduct.annual else { return p.displayPrice }
+        return (p.price / 12).formatted(p.priceFormatStyle)
+    }
+
+    /// Honest savings vs paying monthly, computed from live prices. Falls back
+    /// to a neutral label until StoreKit prices load.
+    private var savingsBadge: String {
+        if let a = subs.product(for: PremiumProduct.annual)?.price,
+           let m = subs.product(for: PremiumProduct.monthly)?.price, m > 0 {
+            let ratio = 1 - (a / (m * 12))
+            let pct = Int((ratio as NSDecimalNumber).doubleValue * 100)
+            if pct > 0 { return "SAVE \(pct)%" }
+        }
+        return "BEST VALUE"
+    }
+
+    private var ctaSubline: String {
+        guard let p = subs.product(for: selectedID) else { return "Cancel anytime" }
+        let period = selectedID == PremiumProduct.annual ? "year" : "month"
+        return "\(p.displayPrice) per \(period), cancel anytime"
     }
 
     private func subscribe() {
