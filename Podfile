@@ -11,5 +11,7 @@ target 'RunRightApp' do
   pod 'FirebaseAuth'
   pod 'FirebaseFirestore'
   pod 'FirebaseStorage'
+  pod 'FirebaseCrashlytics'      # crash reporting
+  pod 'FirebaseRemoteConfig'     # backend kill-switches
   pod 'GoogleSignIn', '~> 8.0'
 end

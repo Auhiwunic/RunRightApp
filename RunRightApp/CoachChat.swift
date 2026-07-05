@@ -321,6 +321,12 @@ struct CoachChatView: View {
         guard !text.isEmpty else { return }
         store.messages.append(CoachMessage(role: .user, text: text))
         input = ""
+        // Backend kill-switch: if the coach service is turned off server-side
+        // (down or being throttled), answer locally instead of hitting it.
+        if !RemoteConfigManager.shared.coachEnabled {
+            store.messages.append(CoachMessage(role: .coach, text: "Your coach is briefly offline for maintenance. Your form analysis still works — try again soon."))
+            return
+        }
         store.sending = true
         let history = store.messages
         Task {
@@ -328,6 +334,7 @@ struct CoachChatView: View {
             do {
                 result = try await CoachChatService.shared.reply(to: text, history: history)
             } catch {
+                CrashReporter.record(error, context: "coach.reply")
                 result = (error as? LocalizedError)?.errorDescription ?? "Something went wrong."
             }
             await MainActor.run {

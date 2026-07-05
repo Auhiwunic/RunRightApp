@@ -7,11 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C0D0E0012FEEAA0000B1047C /* Neumorphic in Frameworks */ = {isa = PBXBuildFile; productRef = C0D0E0022FEEAA0000B1047C /* Neumorphic */; };
-		A1000FC1 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = A3000FC1 /* FluidAudio */; };
-		A1000FC2 /* bm_lewis.bin in Resources */ = {isa = PBXBuildFile; fileRef = A2000FC2 /* bm_lewis.bin */; };
 		068086E02FEE093100B1047C /* MuscleMap in Frameworks */ = {isa = PBXBuildFile; productRef = 068086DF2FEE093100B1047C /* MuscleMap */; };
 		143F8B49F0F7B8BC689097D1 /* CoachTTSConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1025D171D9606F73B94A903 /* CoachTTSConfig.swift */; };
+		17F07C3E40572436EADB11ED /* CrashReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = B38F221C8A5BD365ED4D6541 /* CrashReporter.swift */; };
 		23447C4B23CB87AEA46322F4 /* WeeklyPlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55F5F8A2E3021002B52B86CF /* WeeklyPlanView.swift */; };
 		273637A35750AA576422D2B2 /* WeeklyPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B9A12E581D2BC73E36051A /* WeeklyPlan.swift */; };
 		2B9F7A3E385C0896BCF37D74 /* OnboardingProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F139C24F540EB5234D70867 /* OnboardingProfile.swift */; };
@@ -45,36 +43,12 @@
 		A100000C /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000D /* AppTheme.swift */; };
 		A100000D /* AnalyzeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000E /* AnalyzeView.swift */; };
 		A100000E /* ScanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A200000F /* ScanView.swift */; };
-		A1000F10 /* ArchivoDisplay.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F10 /* ArchivoDisplay.ttf */; };
-		A1000F11 /* ArchivoHead.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F11 /* ArchivoHead.ttf */; };
-		A1000F12 /* ArchivoHeadBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F12 /* ArchivoHeadBold.ttf */; };
-		A1000F13 /* ArchivoMeta.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F13 /* ArchivoMeta.ttf */; };
-		A1000F14 /* Switzer-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F14 /* Switzer-Regular.ttf */; };
-		A1000F15 /* Switzer-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F15 /* Switzer-Medium.ttf */; };
-		A1000F16 /* Switzer-Semibold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F16 /* Switzer-Semibold.ttf */; };
-		A1000E01 /* PastRunsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E01 /* PastRunsSection.swift */; };
-		A1000E02 /* FormGaitCrossReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E02 /* FormGaitCrossReference.swift */; };
-		A1000E03 /* DrillsLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E03 /* DrillsLibrary.swift */; };
-		A1000E05 /* Subscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E05 /* Subscriptions.swift */; };
-		A1000E06 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E06 /* PaywallView.swift */; };
-		A1000FA1 /* LegalDocs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FA1 /* LegalDocs.swift */; };
-		A1000FD1 /* FormReferenceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FD1 /* FormReferenceModel.swift */; };
-		A1000FD2 /* GaitCycleChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FD2 /* GaitCycleChart.swift */; };
-		A1000FB1 /* LewisVoiceBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FB1 /* LewisVoiceBackend.swift */; };
-		A1000FC3 /* CoachVoiceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FC3 /* CoachVoiceEngine.swift */; };
-		A1000FC4 /* CoachVoiceInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FC4 /* CoachVoiceInput.swift */; };
-		A1000FB2 /* LewisVoice in Resources */ = {isa = PBXBuildFile; fileRef = A2000FB2 /* LewisVoice */; };
-		A1000FA2 /* PRIVACY_POLICY.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA2 /* PRIVACY_POLICY.md */; };
-		A1000FA3 /* TERMS_AND_CONDITIONS.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA3 /* TERMS_AND_CONDITIONS.md */; };
-		A1000FA4 /* LICENSES.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA4 /* LICENSES.md */; };
-		A1000E04 /* CoachChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E04 /* CoachChat.swift */; };
-		A1000E99 /* MetricGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E99 /* MetricGuide.swift */; };
 		A100000F /* RunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000010 /* RunView.swift */; };
 		A1000010 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000011 /* ProfileView.swift */; };
 		A1000013 /* HeartRateZonesManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000013 /* HeartRateZonesManager.swift */; };
 		A1000016 /* ActiveRunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000016 /* ActiveRunView.swift */; };
 		A1000017 /* PoseDetection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000017 /* PoseDetection.swift */; };
-		A1000018 /* Models/pose_landmarker_heavy.task in Resources */ = {isa = PBXBuildFile; fileRef = A2000018 /* Models/pose_landmarker_heavy.task */; };
+		A1000018 /* pose_landmarker_heavy.task in Resources */ = {isa = PBXBuildFile; fileRef = A2000018 /* pose_landmarker_heavy.task */; };
 		A1000019 /* RunningFormMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000019 /* RunningFormMetrics.swift */; };
 		A1000020 /* VDOTCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000020 /* VDOTCalculator.swift */; };
 		A1000021 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000021 /* RootView.swift */; };
@@ -96,14 +70,42 @@
 		A1000037 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000037 /* HealthKitManager.swift */; };
 		A1000038 /* ConsentManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000038 /* ConsentManager.swift */; };
 		A1000039 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A2000039 /* PrivacyInfo.xcprivacy */; };
+		A1000E01 /* PastRunsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E01 /* PastRunsSection.swift */; };
+		A1000E02 /* FormGaitCrossReference.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E02 /* FormGaitCrossReference.swift */; };
+		A1000E03 /* DrillsLibrary.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E03 /* DrillsLibrary.swift */; };
+		A1000E04 /* CoachChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E04 /* CoachChat.swift */; };
+		A1000E05 /* Subscriptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E05 /* Subscriptions.swift */; };
+		A1000E06 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E06 /* PaywallView.swift */; };
+		A1000E99 /* MetricGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000E99 /* MetricGuide.swift */; };
 		A1000F01 /* ShareCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000F01 /* ShareCardView.swift */; };
+		A1000F10 /* ArchivoDisplay.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F10 /* ArchivoDisplay.ttf */; };
+		A1000F11 /* ArchivoHead.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F11 /* ArchivoHead.ttf */; };
+		A1000F12 /* ArchivoHeadBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F12 /* ArchivoHeadBold.ttf */; };
+		A1000F13 /* ArchivoMeta.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F13 /* ArchivoMeta.ttf */; };
+		A1000F14 /* Switzer-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F14 /* Switzer-Regular.ttf */; };
+		A1000F15 /* Switzer-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F15 /* Switzer-Medium.ttf */; };
+		A1000F16 /* Switzer-Semibold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F16 /* Switzer-Semibold.ttf */; };
+		A1000FA1 /* LegalDocs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FA1 /* LegalDocs.swift */; };
+		A1000FA2 /* PRIVACY_POLICY.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA2 /* PRIVACY_POLICY.md */; };
+		A1000FA3 /* TERMS_AND_CONDITIONS.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA3 /* TERMS_AND_CONDITIONS.md */; };
+		A1000FA4 /* LICENSES.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA4 /* LICENSES.md */; };
+		A1000FB1 /* LewisVoiceBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FB1 /* LewisVoiceBackend.swift */; };
+		A1000FB2 /* LewisVoice in Resources */ = {isa = PBXBuildFile; fileRef = A2000FB2 /* LewisVoice */; };
+		A1000FC1 /* FluidAudio in Frameworks */ = {isa = PBXBuildFile; productRef = A3000FC1 /* FluidAudio */; };
+		A1000FC2 /* bm_lewis.bin in Resources */ = {isa = PBXBuildFile; fileRef = A2000FC2 /* bm_lewis.bin */; };
+		A1000FC3 /* CoachVoiceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FC3 /* CoachVoiceEngine.swift */; };
+		A1000FC4 /* CoachVoiceInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FC4 /* CoachVoiceInput.swift */; };
+		A1000FD1 /* FormReferenceModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FD1 /* FormReferenceModel.swift */; };
+		A1000FD2 /* GaitCycleChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FD2 /* GaitCycleChart.swift */; };
 		A4D7087EB85B60AE04940C02 /* RunMetricsProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC8FF2275C8ACF1B42822E0E /* RunMetricsProviding.swift */; };
 		A6A99C9FC76F3015B7E51DAF /* ExperienceTierPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = C588F3ED701F070B9F199E44 /* ExperienceTierPicker.swift */; };
+		AB18C821492217C8EE59C9A6 /* RemoteConfigManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 711C01E3360DDE01569A787C /* RemoteConfigManager.swift */; };
 		AE000001 /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AE000002 /* HealthKit.framework */; };
 		AF000001 /* WeatherManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF000002 /* WeatherManager.swift */; };
 		AF000003 /* ShoeCameraView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF000004 /* ShoeCameraView.swift */; };
 		AF000007 /* ScrollFade.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF000008 /* ScrollFade.swift */; };
 		B916CFD1815943EE2D6DEB0F /* AVSpeechBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812A41E57977C264B2688ED7 /* AVSpeechBackend.swift */; };
+		C0D0E0012FEEAA0000B1047C /* Neumorphic in Frameworks */ = {isa = PBXBuildFile; productRef = C0D0E0022FEEAA0000B1047C /* Neumorphic */; };
 		C32700B700E8EBC716E3288E /* PlanMandate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49AA3D5154CC106D7386F32 /* PlanMandate.swift */; };
 		C3AC1C724743354E673ACC88 /* RunningPowerModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FD6B3695583116900B95F2F /* RunningPowerModel.swift */; };
 		C7B41A0C9AAD809561C7A358 /* OnboardingOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0AFEA5813896AD70B00472A /* OnboardingOptions.swift */; };
@@ -131,6 +133,7 @@
 		55F5F8A2E3021002B52B86CF /* WeeklyPlanView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WeeklyPlanView.swift; sourceTree = "<group>"; };
 		577BF8D8652EAC3ECBA5D141 /* PlanTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlanTheme.swift; sourceTree = "<group>"; };
 		6FAC568E683D2E73FFD9E317 /* GaitaCoach.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GaitaCoach.swift; sourceTree = "<group>"; };
+		711C01E3360DDE01569A787C /* RemoteConfigManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RemoteConfigManager.swift; sourceTree = "<group>"; };
 		7185E64123B704C74CA71039 /* AudioSessionManager.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AudioSessionManager.swift; sourceTree = "<group>"; };
 		7D4A11AB9FD841178A30F1FD /* AnimatedBackground.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AnimatedBackground.swift; sourceTree = "<group>"; };
 		812A41E57977C264B2688ED7 /* AVSpeechBackend.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AVSpeechBackend.swift; sourceTree = "<group>"; };
@@ -150,37 +153,12 @@
 		A200000D /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		A200000E /* AnalyzeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyzeView.swift; sourceTree = "<group>"; };
 		A200000F /* ScanView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScanView.swift; sourceTree = "<group>"; };
-		A2000F10 /* ArchivoDisplay.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoDisplay.ttf"; sourceTree = "<group>"; };
-		A2000F11 /* ArchivoHead.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoHead.ttf"; sourceTree = "<group>"; };
-		A2000F12 /* ArchivoHeadBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoHeadBold.ttf"; sourceTree = "<group>"; };
-		A2000F13 /* ArchivoMeta.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ArchivoMeta.ttf"; sourceTree = "<group>"; };
-		A2000F14 /* Switzer-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Regular.ttf"; sourceTree = "<group>"; };
-		A2000F15 /* Switzer-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Medium.ttf"; sourceTree = "<group>"; };
-		A2000F16 /* Switzer-Semibold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Semibold.ttf"; sourceTree = "<group>"; };
-		A2000E01 /* PastRunsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastRunsSection.swift; sourceTree = "<group>"; };
-		A2000E02 /* FormGaitCrossReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormGaitCrossReference.swift; sourceTree = "<group>"; };
-		A2000E03 /* DrillsLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillsLibrary.swift; sourceTree = "<group>"; };
-		A2000E05 /* Subscriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscriptions.swift; sourceTree = "<group>"; };
-		A2000E06 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
-		A2000FA1 /* LegalDocs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocs.swift; sourceTree = "<group>"; };
-		A2000FD1 /* FormReferenceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormReferenceModel.swift; sourceTree = "<group>"; };
-		A2000FD2 /* GaitCycleChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaitCycleChart.swift; sourceTree = "<group>"; };
-		A2000FB1 /* LewisVoiceBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/LewisVoiceBackend.swift; sourceTree = "<group>"; };
-		A2000FC3 /* CoachVoiceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/CoachVoiceEngine.swift; sourceTree = "<group>"; };
-		A2000FC4 /* CoachVoiceInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/CoachVoiceInput.swift; sourceTree = "<group>"; };
-		A2000FB2 /* LewisVoice */ = {isa = PBXFileReference; lastKnownFileType = folder; path = LewisVoice; sourceTree = "<group>"; };
-		A2000FC2 /* bm_lewis.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = bm_lewis.bin; sourceTree = "<group>"; };
-		A2000FA2 /* PRIVACY_POLICY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = PRIVACY_POLICY.md; path = ../legal/PRIVACY_POLICY.md; sourceTree = "<group>"; };
-		A2000FA3 /* TERMS_AND_CONDITIONS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = TERMS_AND_CONDITIONS.md; path = ../legal/TERMS_AND_CONDITIONS.md; sourceTree = "<group>"; };
-		A2000FA4 /* LICENSES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = LICENSES.md; path = ../legal/LICENSES.md; sourceTree = "<group>"; };
-		A2000E04 /* CoachChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachChat.swift; sourceTree = "<group>"; };
-		A2000E99 /* MetricGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricGuide.swift; sourceTree = "<group>"; };
 		A2000010 /* RunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunView.swift; sourceTree = "<group>"; };
 		A2000011 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		A2000013 /* HeartRateZonesManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZonesManager.swift; sourceTree = "<group>"; };
 		A2000016 /* ActiveRunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveRunView.swift; sourceTree = "<group>"; };
 		A2000017 /* PoseDetection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PoseDetection.swift; sourceTree = "<group>"; };
-		A2000018 /* Models/pose_landmarker_heavy.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = Models/pose_landmarker_heavy.task; sourceTree = "<group>"; };
+		A2000018 /* pose_landmarker_heavy.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = Models/pose_landmarker_heavy.task; sourceTree = "<group>"; };
 		A2000019 /* RunningFormMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningFormMetrics.swift; sourceTree = "<group>"; };
 		A2000020 /* VDOTCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VDOTCalculator.swift; sourceTree = "<group>"; };
 		A2000021 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -202,7 +180,32 @@
 		A2000037 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
 		A2000038 /* ConsentManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentManager.swift; sourceTree = "<group>"; };
 		A2000039 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A2000E01 /* PastRunsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PastRunsSection.swift; sourceTree = "<group>"; };
+		A2000E02 /* FormGaitCrossReference.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormGaitCrossReference.swift; sourceTree = "<group>"; };
+		A2000E03 /* DrillsLibrary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DrillsLibrary.swift; sourceTree = "<group>"; };
+		A2000E04 /* CoachChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachChat.swift; sourceTree = "<group>"; };
+		A2000E05 /* Subscriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Subscriptions.swift; sourceTree = "<group>"; };
+		A2000E06 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		A2000E99 /* MetricGuide.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricGuide.swift; sourceTree = "<group>"; };
 		A2000F01 /* ShareCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareCardView.swift; sourceTree = "<group>"; };
+		A2000F10 /* ArchivoDisplay.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ArchivoDisplay.ttf; sourceTree = "<group>"; };
+		A2000F11 /* ArchivoHead.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ArchivoHead.ttf; sourceTree = "<group>"; };
+		A2000F12 /* ArchivoHeadBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ArchivoHeadBold.ttf; sourceTree = "<group>"; };
+		A2000F13 /* ArchivoMeta.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ArchivoMeta.ttf; sourceTree = "<group>"; };
+		A2000F14 /* Switzer-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Regular.ttf"; sourceTree = "<group>"; };
+		A2000F15 /* Switzer-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Medium.ttf"; sourceTree = "<group>"; };
+		A2000F16 /* Switzer-Semibold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Semibold.ttf"; sourceTree = "<group>"; };
+		A2000FA1 /* LegalDocs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocs.swift; sourceTree = "<group>"; };
+		A2000FA2 /* PRIVACY_POLICY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = PRIVACY_POLICY.md; path = ../legal/PRIVACY_POLICY.md; sourceTree = "<group>"; };
+		A2000FA3 /* TERMS_AND_CONDITIONS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = TERMS_AND_CONDITIONS.md; path = ../legal/TERMS_AND_CONDITIONS.md; sourceTree = "<group>"; };
+		A2000FA4 /* LICENSES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = LICENSES.md; path = ../legal/LICENSES.md; sourceTree = "<group>"; };
+		A2000FB1 /* LewisVoiceBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/LewisVoiceBackend.swift; sourceTree = "<group>"; };
+		A2000FB2 /* LewisVoice */ = {isa = PBXFileReference; lastKnownFileType = folder; path = LewisVoice; sourceTree = "<group>"; };
+		A2000FC2 /* bm_lewis.bin */ = {isa = PBXFileReference; lastKnownFileType = archive.macbinary; path = bm_lewis.bin; sourceTree = "<group>"; };
+		A2000FC3 /* CoachVoiceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/CoachVoiceEngine.swift; sourceTree = "<group>"; };
+		A2000FC4 /* CoachVoiceInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/CoachVoiceInput.swift; sourceTree = "<group>"; };
+		A2000FD1 /* FormReferenceModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormReferenceModel.swift; sourceTree = "<group>"; };
+		A2000FD2 /* GaitCycleChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GaitCycleChart.swift; sourceTree = "<group>"; };
 		A3000001 /* RunRightApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RunRightApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A49AA3D5154CC106D7386F32 /* PlanMandate.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlanMandate.swift; sourceTree = "<group>"; };
 		A5139D61C5458798872331CD /* SpeechAudioCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SpeechAudioCache.swift; sourceTree = "<group>"; };
@@ -212,6 +215,7 @@
 		AF000008 /* ScrollFade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrollFade.swift; sourceTree = "<group>"; };
 		AFF2D69CC314A8654793594B /* RunCoachEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RunCoachEngine.swift; sourceTree = "<group>"; };
 		B0AFEA5813896AD70B00472A /* OnboardingOptions.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OnboardingOptions.swift; sourceTree = "<group>"; };
+		B38F221C8A5BD365ED4D6541 /* CrashReporter.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CrashReporter.swift; sourceTree = "<group>"; };
 		B468BB2E3BD4B00CF04258A4 /* WeekdayBarSelector.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WeekdayBarSelector.swift; sourceTree = "<group>"; };
 		B6FA9B3D9CF57578E6940E7E /* GoalTile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GoalTile.swift; sourceTree = "<group>"; };
 		C588F3ED701F070B9F199E44 /* ExperienceTierPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExperienceTierPicker.swift; sourceTree = "<group>"; };
@@ -376,7 +380,7 @@
 				A2000009 /* ActivityTracker.swift */,
 				A200000A /* RouteMapView.swift */,
 				A2000013 /* HeartRateZonesManager.swift */,
-				A2000018 /* Models/pose_landmarker_heavy.task */,
+				A2000018 /* pose_landmarker_heavy.task */,
 				A200000B /* Assets.xcassets */,
 				A200000C /* Info.plist */,
 				A2000032 /* GoogleService-Info.plist */,
@@ -385,6 +389,8 @@
 				0FD6B3695583116900B95F2F /* RunningPowerModel.swift */,
 				0223ECC626CE16608535CFD1 /* Coach */,
 				3FE7A97317D0F286DBC83E88 /* RunSession.swift */,
+				B38F221C8A5BD365ED4D6541 /* CrashReporter.swift */,
+				711C01E3360DDE01569A787C /* RemoteConfigManager.swift */,
 			);
 			path = RunRightApp;
 			sourceTree = "<group>";
@@ -418,6 +424,7 @@
 				A4000001 /* Frameworks */,
 				A4000003 /* Resources */,
 				B564C0779A60F620D1B5C050 /* [CP] Embed Pods Frameworks */,
+				FE3B136AB80E6B24063AB5D3 /* Upload Crashlytics dSYMs */,
 			);
 			buildRules = (
 			);
@@ -472,7 +479,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A100000B /* Assets.xcassets in Resources */,
-				A1000018 /* Models/pose_landmarker_heavy.task in Resources */,
+				A1000018 /* pose_landmarker_heavy.task in Resources */,
 				A1000032 /* GoogleService-Info.plist in Resources */,
 				A1000FA2 /* PRIVACY_POLICY.md in Resources */,
 				A1000FB2 /* LewisVoice in Resources */,
@@ -523,18 +530,36 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-RunRightApp/Pods-RunRightApp-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-RunRightApp/Pods-RunRightApp-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-RunRightApp/Pods-RunRightApp-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
+		};
+		FE3B136AB80E6B24063AB5D3 /* Upload Crashlytics dSYMs */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${TARGET_NAME}",
+				"$(SRCROOT)/$(BUILT_PRODUCTS_DIR)/$(INFOPLIST_PATH)",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+			);
+			name = "Upload Crashlytics dSYMs";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/FirebaseCrashlytics/run\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -626,6 +651,8 @@
 				38E9D582CBE85D7118E065DE /* VoiceAssistantMessageProvider.swift in Sources */,
 				37FEF9F3B52FD265696FB248 /* VoiceAssistantSpeaker.swift in Sources */,
 				EA5BF7CF99F6146689196A6A /* RunSession.swift in Sources */,
+				17F07C3E40572436EADB11ED /* CrashReporter.swift in Sources */,
+				AB18C821492217C8EE59C9A6 /* RemoteConfigManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -841,14 +868,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/costachung/neumorphic.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.0.5;
-			};
-		};
 		068086DE2FEE093100B1047C /* XCRemoteSwiftPackageReference "MuscleMap" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/melihcolpan/MuscleMap.git";
@@ -865,23 +884,31 @@
 				minimumVersion = 0.15.4;
 			};
 		};
+		C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/costachung/neumorphic.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.5;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		C0D0E0022FEEAA0000B1047C /* Neumorphic */ = {
+		068086DF2FEE093100B1047C /* MuscleMap */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */;
-			productName = Neumorphic;
+			package = 068086DE2FEE093100B1047C /* XCRemoteSwiftPackageReference "MuscleMap" */;
+			productName = MuscleMap;
 		};
 		A3000FC1 /* FluidAudio */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A3000FC2 /* XCRemoteSwiftPackageReference "FluidAudio" */;
 			productName = FluidAudio;
 		};
-		068086DF2FEE093100B1047C /* MuscleMap */ = {
+		C0D0E0022FEEAA0000B1047C /* Neumorphic */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 068086DE2FEE093100B1047C /* XCRemoteSwiftPackageReference "MuscleMap" */;
-			productName = MuscleMap;
+			package = C0D0E0032FEEAA0000B1047C /* XCRemoteSwiftPackageReference "neumorphic" */;
+			productName = Neumorphic;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

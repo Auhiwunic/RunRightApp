@@ -193,6 +193,7 @@ struct AnalyzeView: View {
     @State private var showFullMetrics = false
     @State private var metricGuide: MetricGuideEntry?
     @State private var cachedFocusInsights: [CombinedInsight] = []
+    @State private var scanUnavailable = false   // set when the scan backend kill-switch is off
     @ObservedObject private var subscriptions = SubscriptionManager.shared
     @AppStorage("userBodyHeightMeters") private var userBodyHeightMeters: Double = 1.7  // Default 1.7m (average height)
     @AppStorage("scan.selectedShoe") private var shoeForTrend = ""
@@ -253,6 +254,11 @@ struct AnalyzeView: View {
         }
         .sheet(isPresented: $showFullMetrics) {
             fullMetricsSheet
+        }
+        .alert("Scan temporarily unavailable", isPresented: $scanUnavailable) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Shoe scanning is briefly offline for maintenance. Your form analysis still works — please try again soon.")
         }
         .sheet(item: $metricGuide) { entry in
             MetricGuideSheet(entry: entry)
@@ -1164,7 +1170,9 @@ struct AnalyzeView: View {
     /// Tap on a heat-grid page body opens the scanner (paywalled). Lives on the
     /// page content, not the TabView, so the header's shoe Menu keeps its tap.
     private func analyzeOpenScan() {
-        if subscriptions.isPremium { showScan = true } else { showPaywall = true }
+        if !RemoteConfigManager.shared.scanEnabled { scanUnavailable = true }
+        else if subscriptions.isPremium { showScan = true }
+        else { showPaywall = true }
     }
 
     /// Page 1 — the wear heatmaps. Swipe left for gait metrics + wear trend;
