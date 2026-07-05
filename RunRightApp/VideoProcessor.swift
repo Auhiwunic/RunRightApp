@@ -3139,7 +3139,10 @@ class VideoProcessor: ObservableObject {
             let tStrike = crossTime(s)
             let tToe = (toe + 1 <= hi) ? crossTime(toe + 1) : times[toe]
             let ms = (tToe - tStrike) * 1000
-            return (ms >= 120 && ms <= 350) ? ms : nil
+            // Plausible running stance: ~120 ms (elite/fast) up to ~400 ms (slow,
+            // heavy recreational). Above that is walking, not running, and below is
+            // a detection glitch — either way reject rather than show a wrong value.
+            return (ms >= 120 && ms <= 400) ? ms : nil
         }
         func groundContactTimes(from cycles: [CycleIndex], footY: [Double]) -> [Double] {
             cycles.compactMap { verticalContactMs($0, footY: footY) }

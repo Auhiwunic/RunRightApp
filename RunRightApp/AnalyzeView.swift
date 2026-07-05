@@ -790,8 +790,11 @@ struct AnalyzeView: View {
 
             if let ms = form.contactMs, ms.isFinite {
                 ComparisonTrack(
+                    // Lower contact is springier/better down to elite ~180 ms, so the
+                    // good zone has no low penalty (matches the ANGLES GCT score, which
+                    // greens anything <=300). Only long contact reads slow/"outside".
                     label: "GROUND CONTACT", value: ms, unit: "ms",
-                    axisLo: 150, axisHi: 340, zoneLo: 200, zoneHi: 300,
+                    axisLo: 150, axisHi: 340, zoneLo: 150, zoneHi: 300,
                     readout: "Time your foot is on the ground each step. Trained distance runners sit near 200 to 250 ms. Quicker, springier steps cut it.")
             }
             if let deg = form.overstrideDeg, deg.isFinite {
@@ -1469,7 +1472,6 @@ struct AnalyzeView: View {
         let overall = Int((Double(efficiency + power + impact) / 3.0).rounded())
         let gctValues = [metrics.groundContactLeft, metrics.groundContactRight].filter { $0 > 0 }
         let avgGCT = gctValues.isEmpty ? nil : gctValues.reduce(0, +) / Double(gctValues.count)
-        let powerRead = powerResult(series: series, metrics: metrics)
 
         // Per-joint "your run" curve: prefer the strict gait-cycle average, but
         // fall back to folding the per-frame flexion series over the reliable
@@ -1501,8 +1503,8 @@ struct AnalyzeView: View {
             scorecardMetric(label: "SHIN", value: degreeText(abs(series.shankAngleAtContactSignedDeg)), optimal: "<12°", score: breakdown.shin.score),
             scorecardMetric(label: "KNEE", value: degreeText(series.kneeAngleMean), optimal: "128-160", score: kneeScore(series.kneeAngleMean)),
             scorecardMetric(label: "ELBOW", value: degreeText(series.elbowAngleMean), optimal: "55-105°", score: breakdown.elbow.score),
-            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "200-300", score: avgGCT.map(groundContactScore) ?? 0),
-            scorecardMetric(label: "STRIKE", value: metrics.footStrikePattern.uppercased().prefix(4).description, optimal: "--", score: 80)
+            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "<300", score: avgGCT.map(groundContactScore) ?? 0),
+            scorecardMetric(label: "STRIKE", value: metrics.footStrikePattern.uppercased().prefix(4).description, optimal: "--", score: 0, neutral: true)
         ]
         // HIP dropped: a side view has no vertical/pelvis reference, so hip angle
         // = thigh-relative-to-trunk and bakes in forward lean (unmeasurable
@@ -1553,8 +1555,9 @@ struct AnalyzeView: View {
             .jpegData(compressionQuality: 0.82)
     }
 
-    private func scorecardMetric(label: String, value: String, optimal: String, score: Int) -> StoredScorecardMetric {
-        StoredScorecardMetric(label: label, value: value, optimal: optimal, status: scoreStatus(score).rawValue)
+    private func scorecardMetric(label: String, value: String, optimal: String, score: Int, neutral: Bool = false) -> StoredScorecardMetric {
+        StoredScorecardMetric(label: label, value: value, optimal: optimal,
+                              status: neutral ? FormStatus.neutral.rawValue : scoreStatus(score).rawValue)
     }
 
     private func scoreStatus(_ score: Int) -> FormStatus {
@@ -1577,13 +1580,6 @@ struct AnalyzeView: View {
         return max(40, Int((92 - distance * 1.6).rounded()))
     }
 
-    private func verticalOscillationScore(_ value: Double) -> Int {
-        guard value > 0 else { return 0 }
-        if value >= 6 && value <= 9 { return 90 }
-        let distance = value < 6 ? 6 - value : value - 9
-        return max(40, Int((90 - distance * 8).rounded()))
-    }
-
     private func groundContactScore(_ milliseconds: Double) -> Int {
         guard milliseconds > 0 else { return 0 }
         // Easy-pace distance running sits ~250-300 ms; only longer is a real drag.
@@ -1601,12 +1597,6 @@ struct AnalyzeView: View {
         return max(45, Int((90 - distance * 1.4).rounded()))
     }
 
-    private func hipScore(_ angle: Double) -> Int {
-        guard angle > 0 else { return 0 }
-        if angle >= 135 && angle <= 172 { return 90 }
-        let distance = angle < 135 ? 135 - angle : angle - 172
-        return max(45, Int((90 - distance * 1.4).rounded()))
-    }
     
     // MARK: - Instructions Popup
     // MARK: - Settings Popup
@@ -2281,7 +2271,7 @@ private struct GroundContactCard: View {
         // and inflates that difference (the reason this card read ~326 vs the true
         // ~228). contactMs is plausibility-gated already; skip NaN/out-of-range.
         for c in gait.leftCycles where c.contactMs.isFinite {
-            if (120...350).contains(c.contactMs) { out.append(ContactStep(time: c.startTime, ms: c.contactMs, isLeft: true)) }
+            if (120...400).contains(c.contactMs) { out.append(ContactStep(time: c.startTime, ms: c.contactMs, isLeft: true)) }
         }
         for c in gait.rightCycles where c.contactMs.isFinite {
             if (120...350).contains(c.contactMs) { out.append(ContactStep(time: c.startTime, ms: c.contactMs, isLeft: false)) }

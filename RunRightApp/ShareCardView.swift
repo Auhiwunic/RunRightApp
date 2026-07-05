@@ -33,12 +33,13 @@ private extension View {
 
 // MARK: - Status / color coding
 
-enum FormStatus { case good, warn, bad
+enum FormStatus { case good, warn, bad, neutral
     var color: Color {
         switch self {
         case .good: return Color(red: 0.18, green: 0.80, blue: 0.44)   // green
         case .warn: return Color(red: 1.00, green: 0.62, blue: 0.04)   // orange
         case .bad:  return Color(red: 1.00, green: 0.23, blue: 0.19)   // red
+        case .neutral: return Color(red: 0.62, green: 0.64, blue: 0.68) // muted — an observation, not a grade
         }
     }
 }
@@ -104,6 +105,7 @@ extension FormStatus: RawRepresentable, Codable {
         case "good": self = .good
         case "warn": self = .warn
         case "bad": self = .bad
+        case "neutral": self = .neutral
         default: return nil
         }
     }
@@ -113,6 +115,7 @@ extension FormStatus: RawRepresentable, Codable {
         case .good: return "good"
         case .warn: return "warn"
         case .bad: return "bad"
+        case .neutral: return "neutral"
         }
     }
 }
