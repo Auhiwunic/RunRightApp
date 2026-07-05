@@ -22,14 +22,12 @@ struct OnboardingFlowView: View {
 
     private let totalQuestionSteps = 8
 
-    /// Current step's accent — cycles through the five training-zone colors.
-    private var currentAccent: Color { zoneAccent(for: currentStep) }
+    /// Every step's accent is the signature blue (no rainbow zone cycle), so the
+    /// whole intro matches the rest of the app.
+    private var currentAccent: Color { PlanTheme.accent }
 
-    /// The training-zone color for a given step (Z1→Z5, cycling).
-    private func zoneAccent(for step: Int) -> Color {
-        let zones = PlanTheme.zoneColors
-        return zones[max(0, step - 1) % zones.count]
-    }
+    /// Kept for the progress dots — also the signature blue now.
+    private func zoneAccent(for step: Int) -> Color { PlanTheme.accent }
 
     var body: some View {
         ZStack {

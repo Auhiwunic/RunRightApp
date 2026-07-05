@@ -186,7 +186,7 @@ struct RunMapThumbnail: View {
                     path.lineWidth = 3.5
                     path.lineJoinStyle = .round
                     path.lineCapStyle = .round
-                    UIColor(red: 1.0, green: 0x8C / 255.0, blue: 0.0, alpha: 1.0).setStroke()  // accent orange
+                    UIColor(AppTheme.accentColor).setStroke()  // signature blue route line
                     path.stroke()
                 }
                 cont.resume(returning: img)

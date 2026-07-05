@@ -10,19 +10,19 @@ enum PlanTheme {
     static let card = Color(red: 0.11, green: 0.11, blue: 0.12)
     static let cardSelected = Color(red: 0.14, green: 0.14, blue: 0.15)
     static let barUnselected = Color(red: 0.17, green: 0.17, blue: 0.18)
-    static let accent = Color(red: 213 / 255, green: 251 / 255, blue: 111 / 255)
+    static let accent = AppTheme.accentColor          // signature blue (was lime)
     static let textPrimary = Color.white
-    static let textSecondary = Color.white.opacity(0.55)
+    static let textSecondary = Color.white.opacity(0.72)   // reads white, kept slightly softer for hierarchy
     static let cardRadius: CGFloat = 20
 
-    /// The five training-zone colors (Z1 Recovery → Z5 Maximum). Mirrors the
-    /// HeartRateZone palette so the onboarding intro reflects the full range.
+    /// Intro branding spectrum — a blue family (light → deep) so every accent in
+    /// onboarding stays the signature blue rather than a rainbow of zone colors.
     static let zoneColors: [Color] = [
-        Color(hex: "#00CED1"),  // Z1 Recovery
-        Color(hex: "#00FF7F"),  // Z2 Aerobic
-        Color(hex: "#FFD700"),  // Z3 Tempo
-        Color(hex: "#FF8C00"),  // Z4 Threshold
-        Color(hex: "#FF0000")   // Z5 Maximum
+        Color(hex: "#8CF2F4"),
+        Color(hex: "#33DEE1"),
+        Color(hex: "#00CED1"),  // signature blue
+        Color(hex: "#00A5A8"),
+        Color(hex: "#00767A")
     ]
 
     /// Left→right spectrum across all five zones — used to brand the intro screen.

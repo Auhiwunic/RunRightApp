@@ -701,7 +701,7 @@ struct StravaMapView: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polyline = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = UIColor(Color(hex: "#FF8C00"))
+                renderer.strokeColor = UIColor(AppTheme.accentColor)   // signature blue route line
                 renderer.lineWidth = 5
                 renderer.lineCap = .round
                 return renderer
@@ -735,7 +735,7 @@ struct RoutePreviewMap: UIViewRepresentable {
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polyline = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: polyline)
-                renderer.strokeColor = UIColor(Color(hex: "#FF8C00"))
+                renderer.strokeColor = UIColor(AppTheme.accentColor)   // signature blue route line
                 renderer.lineWidth = 4
                 return renderer
             }
