@@ -15,6 +15,7 @@ struct PaywallView: View {
     @State private var selectedID = PremiumProduct.annual
     @State private var purchasing = false
     @State private var legalDoc: LegalDoc?
+    @State private var pendingNotice = false
 
     private let green = AppTheme.accentColor
 
@@ -129,6 +130,11 @@ struct PaywallView: View {
         .sheet(item: $legalDoc) { doc in
             LegalDocView(doc: doc)
         }
+        .alert("Approval pending", isPresented: $pendingNotice) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Your purchase needs approval (Ask to Buy or your bank). Premium unlocks automatically once it's approved — no need to buy again.")
+        }
         .task { await subs.loadProducts() }
     }
 
@@ -198,9 +204,18 @@ struct PaywallView: View {
         guard let product = subs.product(for: selectedID) else { return }
         purchasing = true
         Task {
-            let ok = await subs.purchase(product)
+            let outcome = await subs.purchase(product)
             purchasing = false
-            if ok { dismiss() }
+            switch outcome {
+            case .success:
+                dismiss()
+            case .pending:
+                // Don't leave an Ask-to-Buy / SCA user staring at a reverted
+                // button assuming it failed — tell them approval is pending.
+                pendingNotice = true
+            case .cancelled, .failed:
+                break
+            }
         }
     }
 }

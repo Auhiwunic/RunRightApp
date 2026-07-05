@@ -3,6 +3,7 @@ import FirebaseAuth
 
 struct RootView: View {
     @StateObject private var auth = FirebaseAuthManager.shared
+    @StateObject private var remoteConfig = RemoteConfigManager.shared
     @State private var showAuthSheet = false
     @State private var showOnboarding = false
     @State private var showConsentGate = false
@@ -16,7 +17,14 @@ struct RootView: View {
             // a transparent/black flicker during auth state transitions.
             AppTheme.bgColor.ignoresSafeArea()
 
-            if auth.isAuthenticated {
+            if remoteConfig.needsForcedUpdate {
+                // Backend kill-switch: this build is below the server-mandated
+                // minimum (e.g. a broken endpoint or a required migration shipped).
+                // Block the app until the user updates so old clients can't keep
+                // hitting the broken backend.
+                ForceUpdateView(message: remoteConfig.maintenanceMessage)
+                    .transition(.opacity)
+            } else if auth.isAuthenticated {
                 MainTabView()
                     .transition(.opacity)
             } else {
@@ -38,6 +46,20 @@ struct RootView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 28)
                             .padding(.top, 4)
+
+                        // Anonymous sign-in needs the network; on a fresh install
+                        // with no connection it fails and there is nothing to fall
+                        // back to. Without this, the user is pinned on the spinner
+                        // forever. Let them retry once they're back online.
+                        Button("Try Again") {
+                            Task { await auth.signInAnonymouslyIfNeeded() }
+                        }
+                        .font(AppTheme.bodySemibold(15))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 28)
+                        .padding(.vertical, 12)
+                        .background(Capsule().fill(AppTheme.accentColor))
+                        .padding(.top, 8)
                     } else {
                         Text("Getting ready…")
                             .font(AppTheme.bodyMedium(13))
@@ -138,7 +160,8 @@ private struct ConsentGateView: View {
         ConsentManager.age(on: dateOfBirth) >= region.minimumAge
     }
     private var canContinue: Bool {
-        isOldEnough && healthData && backgroundLocation && runningVideo && !isSaving
+        // Only the age gate is mandatory; the three feature consents are optional.
+        isOldEnough && !isSaving
     }
 
     var body: some View {
@@ -276,9 +299,9 @@ private struct ConsentGateView: View {
 
         let now = Date()
         let record = ConsentRecord(
-            healthDataConsentAt: now,
-            backgroundLocationConsentAt: now,
-            runningVideoConsentAt: now,
+            healthDataConsentAt: healthData ? now : nil,
+            backgroundLocationConsentAt: backgroundLocation ? now : nil,
+            runningVideoConsentAt: runningVideo ? now : nil,
             ageGateConfirmedAt: now,
             dateOfBirth: dateOfBirth,
             region: region
@@ -552,6 +575,58 @@ struct AuthSheet: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Check your inbox for the password reset link.")
+        }
+    }
+}
+
+// MARK: - Force Update (Remote Config kill-switch: min_supported_build)
+
+/// Full-screen block shown when this build is below the server-mandated minimum.
+/// This is what makes the `min_supported_build` Remote Config value actually do
+/// something — without it the value was fetched but never consumed.
+private struct ForceUpdateView: View {
+    /// Optional server-provided text (Remote Config `maintenance_message`).
+    let message: String
+
+    @Environment(\.openURL) private var openURL
+
+    // Opens the App Store. TODO: replace with the direct product link
+    // ("itms-apps://apps.apple.com/app/id<APP_ID>") once Gaita is published.
+    private static let appStoreURL = URL(string: "itms-apps://apps.apple.com/search?term=Gaita")!
+
+    var body: some View {
+        ZStack {
+            AppTheme.bgColor.ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 56))
+                    .foregroundColor(AppTheme.accentColor)
+
+                Text("Update Gaita")
+                    .font(AppTheme.display(30))
+                    .foregroundColor(AppTheme.primaryText)
+
+                Text(message.isEmpty
+                     ? "A newer version of Gaita is required to keep going. Please update from the App Store to continue."
+                     : message)
+                    .font(AppTheme.body(15))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.7))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 32)
+
+                Button("Update Now") {
+                    openURL(Self.appStoreURL)
+                }
+                .font(AppTheme.bodySemibold(17))
+                .foregroundColor(.black)
+                .padding(.horizontal, 40)
+                .padding(.vertical, 14)
+                .background(Capsule().fill(AppTheme.accentColor))
+                .padding(.top, 8)
+            }
+            .padding()
         }
     }
 }

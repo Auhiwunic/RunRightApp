@@ -40,6 +40,7 @@ final class RunSession: ObservableObject {
     private var timer: Timer?
     private var lastTick: Date?
     private var feed: AnyCancellable?
+    private var ticksSinceCoachFeed = 0
 
     private init() {}
 
@@ -92,6 +93,10 @@ final class RunSession: ObservableObject {
     func dismissSession() {
         stopTimer()
         feed = nil
+        // End the coach cleanly: this deactivates the audio session so the user's
+        // music/podcast un-ducks now that the run is truly over (the closing cue
+        // has already played by the time the finish screen is dismissed).
+        coach.stop()
         tracker.reset()
         isActive = false
         isPresented = false
@@ -139,6 +144,19 @@ final class RunSession: ObservableObject {
             elapsed += now.timeIntervalSince(last)
         }
         lastTick = now
+
+        // Feed the coach on a timer too, not only on GPS updates. When GPS never
+        // fixes (indoors / no sky) `liveSummary` never emits again, so the "GPS is
+        // weak" cue — which needs a re-evaluation ~30s after GPS goes quiet — could
+        // never fire. ~every 2s is plenty; coach.update no-ops once the run ends.
+        if isActive, !tracker.isPaused {
+            ticksSinceCoachFeed += 1
+            if ticksSinceCoachFeed >= 4 {
+                ticksSinceCoachFeed = 0
+                feedCoach(distance: tracker.liveSummary?.distance ?? 0,
+                          speed: tracker.liveSummary?.averageSpeed)
+            }
+        }
     }
 
     private func stopTimer() {

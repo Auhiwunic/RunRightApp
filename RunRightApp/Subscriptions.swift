@@ -74,21 +74,40 @@ final class SubscriptionManager: ObservableObject {
         recompute()
     }
 
-    /// Returns true if the purchase completed.
+    /// Outcome of a purchase attempt, so the paywall can distinguish a completed
+    /// buy from a pending (Ask-to-Buy / SCA) approval, a cancel, or a failure.
+    enum PurchaseOutcome {
+        case success
+        case pending
+        case cancelled
+        case failed
+    }
+
     @discardableResult
-    func purchase(_ product: Product) async -> Bool {
+    func purchase(_ product: Product) async -> PurchaseOutcome {
         do {
             let result = try await product.purchase()
-            if case .success(let verification) = result,
-               case .verified(let t) = verification {
-                await t.finish()
-                await updateEntitlements()
-                return true
+            switch result {
+            case .success(let verification):
+                if case .verified(let t) = verification {
+                    await t.finish()
+                    await updateEntitlements()
+                    return .success
+                }
+                return .failed
+            case .pending:
+                // Ask-to-Buy (Family Sharing) or SCA: the buy isn't done yet but
+                // isn't a failure. The Transaction.updates listener applies it once
+                // approved; the caller just needs to explain the wait.
+                return .pending
+            case .userCancelled:
+                return .cancelled
+            @unknown default:
+                return .failed
             }
         } catch {
-            return false
+            return .failed
         }
-        return false
     }
 
     func restore() async {

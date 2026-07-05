@@ -1,22 +1,26 @@
 import Foundation
 
 struct ConsentRecord: Codable, Equatable {
-    let healthDataConsentAt: Date
-    let backgroundLocationConsentAt: Date
-    let runningVideoConsentAt: Date
+    // Optional: nil means the user was offered this feature and declined it.
+    // The age gate (below) is mandatory, so those fields stay non-optional.
+    let healthDataConsentAt: Date?
+    let backgroundLocationConsentAt: Date?
+    let runningVideoConsentAt: Date?
     let ageGateConfirmedAt: Date
     let dateOfBirth: Date
     let region: AgeGateRegion
 
     var firestorePayload: [String: Any] {
-        [
-            "healthDataConsentAt": healthDataConsentAt,
-            "backgroundLocationConsentAt": backgroundLocationConsentAt,
-            "runningVideoConsentAt": runningVideoConsentAt,
+        var payload: [String: Any] = [
             "ageGateConfirmedAt": ageGateConfirmedAt,
             "dateOfBirth": dateOfBirth,
             "region": region.rawValue
         ]
+        // Only record grants the user actually gave; declined features stay absent.
+        if let healthDataConsentAt { payload["healthDataConsentAt"] = healthDataConsentAt }
+        if let backgroundLocationConsentAt { payload["backgroundLocationConsentAt"] = backgroundLocationConsentAt }
+        if let runningVideoConsentAt { payload["runningVideoConsentAt"] = runningVideoConsentAt }
+        return payload
     }
 }
 
@@ -54,7 +58,18 @@ final class ConsentManager {
     }
 
     var hasHealthDataConsent: Bool {
-        currentRecord?.healthDataConsentAt != nil
+        guard let record = currentRecord else { return false }
+        return record.healthDataConsentAt != nil
+    }
+
+    var hasBackgroundLocationConsent: Bool {
+        guard let record = currentRecord else { return false }
+        return record.backgroundLocationConsentAt != nil
+    }
+
+    var hasRunningVideoConsent: Bool {
+        guard let record = currentRecord else { return false }
+        return record.runningVideoConsentAt != nil
     }
 
     func save(_ record: ConsentRecord) {

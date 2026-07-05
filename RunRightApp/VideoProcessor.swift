@@ -1720,6 +1720,13 @@ class VideoProcessor: ObservableObject {
         // Process frames
         while reader.status == .reading {
             if !writerInput.isReadyForMoreMediaData {
+                // If the writer fails mid-stream (disk full, malformed buffer),
+                // `isReadyForMoreMediaData` latches false while the reader stays
+                // `.reading` — without this check the loop would sleep-spin
+                // forever and the analysis would hang at a frozen progress bar.
+                if writer.status == .failed {
+                    throw writer.error ?? ProcessingError.writeFailed
+                }
                 try await Task.sleep(nanoseconds: 2_000_000)
                 continue
             }

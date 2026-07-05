@@ -20,7 +20,9 @@ final class GaitaCoach: ObservableObject {
     @Published var isEnabled: Bool {
         didSet {
             UserDefaults.standard.set(isEnabled, forKey: Self.enabledKey)
-            if !isEnabled { speaker.stop() }
+            // shutdown (not just stop) so the audio session is deactivated and the
+            // user's music/podcast un-ducks the moment they silence the coach.
+            if !isEnabled { speaker.shutdown() }
         }
     }
 
@@ -94,10 +96,13 @@ final class GaitaCoach: ObservableObject {
         isRunning = false
     }
 
-    /// Hard stop (cancel run) — no closing cue.
+    /// End the session (called after the finish/discard screen). Lets any in-flight
+    /// closing cue play out, then deactivates the audio session so the user's music
+    /// un-ducks — without clipping the cue on a fast Save. Skips deactivation if a
+    /// new run has already started.
     func stop() {
         isRunning = false
-        speaker.stop()
+        speaker.finishThenDeactivate(keepActiveIf: { [weak self] in self?.isRunning ?? false })
     }
 
     // MARK: - Engine → speech

@@ -194,6 +194,8 @@ struct AnalyzeView: View {
     @State private var metricGuide: MetricGuideEntry?
     @State private var cachedFocusInsights: [CombinedInsight] = []
     @State private var scanUnavailable = false   // set when the scan backend kill-switch is off
+    @State private var analysisFailed = false    // set when a clip processed but scored nothing (no runner)
+    @State private var analysisFailedReason = ""
     @ObservedObject private var subscriptions = SubscriptionManager.shared
     @AppStorage("userBodyHeightMeters") private var userBodyHeightMeters: Double = 1.7  // Default 1.7m (average height)
     @AppStorage("scan.selectedShoe") private var shoeForTrend = ""
@@ -259,6 +261,11 @@ struct AnalyzeView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Shoe scanning is briefly offline for maintenance. Your form analysis still works — please try again soon.")
+        }
+        .alert("Couldn't read that clip", isPresented: $analysisFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(analysisFailedReason)
         }
         .sheet(item: $metricGuide) { entry in
             MetricGuideSheet(entry: entry)
@@ -355,9 +362,11 @@ struct AnalyzeView: View {
     /// Opens the analysis history, where past runs can be deleted (which reverts
     /// the dashboard's scores to the most recent remaining analysis).
     private var analyzeHistoryButton: some View {
-        Button(action: { showAllHistory = true }) {
+        // Full analysis history is a premium perk. This bento entry point must be
+        // gated exactly like the "SEE ALL" row, or free users bypass the paywall.
+        Button(action: { subscriptions.isPremium ? (showAllHistory = true) : (showPaywall = true) }) {
             HStack(spacing: 5) {
-                Image(systemName: "clock.arrow.circlepath")
+                Image(systemName: subscriptions.isPremium ? "clock.arrow.circlepath" : "lock.fill")
                     .font(AppTheme.meta(11))
                 Text("HISTORY")
                     .font(AppTheme.meta(11))
@@ -1444,7 +1453,19 @@ struct AnalyzeView: View {
     /// writes its raw-data CSV, and opens Full Metrics on this new result.
     @MainActor
     private func finalizeAnalysis(processedURL: URL) async {
-        guard let form = await buildScorecardForm(processedURL: processedURL) else { return }
+        guard let form = await buildScorecardForm(processedURL: processedURL) else {
+            // The clip processed to completion but nothing was scoreable — almost
+            // always no runner in frame. Without feedback here the loading overlay
+            // just vanishes after a long wait and the dashboard silently reverts to
+            // the previous analysis. Tell the user why (using the scan-quality cause
+            // when we have one) and reset, which also clears the stale warning so it
+            // isn't painted onto the previous run's still-visible scorecard.
+            analysisFailedReason = processor.scanQualityWarning
+                ?? "We couldn't find a runner in that clip. Film side-on with your whole body in frame, then try again."
+            resetProcessor()
+            analysisFailed = true
+            return
+        }
         let id = history.add(form: form)          // newest → current everywhere
         persistRawDataCSV(for: id)
         refreshFocusInsights()

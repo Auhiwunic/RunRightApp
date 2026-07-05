@@ -526,8 +526,28 @@ struct ActiveRunView: View {
                 }
             }
             
-            VStack {
+            VStack(spacing: 10) {
                 Spacer()
+
+                // Never fail silently: a save error (offline / Firestore) used to
+                // be swallowed, and a GPS-denied run reached here with an inert
+                // Save button and no explanation. Surface both.
+                if let saveError {
+                    Text(saveError)
+                        .font(AppTheme.body(13))
+                        .foregroundColor(Color(hex: "#FF453A"))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 16)
+                } else if savedSummary == nil {
+                    Text("No GPS distance was recorded, so there's nothing to save. Check that Location is enabled for Gaita and you have a clear view of the sky.")
+                        .font(AppTheme.body(13))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 16)
+                }
+
                 HStack(spacing: 12) {
                     Button(action: { RunSession.shared.dismissSession() }) {
                         Text("Discard")
@@ -572,6 +592,7 @@ struct ActiveRunView: View {
                             .cornerRadius(27)
                             .opacity((!isSaving && savedSummary != nil) ? 1 : 0.7)
                     }
+                    .disabled(isSaving || savedSummary == nil)
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom, 40)
