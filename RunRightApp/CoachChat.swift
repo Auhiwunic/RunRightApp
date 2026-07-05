@@ -445,8 +445,12 @@ struct CoachTabView: View {
                     )
                     .frame(minHeight: 455)
 
-                    // TODAY — top focus from the latest analysis
-                    if !insights.isEmpty {
+                    // TODAY — top focus from the latest analysis, or a hint to
+                    // analyze a run when there's nothing yet (was previously
+                    // unreachable dead code).
+                    if insights.isEmpty {
+                        emptyToday
+                    } else {
                         sectionHeader("TODAY")
                         ForEach(insights) { focusCard($0) }
                     }

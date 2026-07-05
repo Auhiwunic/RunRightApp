@@ -344,7 +344,9 @@ struct OnboardingFlowView: View {
         case 4: experienceLevel != nil
         case 5: !selectedDays.isEmpty
         case 6: weeklyMileage != nil
-        case 8: consents.isComplete
+        // Step 8 consents are optional opt-ins ("your call") — any combination,
+        // including none, is a valid choice, so Finish is always available here.
+        case 8: true
         default: true
         }
     }
@@ -426,9 +428,9 @@ struct OnboardingFlowView: View {
                 age: Int(age),
                 sex: sex,
                 consentRecord: ConsentRecord(
-                    healthDataConsentAt: Date(),
-                    backgroundLocationConsentAt: Date(),
-                    runningVideoConsentAt: Date(),
+                    healthDataConsentAt: consents.healthData ? Date() : nil,
+                    backgroundLocationConsentAt: consents.backgroundLocation ? Date() : nil,
+                    runningVideoConsentAt: consents.runningVideo ? Date() : nil,
                     ageGateConfirmedAt: Date(),
                     dateOfBirth: dateOfBirth,
                     region: ageGateRegion
@@ -443,10 +445,6 @@ private struct ConsentChecklist {
     var healthData = false
     var backgroundLocation = false
     var runningVideo = false
-
-    var isComplete: Bool {
-        healthData && backgroundLocation && runningVideo
-    }
 }
 
 #Preview {

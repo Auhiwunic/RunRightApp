@@ -17,9 +17,9 @@ struct OnboardingProfile {
     var sex: String = "male"   // "male" | "female" | "other"
     // Explicit privacy/legal consent captured during onboarding.
     var consentRecord: ConsentRecord = ConsentRecord(
-        healthDataConsentAt: Date(),
-        backgroundLocationConsentAt: Date(),
-        runningVideoConsentAt: Date(),
+        healthDataConsentAt: nil,
+        backgroundLocationConsentAt: nil,
+        runningVideoConsentAt: nil,
         ageGateConfirmedAt: Date(),
         dateOfBirth: Calendar.current.date(byAdding: .year, value: -18, to: Date()) ?? Date(),
         region: .other

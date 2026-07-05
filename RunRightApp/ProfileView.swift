@@ -281,7 +281,7 @@ struct ProfileView: View {
             case "google.com":
                 do {
                     try await auth.reauthenticateWithGoogle()
-                    try await auth.deleteAccount()
+                    try await auth.deleteAccount(reauthenticated: true)
                     await auth.signInAnonymouslyIfNeeded()
                 } catch {
                     deleteError = error.localizedDescription
@@ -289,7 +289,7 @@ struct ProfileView: View {
             case "apple.com":
                 do {
                     try await auth.reauthenticateWithApple()
-                    try await auth.deleteAccount()
+                    try await auth.deleteAccount(reauthenticated: true)
                     await auth.signInAnonymouslyIfNeeded()
                 } catch {
                     deleteError = error.localizedDescription
@@ -309,7 +309,7 @@ struct ProfileView: View {
         defer { isDeleting = false; reauthPassword = "" }
         do {
             try await auth.reauthenticateWithEmail(password: reauthPassword)
-            try await auth.deleteAccount()
+            try await auth.deleteAccount(reauthenticated: true)
             await auth.signInAnonymouslyIfNeeded()
         } catch {
             deleteError = error.localizedDescription

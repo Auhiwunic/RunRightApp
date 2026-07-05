@@ -236,7 +236,7 @@ final class FirebaseAuthManager: ObservableObject {
         var isEmpty: Bool { collections.values.allSatisfy { $0.isEmpty } }
     }
 
-    private static let guestCollections = ["runs", "scans", "shoes"]
+    private static let guestCollections = ["runs", "scans", "shoes", "plans", "settings"]
 
     private static func fetchGuestData(uid: String) async -> GuestData {
         var out = GuestData()
@@ -254,8 +254,22 @@ final class FirebaseAuthManager: ObservableObject {
         let db = Firestore.firestore()
         for (name, docs) in data.collections {
             for (id, fields) in docs {
-                try? await db.collection("users").document(uid)
-                    .collection(name).document(id).setData(fields, merge: true)
+                let ref = db.collection("users").document(uid)
+                    .collection(name).document(id)
+                // Runs/scans/shoes carry unique IDs and are purely additive, so a
+                // merge is safe. Settings/plans are singletons that the existing
+                // account already owns — only carry the guest's over if the target
+                // has none yet, so we never clobber a real account's profile/plan.
+                if name == "settings" || name == "plans" {
+                    // Fail CLOSED: only copy when we POSITIVELY confirmed the
+                    // target has no such doc. `exists` is nil when the read itself
+                    // failed (network hiccup in this post-account-switch window);
+                    // treat anything other than a confirmed-absent doc as "skip",
+                    // so a transient error never overwrites a real account's data.
+                    let exists = (try? await ref.getDocument())?.exists
+                    if exists != false { continue }
+                }
+                try? await ref.setData(fields, merge: true)
             }
         }
     }
@@ -276,12 +290,24 @@ final class FirebaseAuthManager: ObservableObject {
     /// throws `.requiresRecentLogin`; the caller should reauthenticate (via
     /// `reauthenticateWithGoogle()` / `reauthenticateWithEmail(password:)`) and call
     /// this again.
-    func deleteAccount() async throws {
+    func deleteAccount(reauthenticated: Bool = false) async throws {
         guard let user = Auth.auth().currentUser else { throw AccountDeletionError.notSignedIn }
         let uid = user.uid
 
+        // Deleting the Firebase Auth user requires a recent login, but wiping the
+        // user's Firestore/Storage data requires an *active* login. If we wiped
+        // first and the auth deletion then failed on a stale session, the user
+        // would be left with a live account whose data is already destroyed — and
+        // a cancelled reauth would make that permanent. So for any real account we
+        // demand a fresh reauthentication BEFORE destroying anything: the caller
+        // catches this, reauthenticates, and retries with `reauthenticated: true`.
+        // If the user cancels the reauth prompt, nothing has been touched.
+        // Anonymous users have no credential to reauth and are deleted directly.
+        if !user.isAnonymous && !reauthenticated {
+            throw AccountDeletionError.requiresRecentLogin(provider: user.providerData.first?.providerID ?? "unknown")
+        }
+
         do {
-            // Wipe cloud data first, while the user still has write permission.
             try await Self.deleteAllUserData(uid: uid)
             try await user.delete()
         } catch let error as NSError where error.code == AuthErrorCode.requiresRecentLogin.rawValue {

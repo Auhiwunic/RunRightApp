@@ -74,6 +74,20 @@ final class VoiceAssistantSpeaker: ObservableObject {
         AudioSessionManager.deactivate()
     }
 
+    /// Graceful end: let the in-flight utterance (e.g. the closing run cue) finish
+    /// playing, THEN deactivate the audio session — so a fast Save that tears down
+    /// the run doesn't clip the cue. Deactivates immediately if nothing is speaking.
+    /// `keepActiveIf` lets the caller veto deactivation (e.g. a new run started).
+    func finishThenDeactivate(keepActiveIf stillNeeded: @escaping @MainActor () -> Bool = { false }) {
+        let task = speakTask
+        Task { [weak self] in
+            if let task { _ = await task.value }
+            guard let self else { return }
+            if self.isSpeaking || stillNeeded() { return }
+            AudioSessionManager.deactivate()
+        }
+    }
+
     private func errorMessage(for error: Error) -> String {
         if case SpeechBackendError.cloudRequestFailed(let detail) = error {
             return detail

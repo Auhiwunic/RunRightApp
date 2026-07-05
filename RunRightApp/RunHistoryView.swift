@@ -86,10 +86,13 @@ struct RunHistoryView: View {
     }
 
     private func loadRuns() async {
-        guard let uid = Auth.auth().currentUser?.uid else { return }
+        // Clear the spinner on every exit path — a nil currentUser (transient
+        // signed-out window) used to return before isLoading was reset, leaving
+        // the view stuck on an infinite ProgressView with no empty state.
+        defer { isLoading = false }
         isLoading = true
+        guard let uid = Auth.auth().currentUser?.uid else { return }
         runs = (try? await RunRepository.shared.fetchAllRuns(uid: uid)) ?? []
-        isLoading = false
     }
 
     // MARK: - Grouped runs by month

@@ -287,8 +287,11 @@ struct RunView: View {
            !real.isEmpty {
             pastRuns = real.map { PastRunItem(dto: $0) }
         } else {
-            // No signed-in runs yet — show sample runs so the feature is previewable.
-            pastRuns = SampleRuns.items()
+            // No real runs yet: show nothing. We used to fall back to fabricated
+            // sample runs (fake cities/paces) that were tappable and opened a full
+            // detail screen of invented data — misleading in a shipping build. The
+            // Past Runs section simply hides itself when this is empty.
+            pastRuns = []
         }
     }
 

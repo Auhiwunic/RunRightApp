@@ -8,6 +8,7 @@ import SwiftUI
 struct MainTabView: View {
     @State private var selectedTab = 2 // Home is center (index 2)
     @ObservedObject private var run = RunSession.shared
+    @ObservedObject private var remoteConfig = RemoteConfigManager.shared
 
     var body: some View {
         ZStack {
@@ -40,6 +41,15 @@ struct MainTabView: View {
                 CustomTabBar(selectedTab: $selectedTab)
             }
             .ignoresSafeArea(.keyboard)
+
+            // Ops maintenance banner (Remote Config `maintenance_message`). Empty
+            // string = hidden. This is what makes that kill-switch actually visible.
+            if !remoteConfig.maintenanceMessage.isEmpty {
+                VStack(spacing: 0) {
+                    maintenanceBanner(remoteConfig.maintenanceMessage)
+                    Spacer()
+                }
+            }
         }
         // The live run lives above every tab, so it keeps tracking + coaching when
         // minimized or when the user switches tabs.
@@ -51,6 +61,24 @@ struct MainTabView: View {
                 plannedTargetPaceSecPerMile: run.targetPaceSecPerMile
             )
         }
+    }
+
+    // MARK: - Maintenance banner (ops-set via Remote Config)
+    private func maintenanceBanner(_ text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(AppTheme.meta(12))
+            Text(text)
+                .font(AppTheme.meta(12))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundColor(.black)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(AppTheme.accentColor)
+        .padding(.horizontal, 12)
+        .padding(.top, 4)
     }
 
     // MARK: - Running banner (shown across tabs while a run is minimized)
