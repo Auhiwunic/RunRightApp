@@ -4309,27 +4309,30 @@ class VideoProcessor: ObservableObject {
         // Use median for more robustness against outliers, then compute mean/std from filtered set
         let finalShinMean: Double
         let finalShinStd: Double
-        let shinClassification: ShinStrideClassification
         if !validAngles.isEmpty {
             // Use median as primary measure (more robust)
             let sorted = validAngles.sorted()
             let median = sorted.count % 2 == 0
                 ? (sorted[sorted.count / 2 - 1] + sorted[sorted.count / 2]) / 2.0
                 : sorted[sorted.count / 2]
-            
+
             // Also compute mean/std for reporting, but use median as the primary value
             let stats = robustStats(validAngles)
             finalShinMean = median  // Use median for final value
             finalShinStd  = stats.1
-            shinClassification = classifyShinStride(angle: median)
         } else {
             finalShinMean = -1.0
             finalShinStd  = 0.0
-            shinClassification = classifyShinStride(angle: nil)
         }
-        
-        // Calculate score from canonical stride classifier (single source of truth)
-        let shinScore = Double(shinClassification.score)
+
+        // Score .shinVertical (and .footUnderCOM below) from the VALIDATED signed
+        // shank angle at contact — the single source of truth also behind SHIN /
+        // OVERSTRIDE and the dashboard/Coach. The old UNSIGNED classifier scored a
+        // near-vertical shin as "understride" (its good band centred at 9.5°), so an
+        // elite who lands under the body read ~50, and the foot-COM distance range
+        // (0–0.06) was likewise miscalibrated to ~20. Both now read the real value.
+        let shinScore = Double(classifyShinStrideSigned(
+            angle: shankAngleAtContactSigned.isFinite ? shankAngleAtContactSigned : nil).score)
         
         // Store final values for FormCueScore
         let shinMeanForScore = finalShinMean
@@ -4371,7 +4374,6 @@ class VideoProcessor: ObservableObject {
             ? absArray(cleanedLeftFootY) + absArray(cleanedRightFootY)  // Both if auto-detection
             : (useLeftSide ? absArray(cleanedLeftFootY) : absArray(cleanedRightFootY))  // Only selected side
         let (comMean, comStd) = robustStats(footYForCOM)
-        let comScore = rangeBasedScore(value: comMean, range: FormCueRanges.ranges[.footUnderCOM]!)
 
         let frontHipSeries: [Double] = zip(frames, zip(cleanedLeftHip, cleanedRightHip)).map { (frame: PoseFrame, vals: (Double, Double)) -> Double in
             let useRight = frontSideByDepth(frame)
@@ -4433,7 +4435,7 @@ class VideoProcessor: ObservableObject {
             FormCueScore(cue: .quietFeet, score: quietScore, rawValue: quietMean, mean: quietMean, std: quietStd),
             FormCueScore(cue: .tallPosture, score: postureScoreForCue, rawValue: postureMeanForCue, mean: postureMeanForCue, std: postureStdForCue),
             FormCueScore(cue: .shortQuickSteps, score: cadenceScore, rawValue: cadenceMean, mean: cadenceMean, std: cadenceStd),
-            FormCueScore(cue: .footUnderCOM, score: comScore, rawValue: comMean, mean: comMean, std: comStd),
+            FormCueScore(cue: .footUnderCOM, score: shinScore, rawValue: comMean, mean: comMean, std: comStd),
             FormCueScore(cue: .elbows, score: elbowScoreForCue, rawValue: elbowMeanForCue, mean: elbowMeanForCue, std: elbowAngleStd),
             FormCueScore(cue: .hipsStable, score: hipsScore, rawValue: hipMean, mean: hipMean, std: hipStd),
             FormCueScore(cue: .eyesForward, score: headScoreForCue, rawValue: headMeanForCue, mean: headMeanForCue, std: headStdForCue),
