@@ -229,7 +229,7 @@ struct OnboardingFlowView: View {
                         Spacer()
                         Text("\(Int(age))")
                             .font(.title3.bold())
-                            .foregroundStyle(currentAccent)
+                            .foregroundStyle(PlanTheme.textPrimary)   // all intro text white; accent stays for controls
                     }
                     Slider(value: $age, in: 15...80, step: 1)
                         .tint(currentAccent)
@@ -393,7 +393,7 @@ struct OnboardingFlowView: View {
 
             Text(accent)
                 .font(AppTheme.display(34))
-                .foregroundStyle(currentAccent)
+                .foregroundStyle(PlanTheme.textPrimary)   // all intro text white; accent stays for controls
         }
     }
 
