@@ -34,9 +34,6 @@ struct ProfileView: View {
     @State private var exportFile: ExportFile?
     @State private var exportError: String?
 
-    // Shareable scorecard
-    @State private var showScorecard = false
-
     private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
     @State private var legalDoc: LegalDoc?
@@ -73,20 +70,6 @@ struct ProfileView: View {
                     // Settings
                     settingsCard
                         .padding(.horizontal, 20)
-
-                    // Shareable scorecard (marketable share-to-social card)
-                    Button(action: { showScorecard = true }) {
-                        Text("SHARE SCORECARD")
-                            .font(AppTheme.head(14))
-                            .tracking(1)
-                            .foregroundColor(.black)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 15)
-                            .background(AppTheme.accentColor)
-                            .clipShape(Capsule())
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 4)
 
                     // Concise sign-out + delete account (only when signed in with a real account)
                     if auth.isAuthenticated && !auth.isAnonymous {
@@ -197,9 +180,6 @@ struct ProfileView: View {
         }
         .sheet(item: $exportFile) { file in
             ShareSheet(items: [file.url])
-        }
-        .sheet(isPresented: $showScorecard) {
-            ScorecardShareScreen()
         }
         .alert("Couldn't export data", isPresented: Binding(
             get: { exportError != nil },
@@ -395,17 +375,6 @@ struct ProfileView: View {
                     .frame(height: 50)
                     .background(AppTheme.accentColor)
                     .cornerRadius(14)
-            }
-            .padding(.horizontal, 44)
-
-            // Guests can still preview/share a scorecard (it's the marketable hook).
-            Button(action: { showScorecard = true }) {
-                Text("SHARE SCORECARD")
-                    .font(AppTheme.head(13))
-                    .tracking(1)
-                    .foregroundColor(AppTheme.primaryText.opacity(0.7))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
             }
             .padding(.horizontal, 44)
         }
