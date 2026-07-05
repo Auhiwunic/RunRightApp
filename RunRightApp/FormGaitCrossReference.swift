@@ -58,6 +58,9 @@ struct FormGaitInputs {
     var wear: [String: Int]            // zone name → 0..3 intensity (max of L/R)
     var hasVideo: Bool
     var hasShoe: Bool
+    /// Validated signed shank angle at contact (deg). The reliable overstride
+    /// signal — the old shinVertical/footUnderCOM cues are miscalibrated proxies.
+    var shankAngleAtContactSignedDeg: Double? = nil
 }
 
 enum FormGaitCrossReference {
@@ -102,7 +105,8 @@ enum FormGaitCrossReference {
         }
 
         return insights(FormGaitInputs(cueScores: scores, gaitType: gaitType, strikePattern: strike,
-                                       wear: wear, hasVideo: true, hasShoe: hasShoe))
+                                       wear: wear, hasVideo: true, hasShoe: hasShoe,
+                                       shankAngleAtContactSignedDeg: form.overstrideDeg))
     }
 
     // MARK: the engine
@@ -116,11 +120,20 @@ enum FormGaitCrossReference {
         let heelStrikeShoe = (i.strikePattern?.lowercased() == "heel") || heavy(i, ["centralHeel", "medialHeel"])
 
         // ── Rule A — braking heel strike / overstride ──────────────────────────
-        // Video: foot landing ahead of the hips (shin/COM/strike-angle low).
-        // Shoe : heel-dominant wear or a heel strike read.
-        let overstride = min(score(i, .shinVertical), score(i, .footUnderCOM), score(i, .footPlacement))
+        // Video: foot landing ahead of the hips. Prefer the VALIDATED signed
+        // shank-angle-at-contact (same signal as SHIN/OVERSTRIDE and the dashboard
+        // card) — the old shinVertical/footUnderCOM cues are miscalibrated and read
+        // a 0° shank as heel-braking. Fall back to them only if it's unavailable.
+        let overstride: Double = i.shankAngleAtContactSignedDeg
+            .map { Double(classifyShinStrideSigned(angle: $0).score) }
+            ?? min(score(i, .shinVertical), score(i, .footUnderCOM), score(i, .footPlacement))
         let videoOverstride = i.hasVideo && overstride < 65
-        let shoeHeel = i.hasShoe && heelStrikeShoe
+        // A heel strike is only "braking" if the foot also lands AHEAD of the body.
+        // When the video directly shows a good landing (foot under you), it overrides
+        // the heel-strike-implies-braking inference — heel striking on its own is not
+        // a fault. Only raise the shoe-heel path when the video doesn't contradict it.
+        let videoGoodLanding = i.hasVideo && overstride >= 65
+        let shoeHeel = i.hasShoe && heelStrikeShoe && !videoGoodLanding
         if videoOverstride || shoeHeel {
             let corr: Corroboration = (videoOverstride && shoeHeel) ? .confirmed : (videoOverstride ? .videoOnly : .shoeOnly)
             let detail: String

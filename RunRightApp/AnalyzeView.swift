@@ -969,7 +969,9 @@ struct AnalyzeView: View {
         }
 
         return FormGaitInputs(cueScores: scores, gaitType: gaitType, strikePattern: strike,
-                              wear: wear, hasVideo: true, hasShoe: hasShoe)
+                              wear: wear, hasVideo: true, hasShoe: hasShoe,
+                              shankAngleAtContactSignedDeg: series.shankAngleAtContactSignedDeg.isFinite
+                                  ? series.shankAngleAtContactSignedDeg : nil)
     }
 
     // MARK: - Recent (bare list — spacing separates rows, no card, no dividers)
