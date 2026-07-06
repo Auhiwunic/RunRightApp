@@ -6,6 +6,23 @@
 
 import SwiftUI
 import FirebaseAuth
+import ImageIO
+
+/// Decode a downsampled thumbnail straight from encoded image data via ImageIO,
+/// instead of decoding the full-resolution snapshot just to draw a tiny cell.
+/// This cuts CPU + memory when the history list renders rows on scroll.
+func downsampledThumbnail(_ data: Data, maxPixel: CGFloat) -> UIImage? {
+    let options: [CFString: Any] = [
+        kCGImageSourceCreateThumbnailFromImageAlways: true,
+        kCGImageSourceCreateThumbnailWithTransform: true,
+        kCGImageSourceShouldCacheImmediately: true,
+        kCGImageSourceThumbnailMaxPixelSize: maxPixel,
+    ]
+    guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+          let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+    else { return nil }
+    return UIImage(cgImage: cg)
+}
 
 /// Int conversion that cannot trap on NaN or Inf from degenerate clips.
 func analyzeSafeInt(_ v: Double, fallback: Int = 0) -> Int {
@@ -3169,7 +3186,9 @@ struct AnalysisHistorySheet: View {
     private func row(_ record: AnalysisRecord) -> some View {
         HStack(spacing: 12) {
             Group {
-                if let png = record.form?.snapshotPNG, let img = UIImage(data: png) {
+                // 46pt cell at up to 3x → 138px is plenty; decode a thumbnail
+                // rather than the full snapshot to avoid scroll jank + memory.
+                if let png = record.form?.snapshotPNG, let img = downsampledThumbnail(png, maxPixel: 138) {
                     Image(uiImage: img).resizable().scaledToFill()
                 } else {
                     RoundedRectangle(cornerRadius: 8).fill(AppTheme.primaryText.opacity(0.06))
