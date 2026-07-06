@@ -999,6 +999,19 @@ func classifyShinStrideSigned(angle: Double?) -> ShinStrideClassification {
     }
 }
 
+/// Blend the plain mean with the mean of the WORST third of dimensions. A flat
+/// average lets one serious fault hide behind many fine cues (which is why poor
+/// form scored ~80). This weights the faults: elite form (all dimensions high)
+/// is barely affected, but real faults pull the score down the way they should.
+func faultSensitiveScore(_ dims: [Double]) -> Double {
+    guard !dims.isEmpty else { return 0 }
+    let mean = dims.reduce(0, +) / Double(dims.count)
+    let sorted = dims.sorted()
+    let k = max(1, dims.count / 3)
+    let worst = sorted.prefix(k).reduce(0, +) / Double(k)
+    return max(0, min(100, 0.5 * mean + 0.5 * worst))
+}
+
 func computeEfficiencyBreakdown(series: MetricSeries) -> EfficiencyBreakdown? {
     guard !series.formCueScores.isEmpty else { return nil }
     let shinCls = classifyShinStrideSigned(
@@ -1016,19 +1029,35 @@ func computeEfficiencyBreakdown(series: MetricSeries) -> EfficiencyBreakdown? {
         let m = series.elbowAngleMean
         return m > 0 ? m : nil
     }())
-    // Average ONLY the cues we could actually measure — never dilute the score with
-    // a neutral 50 for a metric that simply wasn't visible in the clip.
-    var present: [Double] = []
-    if shinCls.band != .unknown { present.append(Double(shinCls.score)) }
-    if torsoCls.band != .unknown { present.append(Double(torsoCls.score)) }
-    if gazeCls.band != .unknown { present.append(Double(gazeCls.score)) }
-    if elbowCls.band != .unknown { present.append(Double(elbowCls.score)) }
-    guard !present.isEmpty else { return nil }
-    let avg = present.reduce(0, +) / Double(present.count)
-    let composite = Int(max(0, min(100, avg)).rounded())
+    // Composite over the FULL measured cue set (cadence, foot placement, hip
+    // stability, quiet feet, posture, shin, elbows, gaze) — not just the four
+    // arm/posture pillars — with a fault-sensitive blend so a serious fault is
+    // not averaged away behind fine cues. Averaging only 4 lenient cues flat is
+    // what let poor form score ~80. The shin/torso/gaze/elbow sub-objects are
+    // still returned for the detail view.
+    let dims = series.formCueScores.map { Double($0.score) }
+    guard !dims.isEmpty else { return nil }
+    let composite = Int(faultSensitiveScore(dims).rounded())
+#if DEBUG
+    let dump = series.formCueScores
+        .map { "\($0.cue.rawValue)=\(Int($0.score))" }
+        .joined(separator: " | ")
+    debugLog("[FormScore] composite=\(composite) cues: \(dump)")
+    let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    let f = dir.appendingPathComponent("form_cue_scores.csv")
+    let header = "date," + FormCue.allCases.map { $0.rawValue }.joined(separator: ",") + ",composite\n"
+    var byCue: [FormCue: Int] = [:]
+    for s in series.formCueScores { byCue[s.cue] = Int(s.score) }
+    let row = "\(Date().timeIntervalSince1970)," + FormCue.allCases.map { byCue[$0].map(String.init) ?? "" }.joined(separator: ",") + ",\(composite)\n"
+    if !FileManager.default.fileExists(atPath: f.path) {
+        try? (header + row).write(to: f, atomically: true, encoding: .utf8)
+    } else if let h = try? FileHandle(forWritingTo: f) {
+        h.seekToEndOfFile(); h.write(Data(row.utf8)); try? h.close()
+    }
+#endif
     return EfficiencyBreakdown(
         composite: composite,
-        averageDouble: avg,
+        averageDouble: faultSensitiveScore(dims),
         shin: shinCls,
         torso: torsoCls,
         gaze: gazeCls,
