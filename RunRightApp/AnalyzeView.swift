@@ -1517,7 +1517,10 @@ struct AnalyzeView: View {
         let canonicalCadence = peaks.count >= 2
             ? AnalyzeMath.calculateCadenceFromPeaks(peaks, frameRate: fps)
             : metrics.cadence
-        let overall = Int((Double(efficiency + power + impact) / 3.0).rounded())
+        // Fault-sensitive, not a flat mean: an elite runner is strong on all three
+        // dials, so this barely changes; a clip with a genuinely weak dial has the
+        // headline pulled down instead of the fault being averaged away.
+        let overall = Int(faultSensitiveScore([Double(efficiency), Double(power), Double(impact)]).rounded())
         let gctValues = [metrics.groundContactLeft, metrics.groundContactRight].filter { $0 > 0 }
         let avgGCT = gctValues.isEmpty ? nil : gctValues.reduce(0, +) / Double(gctValues.count)
 
