@@ -52,7 +52,13 @@ private let sideDetectionVoteThreshold = 8
 // calibration log (Documents/scan_quality_log.csv in DEBUG builds), biased to
 // under-trigger until enough real clips have been measured.
 private let scanQualityMinCleanRatio = 0.4
-private let scanQualityMinCleanSeconds = 2.0
+// ~3s of clean framing is the reliable window; shorter clips still analyse but
+// are flagged low-confidence (a 2s clip is only ~3 gait cycles — noisy).
+private let scanQualityMinCleanSeconds = 3.0
+// Fraction of clean-window frames where the hip "snaps" implausibly far in one
+// frame. Above this the skeleton is choppy/unstable → the metrics can't be
+// trusted. Conservative (biased to under-trigger) until calibrated on real clips.
+private let scanQualityMaxJitterRatio = 0.06
 
 enum ShinStrideBand: String {
     case unknown
@@ -1552,6 +1558,7 @@ class VideoProcessor: ObservableObject {
         let cleanSeconds: Double
         let foundWindow: Bool
         let hiddenCoreJointCount: Int
+        let jitterRatio: Double
         let flagged: Bool
 
         /// v2 named cause: turns the generic "hard to read" into an actionable
@@ -1568,6 +1575,9 @@ class VideoProcessor: ObservableObject {
             if !foundWindow {
                 return "Film side on with your whole body in frame."
             }
+            if jitterRatio > scanQualityMaxJitterRatio {
+                return "Tracking was jumpy — retake with the runner well lit and clear of the background."
+            }
             if cleanSeconds < scanQualityMinCleanSeconds {
                 return "Film a longer clip, about 10 to 15 seconds."
             }
@@ -1581,7 +1591,8 @@ class VideoProcessor: ObservableObject {
         cleanFrames: Int,
         foundWindow: Bool,
         fps: Double,
-        permanentlyHidden: Set<PoseJoint>
+        permanentlyHidden: Set<PoseJoint>,
+        jitterRatio: Double
     ) -> ScanQualitySignals {
         let ratio = totalFrames > 0 ? Double(cleanFrames) / Double(totalFrames) : 0
         let seconds = fps > 0 ? Double(cleanFrames) / fps : 0
@@ -1595,6 +1606,7 @@ class VideoProcessor: ObservableObject {
             || ratio < scanQualityMinCleanRatio
             || seconds < scanQualityMinCleanSeconds
             || hiddenCore >= 1
+            || jitterRatio > scanQualityMaxJitterRatio
         return ScanQualitySignals(
             totalFrames: totalFrames,
             cleanFrames: cleanFrames,
@@ -1602,8 +1614,34 @@ class VideoProcessor: ObservableObject {
             cleanSeconds: seconds,
             foundWindow: foundWindow,
             hiddenCoreJointCount: hiddenCore,
+            jitterRatio: jitterRatio,
             flagged: flagged
         )
+    }
+
+    /// Choppy-tracking signal: the fraction of clean-window frames where the
+    /// near-side HIP jumps implausibly far between consecutive frames, normalised
+    /// by leg length (hip→ankle) so it is scale-invariant. The hip barely moves
+    /// frame-to-frame in real running, so a large jump means the skeleton snapped
+    /// to a wrong position — i.e. unstable tracking. Measured on the hip (NOT the
+    /// fast-swinging legs) so smooth fast running never registers as jitter.
+    static func skeletonJitterRatio(_ frames: [PoseFrame]) -> Double {
+        guard frames.count > 5 else { return 0 }
+        var jumps = 0, counted = 0
+        for i in 1..<frames.count {
+            let a = frames[i - 1], b = frames[i]
+            let hipA: PoseJoint = a.facingRight ? .rightHip : .leftHip
+            let ankleA: PoseJoint = a.facingRight ? .rightAnkle : .leftAnkle
+            let hipB: PoseJoint = b.facingRight ? .rightHip : .leftHip
+            guard let h0 = a.points[hipA], let h1 = b.points[hipB],
+                  let k0 = a.points[ankleA] else { continue }
+            let legLen = hypot(Double(h0.x - k0.x), Double(h0.y - k0.y))
+            guard legLen > 1e-6 else { continue }
+            let hipStep = hypot(Double(h1.x - h0.x), Double(h1.y - h0.y)) / legLen
+            counted += 1
+            if hipStep > 0.18 { jumps += 1 }   // >18% of leg length in one frame = a snap
+        }
+        return counted > 0 ? Double(jumps) / Double(counted) : 0
     }
 
     /// DEBUG-only calibration log: one CSV row per analysis in Documents, so
@@ -1612,11 +1650,13 @@ class VideoProcessor: ObservableObject {
 #if DEBUG
         let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let file = dir.appendingPathComponent("scan_quality_log.csv")
-        let header = "date,clip,totalFrames,cleanFrames,cleanRatio,cleanSeconds,foundWindow,hiddenCore,flagged\n"
+        let header = "date,clip,totalFrames,cleanFrames,cleanRatio,cleanSeconds,foundWindow,hiddenCore,jitterRatio,flagged\n"
         let row = "\(Date().timeIntervalSince1970),\(clip),\(q.totalFrames),\(q.cleanFrames),"
             + String(format: "%.3f", q.cleanRatio) + ","
             + String(format: "%.2f", q.cleanSeconds) + ","
-            + "\(q.foundWindow),\(q.hiddenCoreJointCount),\(q.flagged)\n"
+            + "\(q.foundWindow),\(q.hiddenCoreJointCount),"
+            + String(format: "%.3f", q.jitterRatio) + ","
+            + "\(q.flagged)\n"
         if !FileManager.default.fileExists(atPath: file.path) {
             try? (header + row).write(to: file, atomically: true, encoding: .utf8)
         } else if let handle = try? FileHandle(forWritingTo: file) {
@@ -1624,7 +1664,7 @@ class VideoProcessor: ObservableObject {
             handle.write(Data(row.utf8))
             try? handle.close()
         }
-        debugLog("[ScanQuality] \(clip) ratio=\(q.cleanRatio) secs=\(q.cleanSeconds) found=\(q.foundWindow) hiddenCore=\(q.hiddenCoreJointCount) flagged=\(q.flagged)")
+        debugLog("[ScanQuality] \(clip) ratio=\(q.cleanRatio) secs=\(q.cleanSeconds) found=\(q.foundWindow) hiddenCore=\(q.hiddenCoreJointCount) jitter=\(q.jitterRatio) flagged=\(q.flagged)")
 #endif
     }
 
@@ -1945,13 +1985,16 @@ class VideoProcessor: ObservableObject {
         // Slice self.poseFrames itself so getPoseFrame (snapshot) and the metric
         // series share ONE index space.
         let (cleanRange, foundWindow) = Self.cleanWindowRange(poseFrames, frameRate: fps)
+        // Choppiness measured on the clean window (where hip/ankle are present).
+        let jitter = Self.skeletonJitterRatio(Array(poseFrames[cleanRange]))
         // Scan-quality signals — read BEFORE the slice destroys the denominator.
         let quality = Self.scanQualitySignals(
             totalFrames: poseFrames.count,
             cleanFrames: cleanRange.count,
             foundWindow: foundWindow,
             fps: fps,
-            permanentlyHidden: permanentlyHidden
+            permanentlyHidden: permanentlyHidden,
+            jitterRatio: jitter
         )
         logScanQuality(quality, clip: inputURL.lastPathComponent)
         poseFrames = Array(poseFrames[cleanRange])
