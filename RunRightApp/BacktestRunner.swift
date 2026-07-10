@@ -36,6 +36,14 @@ enum BacktestRunner {
         var gctMs: Double?
         var footStrike: String?
         var cues: [String: Double]?
+        // Drive-calibration instrumentation
+        var hipROMSelected: Double?
+        var ankleROMSelected: Double?
+        var kneeROMSelected: Double?
+        var shankDeg: Double?
+        var voPct: Double?
+        var noHeelRatio: Double?
+        var driveConfidence: String?
     }
 
     static var isEnabled: Bool {
@@ -91,6 +99,13 @@ enum BacktestRunner {
                     r.hipROM = max(m.hipExtensionRangeLeft, m.hipExtensionRangeRight)
                     r.ankleROM = max(m.ankleDorsiRangeLeft, m.ankleDorsiRangeRight)
                     r.kneeROM = max(m.kneeFlexionRangeLeft, m.kneeFlexionRangeRight)
+                    r.hipROMSelected = m.hipExtensionRangeSelected
+                    r.ankleROMSelected = m.ankleDorsiRangeSelected
+                    r.kneeROMSelected = m.kneeFlexionRangeSelected
+                    r.shankDeg = s.shankAngleAtContactSignedDeg.isFinite ? s.shankAngleAtContactSignedDeg : nil
+                    r.voPct = m.verticalOscillation > 0 ? m.verticalOscillation : nil
+                    r.noHeelRatio = s.noHeelRatio.isFinite ? s.noHeelRatio : nil
+                    r.driveConfidence = powerRes.confidence.rawValue
                     r.armROM = armROM
                     r.cadence = m.cadence
                     r.torsoDeg = s.torsoAngleMean

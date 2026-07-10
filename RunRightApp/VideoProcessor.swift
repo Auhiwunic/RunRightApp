@@ -931,46 +931,100 @@ func computeSprintPowerComposite(series: MetricSeries, metrics: AnalysisMetrics,
 
 /// Full Power result (score + confidence + physics read) for dial + detail + export.
 func powerResult(series: MetricSeries, metrics: AnalysisMetrics) -> PowerResult {
+    let cfg = scoringConfig
     let (tcs, tfs) = stepContactFlightTimes(from: series.gaitCycleSeries)
-    let hip = max(metrics.hipExtensionRangeLeft, metrics.hipExtensionRangeRight)
-    let ankle = max(metrics.ankleDorsiRangeLeft, metrics.ankleDorsiRangeRight)
-    let knee = max(metrics.kneeFlexionRangeLeft, metrics.kneeFlexionRangeRight)
+
+    // Drive ROMs use the camera-facing leg only. max(left, right) always
+    // preferred the far side whenever occlusion jitter inflated it — clean
+    // elite treadmill footage read 130-150° hip "sweeps" and the exaggeration
+    // falloff zeroed the term. Older stored metrics predate the selected
+    // fields (0 = absent), so fall back to the legacy max for them.
+    let hipRaw = metrics.hipExtensionRangeSelected > 0.5
+        ? metrics.hipExtensionRangeSelected
+        : max(metrics.hipExtensionRangeLeft, metrics.hipExtensionRangeRight)
+    let ankleRaw = metrics.ankleDorsiRangeSelected > 0.5
+        ? metrics.ankleDorsiRangeSelected
+        : max(metrics.ankleDorsiRangeLeft, metrics.ankleDorsiRangeRight)
+    let kneeRaw = metrics.kneeFlexionRangeSelected > 0.5
+        ? metrics.kneeFlexionRangeSelected
+        : max(metrics.kneeFlexionRangeLeft, metrics.kneeFlexionRangeRight)
+
+    // Physiological plausibility windows: a sweep no human hip/knee/ankle can
+    // produce is a tracking artifact, and an artifact must read as
+    // UNMEASURABLE (nil → excluded from the drive average), never as
+    // "exaggerated drive" scored into the falloff. The hip window depends on
+    // the source: the camera-facing read gets falloff runway up to
+    // hipPlausibleMax (real 90-115° over-kips stay penalized; measured
+    // occlusion artifacts at 129-150° stay excluded), while the legacy
+    // max(left,right) fallback keeps the strict scan window because it is
+    // the occlusion-inflated read this fix targets.
+    func plausible(_ v: Double, upTo maxDeg: Double) -> Double? {
+        (v > 0.5 && v <= maxDeg) ? v : nil
+    }
+    let hipCap = metrics.hipExtensionRangeSelected > 0.5
+        ? cfg.hipPlausibleMax : cfg.scanMaxPlausibleHipROM
+    let hip = plausible(hipRaw, upTo: hipCap)
+    let ankle = plausible(ankleRaw, upTo: cfg.anklePlausibleMax)
+    let knee = plausible(kneeRaw, upTo: cfg.scanMaxPlausibleKneeROM)
+
+    // Cadence joins the model as a drive pillar (turnover IS propulsion
+    // evidence), so it enters the score exactly once — the old multiplicative
+    // cadence band is gone. Outside 100-200 spm it is a slow-mo clip or a
+    // broken count and reads unmeasurable inside the model.
+    let cad = metrics.cadence
     let base = RunPowerModel.power(
         contactTimes: tcs,
         flightTimes: tfs,
-        hipExtensionRangeDeg: hip > 0.5 ? hip : nil,
-        ankleRangeDeg: ankle > 0.5 ? ankle : nil,
-        kneeDriveRangeDeg: knee > 0.5 ? knee : nil,
+        hipExtensionRangeDeg: hip,
+        ankleRangeDeg: ankle,
+        kneeDriveRangeDeg: knee,
+        cadenceSpm: cad > 0 ? cad : nil,
         frameRate: series.frameRate
     )
 
-    // The spring-mass model reads force production but is blind to WHERE the
-    // foot lands and how fast the legs turn over — which let a slow, clearly
-    // overstriding jog post an elite DRIVE. Overstride is braking (force spent
-    // decelerating in front of the body is not drive), so the landing evidence
-    // and the cadence band cap the physics score. Both factors are bounded so
-    // they refine the model, never dominate it.
-    // Only penalize cadence that is MEASURED and clearly below the running
-    // band. Below ~100 spm a running gait is physically implausible — that is a
-    // slow-motion clip or a broken cadence read, not a slow runner — so treat it
-    // as unmeasurable rather than punishing it. (The foot-under-COM penalty is
-    // deliberately NOT applied here until that metric is calibrated — see
-    // computeEfficiencyBreakdown.)
+    // Bounded evidence corrections refine the model without dominating it.
+    // (The foot-under-COM penalty is deliberately NOT applied here until that
+    // metric is calibrated — see computeEfficiencyBreakdown. A shank-angle
+    // penalty was evaluated and rejected: heel-striking elites carry the
+    // LARGEST shank angles at contact, so it demoted exactly the wrong
+    // runners.)
     var factor = 1.0
-    let cad = metrics.cadence
-    if cad >= 100, cad < 150 {
-        factor *= max(0.6, 0.6 + 0.4 * (cad - 120) / 30)
+    // Persistent toes-only running (the heel never drops in stance) is calf
+    // bounce, not propulsion — the user-flagged red flag. Same signal, tiers,
+    // and sprint-turnover gate as the footPlacement cue cap.
+    if series.noHeelRatio.isFinite, cad < cfg.driveNoHeelCadenceMax,
+       series.noHeelRatio >= cfg.driveNoHeelOnset {
+        let span = max(cfg.driveNoHeelFull - cfg.driveNoHeelOnset, 0.01)
+        let severity = min(1.0, (series.noHeelRatio - cfg.driveNoHeelOnset) / span)
+        factor *= 1.0 - cfg.driveNoHeelMaxDiscount * severity
     }
+    debugLog("[Drive] hipSel=\(Int(hipRaw)) ankleSel=\(Int(ankleRaw)) kneeSel=\(Int(kneeRaw)) plausible(hip=\(hip.map { Int($0) } ?? -1) ankle=\(ankle.map { Int($0) } ?? -1) knee=\(knee.map { Int($0) } ?? -1)) cad=\(Int(cad)) noHeel=\(series.noHeelRatio.isFinite ? String(format: "%.2f", series.noHeelRatio) : "nil") factor=\(String(format: "%.2f", factor))")
     guard factor < 0.999 else { return base }
     let adjusted = max(0, min(100, Int((Double(base.score) * factor).rounded())))
+    // Re-derive the user-facing band from the DISCOUNTED score: a drive cut
+    // for toes-only running must not keep the "Powerful, springy stride" copy.
+    let label: String
+    let detail: String
+    switch adjusted {
+    case 80...100:
+        label = "Powerful, springy stride"
+        detail = "You apply force quickly and return it elastically — strong drive off the ground with good air time."
+    case 62..<80:
+        label = "Solid drive"
+        detail = "Reasonable force and leg spring. Strides, hills, and plyometrics will build more push-off power and elastic return."
+    default:
+        label = "Build power"
+        detail = "Your heels never settle, so each step bounces off the calves instead of driving through the ground. Letting the heel kiss down after a midfoot landing restores real push-off."
+    }
+    let estimateNote = base.confidence == .high ? "" : " (estimate — record in slo-mo for a precise reading)"
     return PowerResult(
         score: adjusted,
         confidence: base.confidence,
         peakForceBW: base.peakForceBW,
         dutyFactor: base.dutyFactor,
         naturalFreqHz: base.naturalFreqHz,
-        label: base.label,
-        detail: base.detail
+        label: label,
+        detail: detail + estimateNote
     )
 }
 
@@ -1252,6 +1306,12 @@ struct AnalysisMetrics {
     var groundContactUncertaintyMs: Double = 0
     /// The fps the analysis actually ran at — the hard ceiling on timing precision.
     var captureFrameRate: Double = 0
+
+    // Camera-facing-side ROMs for the DRIVE model. The far side inflates
+    // under occlusion (see powerResult); 0 = not measured.
+    var kneeFlexionRangeSelected: Double = 0
+    var hipExtensionRangeSelected: Double = 0
+    var ankleDorsiRangeSelected: Double = 0
 }
 
 struct GaitCycleInterval {
@@ -1371,6 +1431,10 @@ struct MetricSeries {
     // of vertical (foot ahead of body → overstride); − = vertical/behind (good).
     // NaN when not measurable. Used by the Impact model and Efficiency overstride cue.
     var shankAngleAtContactSignedDeg: Double = .nan
+    // Fraction of stances where the heel never dropped to the ground (0-1).
+    // NaN when too few stances were readable. Feeds the footPlacement cue cap
+    // and the DRIVE calf-bounce discount.
+    var noHeelRatio: Double = .nan
 }
 
 struct FormCueScore: Identifiable {
@@ -3973,6 +4037,27 @@ class VideoProcessor: ObservableObject {
         let ankleRightRange = range(rightAnkleFlex)
         let elbowLeftRange = range(leftElbowFlex)
         let elbowRightRange = range(rightElbowFlex)
+
+        // Camera-facing-side ROMs for the DRIVE model. On a side view the far
+        // leg is part-occluded and its angle series carries identity-swap
+        // jitter that inflates range() far past physiology (hip "sweeps" of
+        // 130-150° on clean elite footage) — so max(left, right) always
+        // preferred the corrupted side. Select per frame, the same convention
+        // the interior-angle means use. Built from the frame-indexed *Series
+        // arrays (NaN-gapped), which stay aligned when a joint drops out.
+        func selectedRange(_ left: [Double], _ right: [Double]) -> Double {
+            if useLeftSide && !useRightSide { return range(left) }
+            if useRightSide && !useLeftSide { return range(right) }
+            let picked = frames.indices.map { i -> Double in
+                let l = i < left.count ? left[i] : Double.nan
+                let r = i < right.count ? right[i] : Double.nan
+                return frames[i].facingRight ? r : l
+            }
+            return range(picked)
+        }
+        let kneeFlexSelectedRange = selectedRange(leftKneeFlexSeries, rightKneeFlexSeries)
+        let hipExtSelectedRange = selectedRange(leftHipFlexSeries, rightHipFlexSeries)
+        let ankleSelectedRange = selectedRange(leftAnkleFlexSeries, rightAnkleFlexSeries)
         
         let leftWristRange = range(leftWristX)
         let rightWristRange = range(rightWristX)
@@ -4128,8 +4213,14 @@ class VideoProcessor: ObservableObject {
         // strike over the stance window; nil when the joints weren't tracked.
         func heelTouches(_ idx: Int, heel: PoseJoint, toe: PoseJoint) -> Bool? {
             guard idx < frames.count else { return nil }
+            // Stance window in TIME (~200 ms), not frames: 6 frames is a full
+            // stance at 30fps but only ~25 ms at 240fps slo-mo — which read
+            // every rolling midfoot landing as "heel never touches". The
+            // max(6, …) floor keeps ≤30fps behavior (and its calibration)
+            // identical.
+            let stanceWindow = max(6, Int((frameRate * 0.2).rounded()))
             var measured = false
-            for j in idx...min(frames.count - 1, idx + 6) {
+            for j in idx...min(frames.count - 1, idx + stanceWindow) {
                 let f = frames[j]
                 if let h = point(f, heel), let t = point(f, toe) {
                     measured = true
@@ -4172,6 +4263,11 @@ class VideoProcessor: ObservableObject {
         let plausibleShank = shankSignedSamples.filter { $0.isFinite && abs($0) <= 35 }
         let shankAngleAtContactSigned = plausibleShank.count >= 2
             ? (RunPhysics.median(plausibleShank) ?? Double.nan)
+            : Double.nan
+
+        // Persistent toes-only ratio across readable stances (NaN = unmeasurable).
+        let noHeelRatio: Double = heelTouchSamples.count >= 3
+            ? Double(heelTouchSamples.filter { !$0 }.count) / Double(heelTouchSamples.count)
             : Double.nan
 
         // Build per-frame series (dense like hip drop)
@@ -4432,7 +4528,10 @@ class VideoProcessor: ObservableObject {
             armSwingSymmetry: armSwingSymmetry,
             footStrikeConfidence: footStrikeConfidence,
             groundContactUncertaintyMs: groundContactUncertaintyMs,
-            captureFrameRate: frameRate
+            captureFrameRate: frameRate,
+            kneeFlexionRangeSelected: kneeFlexSelectedRange,
+            hipExtensionRangeSelected: hipExtSelectedRange,
+            ankleDorsiRangeSelected: ankleSelectedRange
         )
         
         // Apply outlier removal to time series data
@@ -4792,11 +4891,10 @@ class VideoProcessor: ObservableObject {
         // stance) overloads the calf/achilles and is the user-flagged red flag.
         // Only applied below sprint turnover — genuine sprinting is forefoot by
         // design. A rolling contact that brings the heel down passes untouched.
-        if heelTouchSamples.count >= 3, cadenceMean < 170 {
-            let noHeel = Double(heelTouchSamples.filter { !$0 }.count) / Double(heelTouchSamples.count)
-            if noHeel >= 0.7 {
+        if noHeelRatio.isFinite, cadenceMean < 170 {
+            if noHeelRatio >= 0.7 {
                 footPlacementScore = min(footPlacementScore, 42)
-            } else if noHeel >= 0.4 {
+            } else if noHeelRatio >= 0.4 {
                 footPlacementScore = min(footPlacementScore, 62)
             }
         }
@@ -4866,7 +4964,8 @@ class VideoProcessor: ObservableObject {
             heelStrikeFrameIndices: selectedPeaks,
             formCueScores: formScores,
             frameRate: frameRate,
-            shankAngleAtContactSignedDeg: shankAngleAtContactSigned
+            shankAngleAtContactSignedDeg: shankAngleAtContactSigned,
+            noHeelRatio: noHeelRatio
         )
 
         return (metrics, series)
