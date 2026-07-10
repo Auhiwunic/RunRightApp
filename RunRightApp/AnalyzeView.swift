@@ -37,7 +37,7 @@ import QuartzCore
 import Combine
 
 private extension Font {
-    static let analyzeSection: Font = AppTheme.head(14)
+    static let analyzeSection: Font = AppTheme.sectionTitleFont   // one title size everywhere
     static let analyzeButton: Font = AppTheme.bodySemibold(17)
     static let analyzeBody: Font = AppTheme.body(14)
     static let analyzeCaption: Font = AppTheme.body(13)
@@ -605,7 +605,9 @@ struct AnalyzeView: View {
         let delta: Int? = (score != nil && prevScore != nil) ? score! - prevScore! : nil
         let arcColor: Color = {
             guard let d = delta, d != 0 else { return AppTheme.accentColor }
-            return d > 0 ? AppTheme.accentGreen : AppTheme.formRed
+            // Same alarm red the cue tiles use — formRed is reserved for the
+            // skeleton overlay/scorecard, and two different reds sat side by side.
+            return d > 0 ? AppTheme.accentGreen : Color(hex: "#FF3B30")
         }()
         return Button(action: { metricGuide = guide }) {
             VStack(spacing: 8) {
@@ -633,7 +635,7 @@ struct AnalyzeView: View {
                         Text("\(abs(d))")
                             .font(AppTheme.meta(10))
                     }
-                    .foregroundColor(d > 0 ? AppTheme.accentGreen : AppTheme.formRed)
+                    .foregroundColor(d > 0 ? AppTheme.accentGreen : Color(hex: "#FF3B30"))
                 } else {
                     // Reserve the row so tiles stay the same height with/without a trend.
                     Text(" ").font(AppTheme.meta(10))
@@ -2801,7 +2803,9 @@ struct GaugeDial: View {
             }
             Text("\(score)")
                 .font(AppTheme.head(15))
-                .foregroundColor(AppTheme.primaryText)
+                // The chip is a fixed dark scrim, so its text is fixed white —
+                // primaryText flipped to ink in light mode and went muddy.
+                .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 1)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)

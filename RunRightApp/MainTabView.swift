@@ -10,6 +10,7 @@ struct MainTabView: View {
     @ObservedObject private var run = RunSession.shared
     @ObservedObject private var remoteConfig = RemoteConfigManager.shared
     @State private var showCancelToast = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
@@ -54,6 +55,17 @@ struct MainTabView: View {
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
+        }
+        // Adaptive plan: reconcile the week with what actually happened — on
+        // launch, on every return to foreground, and after each saved run.
+        .task { await AdaptivePlanEngine.shared.evaluateIfNeeded() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await AdaptivePlanEngine.shared.evaluateIfNeeded() }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .runSaved)) { _ in
+            Task { await AdaptivePlanEngine.shared.evaluateIfNeeded() }
         }
         .onChange(of: run.autoCancelledNotice) { _, cancelled in
             guard cancelled else { return }

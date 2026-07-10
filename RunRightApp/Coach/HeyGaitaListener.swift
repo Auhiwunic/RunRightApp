@@ -15,7 +15,9 @@
 
 import Foundation
 import AVFoundation
+import AudioToolbox
 import Speech
+import UIKit
 
 @MainActor
 final class HeyGaitaListener: ObservableObject {
@@ -35,6 +37,11 @@ final class HeyGaitaListener: ObservableObject {
     private var silenceTask: Task<Void, Never>?
     private var dismissTask: Task<Void, Never>?
     private var wordCount = 0
+    /// Latest full transcript from the live session (finalized + volatile).
+    private var lastTranscript = ""
+    /// Transcript snapshot at the moment the wake word was heard — the question
+    /// is whatever the runner says after this point.
+    private var captureBaseline = ""
 
     static var isSupported: Bool {
         if #available(iOS 26.0, *) { return true }
@@ -66,12 +73,17 @@ final class HeyGaitaListener: ObservableObject {
         cancelSession()
         phase = .off
         heard = ""; answer = ""
+        lastTranscript = ""; captureBaseline = ""
     }
 
     /// Tap handler on the pill: skip the wake word and start capturing now.
     func tapToTalk() {
         guard phase == .off || phase == .listening || phase == .answering else { return }
-        Task { await beginCapturing() }
+        if phase == .listening, session != nil {
+            enterCapture(from: lastTranscript)   // reuse the running session
+        } else {
+            Task { await beginCapturing() }
+        }
     }
 
     // MARK: - Listening for the wake word
@@ -79,42 +91,56 @@ final class HeyGaitaListener: ObservableObject {
     private func beginListening() async {
         guard #available(iOS 26.0, *) else { return }
         cancelSession()
-        heard = ""
+        heard = ""; lastTranscript = ""; captureBaseline = ""
         activateSession()
         let live = LiveTranscriptionSession { [weak self] text in
-            self?.onWakeTranscript(text)
+            self?.onTranscript(text)
         }
         do { try await live.start(); session = live; phase = .listening }
         catch { phase = .off }
     }
 
-    private func onWakeTranscript(_ text: String) {
-        guard phase == .listening, Self.containsWakeWord(text) else { return }
-        Task { await beginCapturing() }
+    /// One stream, two modes: while listening it watches for the wake word;
+    /// while capturing it extracts the question from the same running session.
+    /// Not restarting the analyzer on wake is what makes capture feel instant —
+    /// the old teardown+respin took over a second and ate the first words.
+    private func onTranscript(_ text: String) {
+        lastTranscript = text
+        switch phase {
+        case .listening:
+            if Self.containsWakeWord(text) { enterCapture(from: text) }
+        case .capturing:
+            onQuestionTranscript(Self.questionPart(of: text, afterBaseline: captureBaseline))
+        default:
+            break
+        }
     }
 
     // MARK: - Capturing the question
 
-    private func beginCapturing() async {
-        cancelSession()
+    /// Switch the already-running session into capture mode (instant).
+    private func enterCapture(from currentText: String) {
+        silenceTask?.cancel(); dismissTask?.cancel()
+        captureBaseline = currentText
         heard = ""; wordCount = 0
         phase = .capturing
+        wakeChime()
+        startCaptureWatchdog()
+    }
+
+    /// Cold start: no session running (tap-to-talk from .off/.answering).
+    private func beginCapturing() async {
+        cancelSession()
+        captureBaseline = ""; lastTranscript = ""
+        heard = ""; wordCount = 0
+        phase = .capturing
+        wakeChime()
         guard #available(iOS 26.0, *) else { await ask(Self.fallbackQuestion); return }
 
-        // Watchdog: if capture never produces speech (no mic, model still
-        // downloading, or the simulator), fall through to a default question so
-        // the coach still answers instead of hanging on "Listening".
-        silenceTask?.cancel()
-        silenceTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 6_000_000_000)
-            guard let self, !Task.isCancelled,
-                  self.phase == .capturing, self.heard.isEmpty else { return }
-            await self.ask(Self.fallbackQuestion)
-        }
-
+        startCaptureWatchdog()
         activateSession()
         let live = LiveTranscriptionSession { [weak self] text in
-            self?.onQuestionTranscript(text)
+            self?.onTranscript(text)
         }
         do {
             try await live.start()
@@ -125,20 +151,41 @@ final class HeyGaitaListener: ObservableObject {
         }
     }
 
+    /// Watchdog: if capture never produces speech (no mic, model still
+    /// downloading, or the simulator), fall through to a default question so
+    /// the coach still answers instead of hanging on "Listening".
+    private func startCaptureWatchdog() {
+        silenceTask?.cancel()
+        silenceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard let self, !Task.isCancelled,
+                  self.phase == .capturing, self.heard.isEmpty else { return }
+            await self.ask(Self.fallbackQuestion)
+        }
+    }
+
+    /// Short "I'm listening" cue the moment the wake word lands — audible tick
+    /// plus a haptic, so the runner knows to ask without looking at the screen.
+    private func wakeChime() {
+        AudioServicesPlaySystemSound(1113)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    }
+
     private static let fallbackQuestion = "How is my pace looking right now?"
 
-    private func onQuestionTranscript(_ text: String) {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func onQuestionTranscript(_ question: String) {
+        let trimmed = question.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }   // wake-segment rewrite noise
         heard = trimmed
         wordCount = trimmed.split(separator: " ").count
         resetSilenceTimer()
     }
 
-    /// Fire the coach once the runner stops talking for ~1.4s (and said enough).
+    /// Fire the coach once the runner stops talking for ~1.1s (and said enough).
     private func resetSilenceTimer() {
         silenceTask?.cancel()
         silenceTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            try? await Task.sleep(nanoseconds: 1_100_000_000)
             guard let self, !Task.isCancelled else { return }
             await self.submitIfReady()
         }
@@ -164,6 +211,12 @@ final class HeyGaitaListener: ObservableObject {
         // start-failure paths call ask() without cancelling first, which otherwise
         // keeps the mic hot straight through the spoken reply (#15).
         cancelSession()
+        // "Got it" cue: a second, lower tick + light haptic marks the moment the
+        // question is understood and the coach starts thinking, so the runner
+        // knows to stop talking without looking at the screen.
+        AudioServicesPlaySystemSound(1114)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        phase = .thinking
         var reply = "I couldn't reach your coach. Try again."
         do {
             let r = try await CoachChatService.shared.reply(
@@ -213,14 +266,34 @@ final class HeyGaitaListener: ObservableObject {
         session = nil
     }
 
-    /// Tolerant match for "Hey Gaita" — the recognizer often hears the name as
-    /// "gaeta", "gator", "gate a", "guy ta", etc., so accept the close variants.
+    /// Close variants the recognizer hears the name as ("gaeta", "gator",
+    /// "gate a", "guy ta", …).
+    static let wakeTokens = ["gaita", "gaeta", "gata", "gayta", "gaeda", "gada",
+                             "guy ta", "guyta", "gator", "gate a", "gatea", "gate", "gaia"]
+
+    /// Tolerant match for "Hey Gaita".
     static func containsWakeWord(_ text: String) -> Bool {
         let t = text.lowercased()
         guard let heyRange = t.range(of: "hey") else { return false }
         let after = t[heyRange.upperBound...]
-        let tokens = ["gaita", "gaeta", "gata", "gayta", "gaeda", "gada",
-                      "guy ta", "guyta", "gator", "gate a", "gatea", "gate", "gaia"]
-        return tokens.contains { after.contains($0) }
+        return wakeTokens.contains { after.contains($0) }
+    }
+
+    /// The question portion of a running transcript: everything after the LAST
+    /// wake-token occurrence. Volatile results rewrite the current segment, so
+    /// re-deriving from scratch each update is the robust option; if the wake
+    /// token got rewritten away, fall back to dropping the snapshot prefix.
+    static func questionPart(of text: String, afterBaseline baseline: String) -> String {
+        var cut: String.Index?
+        for token in wakeTokens {
+            if let r = text.range(of: token, options: [.caseInsensitive, .backwards]) {
+                if cut == nil || r.upperBound > cut! { cut = r.upperBound }
+            }
+        }
+        if let cut { return String(text[cut...]) }
+        if !baseline.isEmpty, text.hasPrefix(baseline) {
+            return String(text.dropFirst(baseline.count))
+        }
+        return text
     }
 }

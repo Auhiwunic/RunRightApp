@@ -82,13 +82,20 @@ final class CoachVoiceEngine: ObservableObject {
         _ = AudioSessionManager.activate()
 
         do {
-            for chunk in Self.chunks(trimmed) {
+            for chunk in Self.chunks(Self.speakable(trimmed)) {
                 let wav = try await manager.synthesize(text: chunk, voice: Self.voiceName, speed: 1.05)
                 try await player.play(data: wav)
             }
         } catch {
             // stay silent — text is already on screen
         }
+    }
+
+    /// Rewrite text so the voice reads it naturally: a multiplication "x" between
+    /// numbers (interval notation like "4x400") is otherwise pronounced as the
+    /// letter "ex" by the synthesizer, so turn it into the spoken word "by".
+    static func speakable(_ text: String) -> String {
+        text.replacing(/(\d)\s*[xX×]\s*(\d)/) { match in "\(match.1) by \(match.2)" }
     }
 
     func stop() {

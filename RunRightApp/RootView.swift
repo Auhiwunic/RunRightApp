@@ -166,14 +166,17 @@ private struct ConsentGateView: View {
 
     var body: some View {
         ZStack {
-            AnimatedBackground()
+            // Theme aware: this gate appears over whatever theme the user chose,
+            // so it uses AppTheme tokens — a fixed-dark takeover on a light theme
+            // read as broken.
+            AppTheme.bgColor.ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Privacy")
                             .font(AppTheme.display(42))
-                            .foregroundStyle(PlanTheme.textPrimary)
+                            .foregroundStyle(AppTheme.primaryText)
                         Text("check-in.")
                             .font(AppTheme.display(42))
                             .foregroundStyle(accent)
@@ -182,7 +185,7 @@ private struct ConsentGateView: View {
 
                     Text("Confirm these once so Gaita can keep using health, location, and video features for your training.")
                         .font(AppTheme.body(17))
-                        .foregroundStyle(PlanTheme.textSecondary)
+                        .foregroundStyle(AppTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
                     ageSection
@@ -231,7 +234,6 @@ private struct ConsentGateView: View {
                 .padding(.horizontal, 28)
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var ageSection: some View {
@@ -244,7 +246,7 @@ private struct ConsentGateView: View {
             )
             .datePickerStyle(.compact)
             .tint(accent)
-            .foregroundStyle(PlanTheme.textPrimary)
+            .foregroundStyle(AppTheme.primaryText)
 
             HStack(spacing: 10) {
                 ForEach(AgeGateRegion.allCases) { option in
@@ -252,12 +254,12 @@ private struct ConsentGateView: View {
                     Button { region = option } label: {
                         Text(option.displayName)
                             .font(AppTheme.bodySemibold(15))
-                            .foregroundStyle(selected ? .black : PlanTheme.textSecondary)
+                            .foregroundStyle(selected ? .black : AppTheme.secondaryText)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(selected ? accent : PlanTheme.barUnselected)
+                                    .fill(selected ? accent : AppTheme.insetFill)
                             )
                     }
                     .buttonStyle(.plain)
@@ -272,7 +274,7 @@ private struct ConsentGateView: View {
             }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(PlanTheme.card))
+        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(AppTheme.cardBg))
     }
 
     private func consentRow(title: String, text: String, isOn: Binding<Bool>) -> some View {
@@ -280,16 +282,16 @@ private struct ConsentGateView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
                     .font(AppTheme.bodySemibold(17))
-                    .foregroundStyle(PlanTheme.textPrimary)
+                    .foregroundStyle(AppTheme.primaryText)
                 Text(text)
                     .font(AppTheme.body(13))
-                    .foregroundStyle(PlanTheme.textSecondary)
+                    .foregroundStyle(AppTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .toggleStyle(SwitchToggleStyle(tint: accent))
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(PlanTheme.card))
+        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(AppTheme.cardBg))
     }
 
     private func saveConsent() {
@@ -441,6 +443,12 @@ struct AuthSheet: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .background(Color.white)
+                        .overlay(
+                            // Outline so the white pill doesn't wash into the
+                            // light-mode sheet (the Apple button already has one).
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
                         .cornerRadius(14)
                     }
                     .disabled(isLoading)

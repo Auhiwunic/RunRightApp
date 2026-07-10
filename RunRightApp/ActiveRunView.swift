@@ -147,9 +147,8 @@ struct ActiveRunView: View {
                         }
                         .foregroundColor(.white)
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.black.opacity(0.55))
-                        .clipShape(Capsule())
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial, in: Capsule())
                         .padding(.trailing, 16)
                         .padding(.top, 50)
                     }
@@ -162,8 +161,7 @@ struct ActiveRunView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 9)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Capsule())
+                            .background(.ultraThinMaterial, in: Capsule())
                             .padding(.horizontal, 28)
                             .padding(.top, 8)
                             .transition(.opacity)
@@ -178,8 +176,11 @@ struct ActiveRunView: View {
 
                     Spacer()
                 }
-                .animation(.easeInOut(duration: 0.25), value: coach.lastSpoken)
-                .animation(.easeInOut(duration: 0.25), value: wake.phase)
+                // Overlays float on the dark map — force dark materials so the
+                // blur chips stay legible regardless of the app's color scheme.
+                .environment(\.colorScheme, .dark)
+                .animation(.easeInOut(duration: 0.3), value: coach.lastSpoken)
+                .animation(.spring(duration: 0.35), value: wake.phase)
                 
                 compactStatsBar
             }
@@ -192,9 +193,8 @@ struct ActiveRunView: View {
             Image(systemName: "chevron.down").accessibilityLabel("Minimize run")
                 .font(AppTheme.meta(13))
                 .foregroundColor(.white)
-                .padding(8)
-                .background(Color.black.opacity(0.55))
-                .clipShape(Circle())
+                .padding(9)
+                .background(.ultraThinMaterial, in: Circle())
         }
     }
 
@@ -209,9 +209,8 @@ struct ActiveRunView: View {
             }
             .foregroundColor(.white.opacity(coach.isEnabled ? 1 : 0.45))
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Color.black.opacity(0.55))
-            .clipShape(Capsule())
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
         }
     }
 
@@ -229,9 +228,7 @@ struct ActiveRunView: View {
                 }
                 .foregroundColor(.white)
                 .padding(.horizontal, 14).padding(.vertical, 9)
-                .background(Color.black.opacity(0.55))
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.16), lineWidth: 1))
+                .background(.ultraThinMaterial, in: Capsule())
             }
             .buttonStyle(.plain)
 
@@ -270,68 +267,52 @@ struct ActiveRunView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 16).padding(.vertical, 12)
-        .background(Color.black.opacity(0.72))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.horizontal, 16).padding(.vertical, 13)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
-    // MARK: - Compact Stats Bar
+    // MARK: - Compact Stats Card
+    // A floating rounded card with three equal data columns, the zone gauge, and
+    // a full-width pause pill — deliberately not the attached bottom sheet with a
+    // giant circular button every other run app uses.
     private var compactStatsBar: some View {
-        VStack(spacing: 0) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(AppTheme.primaryText.opacity(0.4))
-                .frame(width: 40, height: 5)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-            
-            Text(formatTime(elapsedTime))
-                .font(AppTheme.displayTabular(48))
-                .foregroundColor(AppTheme.primaryText)
-            
-            HStack(spacing: 32) {
-                VStack(spacing: 2) {
-                    Text(formatMiles(tracker.liveSummary?.distance ?? 0))
-                        .font(AppTheme.bodyMedium(24))
-                        .foregroundColor(AppTheme.primaryText)
-                    Text("mi")
-                        .font(AppTheme.body(12))
-                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
-                }
-                
-                VStack(spacing: 2) {
-                    Text(formatPacePerMile(tracker.liveSummary?.averageSpeed ?? 0))
-                        .font(AppTheme.bodyMedium(24))
-                        .foregroundColor(AppTheme.primaryText)
-                    Text("/mi")
-                        .font(AppTheme.body(12))
-                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
-                }
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(AppTheme.primaryText.opacity(0.25))
+                .frame(width: 36, height: 4)
+
+            HStack(spacing: 0) {
+                compactStat(formatTime(elapsedTime), "TIME")
+                compactStat(formatMiles(tracker.liveSummary?.distance ?? 0), "MILES")
+                compactStat(formatPacePerMile(tracker.liveSummary?.averageSpeed ?? 0), "PACE")
             }
-            .padding(.top, 8)
 
             // Live effort zone — the run screen's signature element.
             zoneStrip
-                .padding(.horizontal, 44)
-                .padding(.top, 18)
+                .padding(.horizontal, 6)
 
-            // Pause button
             Button(action: pauseRun) {
-                Circle()
-                    .fill(accentOrange)
-                    .frame(width: 72, height: 72)
-                    .overlay(
-                        Image(systemName: "pause.fill").accessibilityLabel("Pause run")
-                            .font(AppTheme.display(28))
-                            .foregroundColor(.black)
-                    )
+                HStack(spacing: 8) {
+                    Image(systemName: "pause.fill").accessibilityLabel("Pause run")
+                        .font(AppTheme.head(16))
+                    Text("Pause")
+                        .font(AppTheme.bodySemibold(17))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(accentOrange)
+                .clipShape(Capsule())
             }
-            .padding(.top, 16)
-            .padding(.bottom, 30)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 18)
         .background(backgroundColor)
-        .cornerRadius(20, corners: [.topLeft, .topRight])
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.bottom, 24)
         .offset(y: compactDragOffset)
         .gesture(
             DragGesture()
@@ -353,6 +334,18 @@ struct ActiveRunView: View {
         )
     }
     
+    private func compactStat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(AppTheme.displayTabular(30))
+                .foregroundColor(AppTheme.primaryText)
+            Text(label)
+                .font(AppTheme.meta(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.45))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     // MARK: - Expanded Stats View
     private var expandedStatsView: some View {
         VStack(spacing: 0) {
@@ -389,27 +382,34 @@ struct ActiveRunView: View {
     }
     
     // MARK: - Header Section
+    // Dark header with a small status dot — not the solid orange banner every
+    // other run app puts here. The accent lives in the dot and the buttons.
     private var headerSection: some View {
         VStack(spacing: 4) {
             if !isPaused {
                 RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.black.opacity(0.3))
+                    .fill(AppTheme.primaryText.opacity(0.25))
                     .frame(width: 40, height: 5)
                     .padding(.top, 8)
             }
-            
-            Text(isPaused ? "Paused" : "Running")
-                .font(AppTheme.bodySemibold(15))
-                .foregroundColor(.black)
-            
+
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(isPaused ? AppTheme.primaryText.opacity(0.4) : accentOrange)
+                    .frame(width: 8, height: 8)
+                Text(isPaused ? "Paused" : "Running")
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
+            }
+
             Text(formatTimeWithHours(elapsedTime))
                 .font(AppTheme.displayTabular(56))
-                .foregroundColor(.black)
+                .foregroundColor(AppTheme.primaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, isPaused ? 60 : 50)
         .padding(.bottom, 20)
-        .background(accentOrange)
+        .background(backgroundColor)
         .overlay(
             Button(action: {
                 if !isPaused {
@@ -418,7 +418,7 @@ struct ActiveRunView: View {
             }) {
                 Image(systemName: "arrow.down.right.and.arrow.up.left").accessibilityLabel("Collapse run")
                     .font(AppTheme.bodyMedium(18))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
                     .padding(12)
             }
             .opacity(isPaused ? 0 : 1)
@@ -778,10 +778,11 @@ struct ActiveRunView: View {
         }
     }
 
-    /// Current speed (m/s): live GPS speed when valid, else the run average.
+    /// Current speed (m/s) from the tracker's live Doppler reading — honestly
+    /// zero when the runner stops (the old trackedLocations.last read went stale
+    /// while standing still and kept showing the last moving speed).
     private var currentSpeedMps: Double {
-        if let s = tracker.trackedLocations.last?.speed, s >= 0.5 { return s }
-        return tracker.liveSummary?.averageSpeed ?? 0
+        tracker.currentSpeedMps
     }
 
     /// The live zone, or nil when basically stopped (warming up / paused).

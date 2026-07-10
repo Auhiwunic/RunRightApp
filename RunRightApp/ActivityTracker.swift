@@ -113,14 +113,17 @@ public struct ActivityCalculator {
         let distance = calculateTotalDistance(from: locations)
         let elevation = calculateElevationStats(from: locations)
         let speeds = calculateSpeedStats(from: locations)
+        let duration = locations.last!.timestamp.timeIntervalSince(locations.first!.timestamp)
         return ActivitySummary(
             distance: distance,
-            duration: locations.last!.timestamp.timeIntervalSince(locations.first!.timestamp),
+            duration: duration,
             elevationGain: elevation.gain,
             elevationLoss: elevation.loss,
             highestPoint: elevation.highest,
             lowestPoint: elevation.lowest,
-            averageSpeed: speeds.average,
+            // Time-weighted (distance over time), not a per-segment mean — the
+            // segment mean let short jittery segments dominate the average.
+            averageSpeed: duration > 0 ? distance / duration : speeds.average,
             maxSpeed: speeds.max,
             startTime: locations.first!.timestamp,
             endTime: locations.last!.timestamp,
@@ -142,6 +145,20 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     @Published public var isPaused = false
     @Published public var liveSummary: ActivitySummary?
     @Published public var finalSummary: ActivitySummary?
+    /// Live Doppler-derived speed (m/s) from the most recent GPS fix — updated
+    /// even when the fix is rejected for distance, so "current pace" honestly
+    /// reads zero when the runner stops instead of drifting on jitter.
+    @Published public var currentSpeedMps: Double = 0
+
+    // MARK: - Fix acceptance thresholds
+    /// Fixes worse than this are noise, not position (was 100m — indoor/urban
+    /// garbage fixes got in and their drift was counted as running).
+    private static let maxAccuracyMeters: Double = 30
+    /// Below this Doppler speed the runner is standing still; GPS position may
+    /// still wander, but that wander must never count as distance.
+    private static let stationaryDopplerFloor: Double = 0.5
+    /// When the last valid Doppler reading arrived (staleness cutoff above).
+    private var lastDopplerAt = Date.distantPast
 
     /// Shared singleton so the run keeps tracking even if the Run tab's view is
     /// torn down (e.g. switching tabs). The CLLocationManager lives here, not in
@@ -153,7 +170,11 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         locationManager.delegate = self
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.activityType = .fitness
-        locationManager.distanceFilter = 5
+        // Deliver every fix. The old 5m filter could stop callbacks entirely when
+        // the runner halts with a clean GPS lock, freezing the live speed at its
+        // last moving value; the movement gate now does the noise filtering, and
+        // GPS hardware is already on continuously so there is no battery cost.
+        locationManager.distanceFilter = kCLDistanceFilterNone
         // Keep tracking when the screen is locked / app is backgrounded.
         // Requires the "location" UIBackgroundMode (present in Info.plist).
         locationManager.allowsBackgroundLocationUpdates = true
@@ -193,6 +214,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         locationManager.stopUpdatingLocation()
         isTracking = false
         isPaused = false
+        currentSpeedMps = 0
         
         let valid = ActivityCalculator.filterValidLocations(trackedLocations)
         guard valid.count > 1 else {
@@ -211,6 +233,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         finalSummary = nil
         isTracking = false
         isPaused = false
+        currentSpeedMps = 0
         resetLiveAccumulators()
         locationManager.stopUpdatingLocation()
     }
@@ -275,6 +298,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     public func pauseTracking() {
         guard isTracking && !isPaused else { return }
         isPaused = true
+        currentSpeedMps = 0
         locationManager.stopUpdatingLocation()
     }
     
@@ -287,34 +311,86 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard isTracking && !isPaused else { return }
-        
-        // Filter: only accept recent locations (within last 10 seconds) to avoid stale cache
+
+        // Live current speed straight from the newest fix's Doppler reading —
+        // published even when the fix is rejected below, so the pace/zone UI
+        // drops to zero the moment the runner stops. A reading is only trusted
+        // for a few seconds: under bridges/trees Doppler goes invalid (-1) and
+        // holding the old value forever would show a stale running pace.
+        if let doppler = locations.last?.speed, doppler >= 0 {
+            currentSpeedMps = doppler
+            lastDopplerAt = Date()
+        } else if currentSpeedMps != 0, Date().timeIntervalSince(lastDopplerAt) > 5 {
+            currentSpeedMps = 0
+        }
+
+        // Only recent, reasonably accurate fixes. 100m acceptance let indoor and
+        // urban-canyon garbage in; their drift read as a 7-minute pace while the
+        // runner sat still.
         let recentLocations = locations.filter { location in
             let age = Date().timeIntervalSince(location.timestamp)
-            return age < 10 && location.horizontalAccuracy > 0 && location.horizontalAccuracy < 100
+            return age < 10 && location.horizontalAccuracy > 0
+                && location.horizontalAccuracy < Self.maxAccuracyMeters
         }
-        
         guard !recentLocations.isEmpty else { return }
 
-        accumulate(recentLocations)
-        trackedLocations.append(contentsOf: recentLocations)
+        // Movement gate: a fix only counts when it represents real travel, not
+        // jitter. Doppler is the primary signal (independent of position noise);
+        // without a valid Doppler reading, the displacement must exceed the two
+        // fixes' combined uncertainty to be distinguishable from noise.
+        var accepted: [CLLocation] = []
+        var anchor: CLLocation? = resetAnchorOnNextUpdate ? nil : trackedLocations.last
+        for loc in recentLocations {
+            guard let a = anchor else {   // first fix of the run / after resume
+                accepted.append(loc)
+                anchor = loc
+                continue
+            }
+            if Self.isRealMovement(from: a, to: loc) {
+                accepted.append(loc)
+                anchor = loc
+            }
+        }
+        guard !accepted.isEmpty else { return }
 
-        if trackedLocations.count > 1,
-           let first = trackedLocations.first, let last = trackedLocations.last {
+        accumulate(accepted)
+        trackedLocations.append(contentsOf: accepted)
+
+        // Publish from the FIRST accepted fix (not the second): a stationary run
+        // accepts exactly one anchor fix, and without a liveSummary the
+        // inactivity logic can't show its countdown before auto-cancelling.
+        if let first = trackedLocations.first, let last = trackedLocations.last {
+            let duration = last.timestamp.timeIntervalSince(first.timestamp)
             liveSummary = ActivitySummary(
                 distance: liveDistance,
-                duration: last.timestamp.timeIntervalSince(first.timestamp),
+                duration: duration,
                 elevationGain: liveGain,
                 elevationLoss: liveLoss,
                 highestPoint: liveHighest,
                 lowestPoint: liveLowest,
-                averageSpeed: liveSpeedCount > 0 ? liveSpeedSum / Double(liveSpeedCount) : 0,
+                // Time-weighted: total distance over total time. The old
+                // per-segment mean let one 10m jitter jump over 2s (5 m/s) weigh
+                // as much as a full steady minute, inflating pace while idle.
+                averageSpeed: duration > 0 ? liveDistance / duration : 0,
                 maxSpeed: liveMaxSpeed,
                 startTime: first.timestamp,
                 endTime: last.timestamp,
                 hasHeartRate: false
             )
         }
+    }
+
+    /// True when the step from `a` to `b` is real travel rather than GPS jitter.
+    static func isRealMovement(from a: CLLocation, to b: CLLocation) -> Bool {
+        // A valid Doppler reading near zero means standing still, no matter how
+        // far the position wandered.
+        if b.speed >= 0 && b.speed < stationaryDopplerFloor { return false }
+        // Valid Doppler says moving — trust it.
+        if b.speed >= stationaryDopplerFloor { return true }
+        // No Doppler: fall back to displacement vs. the fixes' combined
+        // uncertainty. Anything smaller is indistinguishable from noise.
+        let noiseFloor = max(10, a.horizontalAccuracy + b.horizontalAccuracy)
+        return b.distance(from: a) >= noiseFloor
     }
     
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

@@ -548,6 +548,19 @@ struct RunView: View {
 
             if todaysRunEnabled {
                 VStack(alignment: .leading, spacing: 18) {
+                    // Adaptive plan note — why today's run changed.
+                    if let note = AdaptivePlanEngine.todaysNote {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(AppTheme.meta(11))
+                                .padding(.top, 2)
+                            Text(note)
+                                .font(AppTheme.body(12))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .foregroundColor(AppTheme.accentColor)
+                    }
+
                     if todayPlan.isRest {
                         Text("Recovery is part of training.")
                             .font(AppTheme.body(13))
@@ -693,11 +706,12 @@ struct ToggleRow: View {
             
             ZStack {
                 Capsule()
-                    .fill(isOn ? accentLime : Color(hex: "#333333"))
+                    .fill(isOn ? accentLime : AppTheme.insetFill)
+                    .overlay(Capsule().stroke(AppTheme.subtleBorder, lineWidth: isOn ? 0 : 1))
                     .frame(width: 50, height: 28)
-                
+
                 Circle()
-                    .fill(isOn ? Color.black : Color.white)
+                    .fill(isOn ? Color.black : AppTheme.raisedFill)
                     .frame(width: 22, height: 22)
                     .offset(x: isOn ? 11 : -11)
             }

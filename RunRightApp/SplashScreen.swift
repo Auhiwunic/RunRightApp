@@ -21,15 +21,16 @@ struct BrandedSplashScreen: View {
     @State private var spin = false
     @State private var pulse = false
 
-    // The splash is ALWAYS pure white (user request) — no tint, no ambient orbs,
-    // in either theme. Matches the static UILaunchScreen (LaunchBackground = white)
-    // so there is no dark flash before or during the logo. Text/ink is fixed dark
-    // so it stays legible on white regardless of the app's light/dark setting.
-    private let ink = Color(red: 0.08, green: 0.08, blue: 0.07)
+    // Theme aware (user request 2026-07-11, supersedes the earlier "always pure
+    // white"): the splash matches the chosen appearance — clean white in light
+    // mode, the app's dark base in dark mode — so a dark-theme launch never
+    // flashes white. No tint, no ambient orbs in either theme. The static
+    // UILaunchScreen colorset carries a matching dark variant.
+    private var ink: Color { AppTheme.primaryText }
 
     var body: some View {
         ZStack {
-            Color.white.ignoresSafeArea()
+            AppTheme.bgColor.ignoresSafeArea()
 
             VStack(spacing: 26) {
                 // The logo itself spins — the same branded motion as the Coach

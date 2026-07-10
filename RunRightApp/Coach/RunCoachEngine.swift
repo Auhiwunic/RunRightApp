@@ -34,8 +34,12 @@ struct RunCoachEngineState: Equatable {
 struct RunCoachEngine {
     private let onPaceThreshold: Double = 15
     private let slightlyThreshold: Double = 45
-    private let minSameCategoryInterval: TimeInterval = 90
-    private let minOverallInterval: TimeInterval = 60
+    // Mid-run the coach should mostly stay quiet: mile splits are the anchor
+    // cues (they bypass this throttle); between them, at most one pace cue per
+    // 3 minutes and the same nag no more than once per 5 — a runner drifting
+    // around the target must not get a running commentary.
+    private let minSameCategoryInterval: TimeInterval = 300
+    private let minOverallInterval: TimeInterval = 180
     private let gpsWeakDelay: TimeInterval = 30
 
     mutating func evaluate(
