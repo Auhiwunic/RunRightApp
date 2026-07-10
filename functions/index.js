@@ -61,6 +61,48 @@ function isAllowedImageUrl(u) {
 
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 
+// The 10 sole zones every scan grades, in one place.
+const SCAN_ZONES = [
+  "bigToe", "lesserToes", "medialBall", "centralBall", "lateralBall",
+  "medialMidfoot", "lateralMidfoot", "medialHeel", "centralHeel", "lateralHeel",
+];
+
+// Enforced output schema for the scan (strict structured outputs): the API
+// itself rejects any response whose enums/types drift, so the client decoder
+// never sees out-of-vocabulary values.
+const SHOE_SCAN_SCHEMA = (() => {
+  const zoneObject = (valueSchema) => ({
+    type: "object",
+    additionalProperties: false,
+    required: SCAN_ZONES,
+    properties: Object.fromEntries(SCAN_ZONES.map((z) => [z, valueSchema])),
+  });
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "overallCondition", "zoneNotes", "gaitType", "wearZones", "wearPercents",
+      "strikePattern", "primaryWearAreas", "gaitCause", "concern", "severity",
+      "estimatedMilesRemaining", "confidence", "treadNote",
+    ],
+    properties: {
+      overallCondition: { type: "string" },
+      zoneNotes: { type: "string" },
+      gaitType: { type: "string", enum: ["neutral", "pronation", "supination", "overpronation"] },
+      wearZones: zoneObject({ type: "string", enum: ["green", "yellow", "orange", "red"] }),
+      wearPercents: zoneObject({ type: "integer" }),
+      strikePattern: { type: "string", enum: ["heel", "midfoot", "forefoot"] },
+      primaryWearAreas: { type: "string" },
+      gaitCause: { type: "string" },
+      concern: { type: "string" },
+      severity: { type: "string", enum: ["mild", "moderate", "severe"] },
+      estimatedMilesRemaining: { type: ["integer", "null"] },
+      confidence: { type: "integer" },
+      treadNote: { type: "string" },
+    },
+  };
+})();
+
 function buildSingleShoePrompt(side, previousZones) {
   const s = String(side || "").toUpperCase();
   const isLeft = String(side || "").toLowerCase() === "left";
@@ -98,27 +140,24 @@ Rubber wear only progresses. Each zone must be the SAME or MORE worn than the ba
 Respond with ONLY this JSON object — no markdown, no text outside it.
 Fill "zoneNotes" FIRST with what you actually observe per zone (forces you to look before grading).
 Each wearZones value MUST be exactly one of: green, yellow, orange, red.
+wearPercents is the SAME 10 zones as a precise 0-100 wear depth (0 = factory fresh, 100 = worn through). It MUST agree with the color: green 0-25, yellow 26-50, orange 51-75, red 76-100.
+estimatedMilesRemaining: integer miles of useful life left across the whole shoe based on the worst load-bearing zones and visible midsole compression; null only if the photo truly cannot support an estimate.
+confidence: 0-100 — how clearly the photo shows the tread (lighting, focus, angle, full sole visible).
+treadNote: one sentence about tread depth and pattern condition (lugs, exposed midsole, smoothing).
 {
   "overallCondition": "<one sentence: how worn overall>",
   "zoneNotes": "<bigToe: ...; lesserToes: ...; medialBall: ...; centralBall: ...; lateralBall: ...; medialMidfoot: ...; lateralMidfoot: ...; medialHeel: ...; centralHeel: ...; lateralHeel: ...>",
   "gaitType": "<neutral|pronation|supination|overpronation>",
-  "wearZones": {
-    "bigToe": "<green|yellow|orange|red>",
-    "lesserToes": "<green|yellow|orange|red>",
-    "medialBall": "<green|yellow|orange|red>",
-    "centralBall": "<green|yellow|orange|red>",
-    "lateralBall": "<green|yellow|orange|red>",
-    "medialMidfoot": "<green|yellow|orange|red>",
-    "lateralMidfoot": "<green|yellow|orange|red>",
-    "medialHeel": "<green|yellow|orange|red>",
-    "centralHeel": "<green|yellow|orange|red>",
-    "lateralHeel": "<green|yellow|orange|red>"
-  },
+  "wearZones": { "bigToe": "<green|yellow|orange|red>", ... all 10 zones ... },
+  "wearPercents": { "bigToe": <0-100>, ... all 10 zones ... },
   "strikePattern": "<heel|midfoot|forefoot>",
   "primaryWearAreas": "<comma-separated most-worn zones>",
   "gaitCause": "<one sentence biomechanical cause referencing anatomy>",
   "concern": "<one sentence injury risk>",
-  "severity": "<mild|moderate|severe>"
+  "severity": "<mild|moderate|severe>",
+  "estimatedMilesRemaining": <integer or null>,
+  "confidence": <0-100>,
+  "treadNote": "<one sentence on tread depth and pattern>"
 }`;
 
   return prompt;
@@ -185,7 +224,10 @@ export const analyzeShoe = onRequest(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4.1",
+          // gpt-5.6-sol: OpenAI's flagship vision model (July 2026) — markedly
+          // better fine-detail tread reading than gpt-4.1. Scans are metered
+          // (5 free/month + rate limit), so the ~1 cent/scan cost is fine.
+          model: "gpt-5.6-sol",
           messages: [
             {
               role: "user",
@@ -195,9 +237,14 @@ export const analyzeShoe = onRequest(
               ],
             },
           ],
-          max_tokens: 2000,
+          max_tokens: 3000,
           temperature: 0.1,
-          response_format: { type: "json_object" },
+          // Enforced schema: enums and integer types are validated by the API,
+          // so colors/gait/strike can never drift out of the app's vocabulary.
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: "shoe_scan", strict: true, schema: SHOE_SCAN_SCHEMA },
+          },
         }),
       });
 

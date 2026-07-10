@@ -70,7 +70,11 @@ final class ScanRepository {
             gaitCause: result.gaitCause,
             concern: result.concern,
             severity: result.severity,
-            imageUrl: imageDownloadURL
+            imageUrl: imageDownloadURL,
+            wearPercents: result.wearPercents,
+            estimatedMilesRemaining: result.estimatedMilesRemaining,
+            confidence: result.confidence,
+            treadNote: result.treadNote
         )
 
         let doc = scansCollection(uid: uid).document(scanId)
@@ -162,7 +166,11 @@ final class ScanRepository {
             gaitCause: gaitCause,
             concern: concern,
             severity: severity,
-            imageUrl: imageUrl
+            imageUrl: imageUrl,
+            wearPercents: data["wearPercents"] as? [String: Int],
+            estimatedMilesRemaining: data["estimatedMilesRemaining"] as? Int,
+            confidence: data["confidence"] as? Int,
+            treadNote: data["treadNote"] as? String
         )
     }
 

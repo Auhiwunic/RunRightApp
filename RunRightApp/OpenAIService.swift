@@ -121,7 +121,12 @@ struct SingleShoeResponse: Codable {
     let gaitCause: String?          // biomechanical cause referencing anatomy
     let concern: String?            // injury risk from this pattern
     let severity: String?           // "mild" | "moderate" | "severe"
-    
+    // Detailed fields (gpt-5.6 upgrade) — optional so older responses still decode.
+    let wearPercents: [String: Int]?    // per zone, 0-100 wear depth
+    let estimatedMilesRemaining: Int?   // useful life left, nil when unestimable
+    let confidence: Int?                // 0-100 photo readability
+    let treadNote: String?              // one sentence on tread depth/pattern
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         // A real analysis carries at least a gait type or wear zones. If neither
@@ -137,19 +142,25 @@ struct SingleShoeResponse: Codable {
         gaitCause = try? container.decodeIfPresent(String.self, forKey: .gaitCause)
         concern = try? container.decodeIfPresent(String.self, forKey: .concern)
         severity = try? container.decodeIfPresent(String.self, forKey: .severity)
+        wearPercents = try? container.decodeIfPresent([String: Int].self, forKey: .wearPercents)
+        estimatedMilesRemaining = try? container.decodeIfPresent(Int.self, forKey: .estimatedMilesRemaining)
+        confidence = try? container.decodeIfPresent(Int.self, forKey: .confidence)
+        treadNote = try? container.decodeIfPresent(String.self, forKey: .treadNote)
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case gaitType, wearZones, strikePattern, primaryWearAreas, gaitCause, concern, severity
+        case wearPercents, estimatedMilesRemaining, confidence, treadNote
     }
 }
 
 class OpenAIService {
     static let shared = OpenAIService()
 
-    /// Vision model used for wear analysis. gpt-4.1 follows the zone instructions
-    /// and reads fine tread detail noticeably better than gpt-4o. Change in one place.
-    static let visionModel = "gpt-4.1"
+    /// Vision model used for wear analysis. gpt-5.6-sol (OpenAI's flagship
+    /// vision model, July 2026) reads fine tread detail noticeably better than
+    /// the gpt-4 family. Change in one place; keep in sync with functions/index.js.
+    static let visionModel = "gpt-5.6-sol"
 
     /// Firebase HTTPS Cloud Function that holds the OpenAI key server-side.
     /// The app sends a Firebase ID token plus the single-shoe request body.

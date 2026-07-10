@@ -198,6 +198,13 @@ struct ShoeScanDTO: Codable {
 
     var imageUrl: String?
 
+    // Detailed fields from the gpt-5.6 scan upgrade (optional — older scans
+    // predate them).
+    var wearPercents: [String: Int]?
+    var estimatedMilesRemaining: Int?
+    var confidence: Int?
+    var treadNote: String?
+
     func toFirestore() -> [String: Any] {
         var dict: [String: Any] = [
             "shoeName": shoeName,
@@ -214,6 +221,10 @@ struct ShoeScanDTO: Codable {
         if let severity { dict["severity"] = severity }
         if let imageUrl { dict["imageUrl"] = imageUrl }
         if let wearZones { dict["wearZones"] = wearZones.toFirestore() }
+        if let wearPercents { dict["wearPercents"] = wearPercents }
+        if let estimatedMilesRemaining { dict["estimatedMilesRemaining"] = estimatedMilesRemaining }
+        if let confidence { dict["confidence"] = confidence }
+        if let treadNote { dict["treadNote"] = treadNote }
 
         return dict
     }
