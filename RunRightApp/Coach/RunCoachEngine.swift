@@ -91,7 +91,11 @@ struct RunCoachEngine {
             return nil
         }
 
-        if shouldSkipEasyRunPrompt(category: category, plannedRun: plannedRun) {
+        // Between mile splits the coach only speaks up for a BIG deviation.
+        // The onPace / slightly-off commentary made it talk constantly on a
+        // normal run (pace naturally hovers around the target and every hover
+        // was a category change) — the mile-split pace note covers those.
+        guard category == .tooSlow || category == .tooFast else {
             engineState.lastCategory = category
             return nil
         }

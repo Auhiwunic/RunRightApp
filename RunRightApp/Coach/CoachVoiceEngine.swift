@@ -81,9 +81,24 @@ final class CoachVoiceEngine: ObservableObject {
         guard let manager, case .ready = state else { return }
         _ = AudioSessionManager.activate()
 
+        let parts = Self.chunks(Self.speakable(trimmed))
+        guard !parts.isEmpty else { return }
         do {
-            for chunk in Self.chunks(Self.speakable(trimmed)) {
-                let wav = try await manager.synthesize(text: chunk, voice: Self.voiceName, speed: 1.05)
+            // Pipeline synthesis with playback: the next sentence is synthesized
+            // WHILE the current one plays. The old serial synth→play loop left a
+            // dead gap equal to the neural synthesis time at every sentence
+            // boundary, which is exactly what made the voice sound choppy.
+            var pending = Task { [manager] in
+                try await manager.synthesize(text: parts[0], voice: Self.voiceName, speed: 1.05)
+            }
+            for i in parts.indices {
+                let wav = try await pending.value
+                if i + 1 < parts.count {
+                    let next = parts[i + 1]
+                    pending = Task { [manager] in
+                        try await manager.synthesize(text: next, voice: Self.voiceName, speed: 1.05)
+                    }
+                }
                 try await player.play(data: wav)
             }
         } catch {

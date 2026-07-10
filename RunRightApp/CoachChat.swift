@@ -107,13 +107,21 @@ final class CoachChatService {
     /// in their data and recommends real drills rather than inventing them.
     static func groundingContext() -> [String: Any] {
         var ctx: [String: Any] = [:]
+        // Everything from the recorded form video lives under ONE clearly-named
+        // key. With `cadence` at the top level the model quoted the VIDEO's
+        // cadence as the runner's live cadence ("your cadence is 190" while they
+        // stood still) — the data must say what it is, not just the prompt.
         if let form = ScorecardDataStore.shared.load() {
-            ctx["overallForm"] = form.overall
-            ctx["cadence"] = form.cadence
-            ctx["metrics"] = form.metrics.map { ["label": $0.label, "value": $0.value] }
+            var video: [String: Any] = [
+                "note": "metrics measured in the runner's LAST RECORDED FORM VIDEO, not live values",
+                "overallForm": form.overall,
+                "cadenceInThatVideo": form.cadence,
+                "metrics": form.metrics.map { ["label": $0.label, "value": $0.value] },
+            ]
             if let cues = form.cueScores {
-                ctx["cueScores"] = cues.mapValues { Int($0.rounded()) }
+                video["cueScores"] = cues.mapValues { Int($0.rounded()) }
             }
+            ctx["formVideoAnalysis"] = video
         }
         // The same fused FOCUS list the app shows, so chat answers match the UI.
         ctx["focus"] = Array(FormGaitCrossReference.storedInsights().prefix(4)).map {

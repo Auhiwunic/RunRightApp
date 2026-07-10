@@ -35,6 +35,12 @@ struct RunRightApp: App {
                 // Fetch backend kill-switches (coach/scan/force-update). Bundled
                 // defaults already apply, so this only ever loosens or tightens.
                 .task { RemoteConfigManager.shared.start() }
+                // DEBUG headless backtest (GAITA_BACKTEST=1) — no-op otherwise.
+                .task {
+                    #if DEBUG
+                    BacktestRunner.runIfNeeded()
+                    #endif
+                }
                 // Pins system chrome (status bar, sheets, alerts, keyboard) to
                 // the chosen appearance; AppTheme colors resolve off this trait.
                 .preferredColorScheme(appearance == "light" ? .light : .dark)

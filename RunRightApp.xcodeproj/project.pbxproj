@@ -90,6 +90,8 @@
 		A1000FA1 /* LegalDocs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FA1 /* LegalDocs.swift */; };
 		A1000FE1 /* UsageLimits.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FE1 /* UsageLimits.swift */; };
 		A1000FJ1 /* AdaptivePlanEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FJ1 /* AdaptivePlanEngine.swift */; };
+		A1000FK1 /* BacktestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FK1 /* BacktestRunner.swift */; };
+		A1000FL1 /* AppTourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FL1 /* AppTourView.swift */; };
 		A1000FG1 /* CoachActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FG1 /* CoachActions.swift */; };
 		A1000FH1 /* HeyGaitaListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FH1 /* HeyGaitaListener.swift */; };
 		A1000FF1 /* WearSymmetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FF1 /* WearSymmetry.swift */; };
@@ -208,6 +210,8 @@
 		A2000FA1 /* LegalDocs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocs.swift; sourceTree = "<group>"; };
 		A2000FE1 /* UsageLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageLimits.swift; sourceTree = "<group>"; };
 		A2000FJ1 /* AdaptivePlanEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptivePlanEngine.swift; sourceTree = "<group>"; };
+		A2000FK1 /* BacktestRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BacktestRunner.swift; sourceTree = "<group>"; };
+		A2000FL1 /* AppTourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTourView.swift; sourceTree = "<group>"; };
 		A2000FG1 /* CoachActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachActions.swift; sourceTree = "<group>"; };
 		A2000FH1 /* HeyGaitaListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/HeyGaitaListener.swift; sourceTree = "<group>"; };
 		A2000FF1 /* WearSymmetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearSymmetry.swift; sourceTree = "<group>"; };
@@ -374,6 +378,8 @@
 				A2000FA1 /* LegalDocs.swift */,
 				A2000FE1 /* UsageLimits.swift */,
 				A2000FJ1 /* AdaptivePlanEngine.swift */,
+				A2000FK1 /* BacktestRunner.swift */,
+				A2000FL1 /* AppTourView.swift */,
 				A2000FG1 /* CoachActions.swift */,
 				A2000FH1 /* HeyGaitaListener.swift */,
 				A2000FF1 /* WearSymmetry.swift */,
@@ -626,6 +632,8 @@
 				A1000FA1 /* LegalDocs.swift in Sources */,
 				A1000FE1 /* UsageLimits.swift in Sources */,
 				A1000FJ1 /* AdaptivePlanEngine.swift in Sources */,
+				A1000FK1 /* BacktestRunner.swift in Sources */,
+				A1000FL1 /* AppTourView.swift in Sources */,
 				A1000FG1 /* CoachActions.swift in Sources */,
 				A1000FH1 /* HeyGaitaListener.swift in Sources */,
 				A1000FF1 /* WearSymmetry.swift in Sources */,

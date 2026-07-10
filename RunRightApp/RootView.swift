@@ -10,6 +10,8 @@ struct RootView: View {
     @State private var showSyncPrompt = false
     @AppStorage("hasSeenSyncPrompt") private var hasSeenSyncPrompt = false   // once dismissed, never shown again
     @AppStorage("hasCompletedWeeklyOnboarding") private var hasOnboarded = false
+    @AppStorage("hasSeenAppTour") private var hasSeenTour = false
+    @State private var showTour = false
 
     // Branded launch splash. Shows on every cold launch as a short brand beat
     // over the first-frame build, then fades once the app is ready. On an
@@ -122,6 +124,14 @@ struct RootView: View {
                 // regular sign-in path from the Profile tab.
                 hasSeenSyncPrompt = true
                 Task { await HealthKitManager.shared.syncAll() }
+                // New users get the short how-to tour next (always skippable).
+                if !hasSeenTour { showTour = true }
+            }
+        }
+        .fullScreenCover(isPresented: $showTour) {
+            AppTourView {
+                hasSeenTour = true
+                showTour = false
             }
         }
     }
