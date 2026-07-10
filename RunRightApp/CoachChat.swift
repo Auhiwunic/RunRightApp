@@ -42,16 +42,41 @@ final class CoachChatService {
         }
     }
 
-    func reply(to message: String, history: [CoachMessage]) async throws -> String {
+    /// Live run stats for the coach, or nil when no run is in progress. Lets the
+    /// coach answer "how's my pace" during a run instead of only from stored form.
+    @MainActor
+    static func runContext() -> [String: Any]? {
+        let s = RunSession.shared
+        guard s.isActive else { return nil }
+        let meters = ActivityTracker.shared.liveSummary?.distance ?? 0
+        let miles = meters / 1609.344
+        var ctx: [String: Any] = [
+            "active": true,
+            "elapsedSeconds": Int(s.elapsed.rounded()),
+            "distanceMiles": (miles * 100).rounded() / 100
+        ]
+        if miles > 0.02 { ctx["avgPaceSecPerMile"] = Int(s.elapsed / miles) }
+        if let last = s.mileSplits.last?.time { ctx["lastMilePaceSecPerMile"] = Int(last) }
+        if let t = s.targetPaceSecPerMile { ctx["targetPaceSecPerMile"] = Int(t) }
+        ctx["milesCompleted"] = s.mileSplits.count
+        return ctx
+    }
+
+    /// Returns the coach's reply plus an optional structured action (schedule a
+    /// run, rebuild the profile) that the app applies. Falls back to text only
+    /// when the server sends no action. `extraContext` carries live run stats.
+    func reply(to message: String, history: [CoachMessage], extraContext: [String: Any]? = nil) async throws -> CoachReply {
         guard let endpoint, !endpoint.isEmpty, let url = URL(string: endpoint) else {
             throw CoachError.notConfigured
         }
         guard let idToken = try await Auth.auth().currentUser?.getIDToken() else {
             throw CoachError.notSignedIn
         }
+        var context = Self.groundingContext()
+        if let extraContext { context["liveRun"] = extraContext }
         let body: [String: Any] = [
             "message": message,
-            "context": Self.groundingContext(),
+            "context": context,
             "history": history.suffix(8).map { ["role": $0.role == .user ? "user" : "assistant", "text": $0.text] }
         ]
         var request = URLRequest(url: url)
@@ -74,7 +99,8 @@ final class CoachChatService {
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         guard let reply = (json?["reply"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !reply.isEmpty else { throw CoachError.server }
-        return reply
+        let action = (json?["action"] as? [String: Any]).flatMap(CoachAction.init(json:))
+        return CoachReply(text: reply, action: action)
     }
 
     /// The runner's latest analysis + the drills, so the coach answers grounded
@@ -112,12 +138,21 @@ final class CoachChatStore: ObservableObject {
         CoachMessage(role: .coach, text: "Ask me about your form or your next drill.")
     ]
     @Published var sending = false
+    /// Set by the scheduling card to send a prompt into the chat; the chat view
+    /// picks it up, sends it, and clears it.
+    @Published var queuedUserMessage: String?
 }
 
 struct CoachChatView: View {
     var embedded: Bool = false
+    /// Hard lock: free user who has used up the monthly message allowance.
     var isLocked: Bool = false
+    /// Premium unlocks unlimited chat, the live Lewis voice reply, and voice input.
+    var isPremium: Bool = false
     var onLockedTap: (() -> Void)? = nil
+    /// Fired when the coach action asks to rebuild the training profile — the
+    /// parent presents the onboarding questions.
+    var onEditProfile: (() -> Void)? = nil
 
     @ObservedObject private var store = CoachChatStore.shared
     @State private var input = ""
@@ -284,8 +319,8 @@ struct CoachChatView: View {
                 .padding(.bottom, embedded ? 10 : 12)
         }
         .task {
-            // Warm the premium coach voice so replies can be spoken aloud.
-            if !isLocked { await CoachVoiceEngine.shared.ensureReady() }
+            // Warm the coach voice only for premium — free replies are text only.
+            if isPremium { await CoachVoiceEngine.shared.ensureReady() }
         }
         // Live transcription: words land in the input field as you speak.
         .onChange(of: voiceInput.liveTranscript) { _, text in
@@ -293,10 +328,22 @@ struct CoachChatView: View {
                 input = text
             }
         }
+        // The scheduling card can queue a prompt; send it as if the user typed it.
+        .onChange(of: store.queuedUserMessage) { _, queued in
+            guard let queued, !store.sending else { return }
+            store.queuedUserMessage = nil
+            if isLocked { onLockedTap?(); return }
+            send(queued)
+        }
     }
 
     private func voiceMessageTapped() {
         if isLocked {
+            onLockedTap?()
+            return
+        }
+        // Voice input (on-device transcription + spoken reply) is a premium feature.
+        if !isPremium {
             onLockedTap?()
             return
         }
@@ -319,6 +366,10 @@ struct CoachChatView: View {
         }
         let text = (preset ?? input).trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        // Snapshot history BEFORE appending the user message, or the same question
+        // is sent twice — once as `message`, once as the last history entry —
+        // degrading replies and wasting tokens (#11).
+        let history = store.messages
         store.messages.append(CoachMessage(role: .user, text: text))
         input = ""
         // Backend kill-switch: if the coach service is turned off server-side
@@ -328,11 +379,16 @@ struct CoachChatView: View {
             return
         }
         store.sending = true
-        let history = store.messages
+        let liveRun = CoachChatService.runContext()   // non-nil if a run is in progress
         Task {
             let result: String
+            var action: CoachAction? = nil
+            var succeeded = false
             do {
-                result = try await CoachChatService.shared.reply(to: text, history: history)
+                let reply = try await CoachChatService.shared.reply(to: text, history: history, extraContext: liveRun)
+                result = reply.text
+                action = reply.action
+                succeeded = true
             } catch {
                 CrashReporter.record(error, context: "coach.reply")
                 result = (error as? LocalizedError)?.errorDescription ?? "Something went wrong."
@@ -340,11 +396,40 @@ struct CoachChatView: View {
             await MainActor.run {
                 store.messages.append(CoachMessage(role: .coach, text: result))
                 store.sending = false
+                // Meter against the free monthly allowance only when the coach
+                // actually replied — a failed request must not burn a message (#10).
+                if succeeded && !isPremium {
+                    UsageLimits.shared.recordCoachMessage()
+                }
             }
-            // Voice in, voice out: speak the reply in the coach's own voice.
-            if spokenReply {
+            // Voice in, voice out: speak the reply in Lewis's voice — premium only.
+            if spokenReply && isPremium {
                 await CoachVoiceEngine.shared.speak(result)
             }
+            // The coach can act, not just talk: apply any structured action.
+            if let action { await apply(action) }
+        }
+    }
+
+    /// Carry out a coach action and drop a confirmation into the chat.
+    @MainActor
+    private func apply(_ action: CoachAction) async {
+        let confirmation: String?
+        switch action {
+        case let .adjustDay(day, change):
+            confirmation = await CoachPlanActions.applyAdjustDay(day: day, change: change)
+        case let .moveRun(from, to):
+            confirmation = await CoachPlanActions.applyMoveRun(from: from, to: to)
+        case let .swapDays(a, b):
+            confirmation = await CoachPlanActions.applySwapDays(a: a, b: b)
+        case let .adjustWeek(change):
+            confirmation = await CoachPlanActions.applyAdjustWeek(change: change)
+        case .editProfile:
+            onEditProfile?()
+            confirmation = nil
+        }
+        if let confirmation {
+            store.messages.append(CoachMessage(role: .coach, text: confirmation))
         }
     }
 
@@ -416,12 +501,40 @@ struct TrainingZonesCard: View {
     }
 }
 
+// MARK: - Wrapping tappable chips (dark text on the green plan card)
+
+private struct FlowChips: View {
+    let chips: [(String, () -> Void)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(chips.enumerated()), id: \.offset) { _, chip in
+                Button(action: chip.1) {
+                    Text(chip.0)
+                        .font(AppTheme.bodySemibold(13))
+                        .foregroundColor(AppTheme.onAccentPrimary)
+                        .padding(.horizontal, 16).padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(AppTheme.onAccentPrimary.opacity(0.12))
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
 // MARK: - Coach tab (green) — coaching home: today's focus + drills + chat
 
 struct CoachTabView: View {
     private let green = AppTheme.accentColor
     @ObservedObject private var subs = SubscriptionManager.shared
+    @ObservedObject private var usage = UsageLimits.shared
+    @ObservedObject private var store = CoachChatStore.shared
     @State private var showPaywall = false
+    @State private var showProfileEdit = false
     // Loaded once per appearance — computing this in body JSON-decoded the whole
     // stored scorecard (snapshot JPEG included) from UserDefaults on every render.
     @State private var insights: [CombinedInsight] = []
@@ -440,10 +553,26 @@ struct CoachTabView: View {
 
                     CoachChatView(
                         embedded: true,
-                        isLocked: !subs.isPremium,
-                        onLockedTap: { showPaywall = true }
+                        // Free users chat until the monthly allowance runs out;
+                        // then it hard-locks to the paywall. Premium never locks.
+                        isLocked: !subs.isPremium && usage.coachMessagesRemaining == 0,
+                        isPremium: subs.isPremium,
+                        onLockedTap: { showPaywall = true },
+                        onEditProfile: { showProfileEdit = true }
                     )
                     .frame(minHeight: 455)
+
+                    planCard
+
+                    if !subs.isPremium {
+                        Text(usage.coachMessagesRemaining > 0
+                             ? "\(usage.coachMessagesRemaining) free coach messages left this month. Premium unlocks unlimited chat and the spoken coach voice."
+                             : "You have used your free coach messages this month. Premium unlocks unlimited chat and the spoken coach voice.")
+                            .font(AppTheme.body(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.45))
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(.top, 2)
+                    }
 
                     // TODAY — top focus from the latest analysis, or a hint to
                     // analyze a run when there's nothing yet (was previously
@@ -466,7 +595,53 @@ struct CoachTabView: View {
             }
         }
         .onAppear { insights = Array(FormGaitCrossReference.storedInsights().prefix(3)) }
+        // The tab persists across switches, so onAppear no longer fires on every
+        // return — refresh TODAY insights whenever a new analysis is stored.
+        .onReceive(NotificationCenter.default.publisher(for: .analysisSaved)) { _ in
+            insights = Array(FormGaitCrossReference.storedInsights().prefix(3))
+        }
         .sheet(isPresented: $showPaywall) { PaywallView() }
+        .fullScreenCover(isPresented: $showProfileEdit) {
+            // Re-run the onboarding questions; on finish it re-persists the
+            // profile AND regenerates + saves the weekly plan (see OnboardingView).
+            OnboardingView(isPresented: $showProfileEdit)
+        }
+    }
+
+    // MARK: - Plan-with-coach card (the green scheduling entry point)
+
+    private var planCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "calendar")
+                    .font(AppTheme.head(15))
+                    .foregroundColor(AppTheme.onAccentPrimary)
+                Text("PLAN YOUR WEEK")
+                    .font(AppTheme.head(15))
+                    .foregroundColor(AppTheme.onAccentPrimary)
+            }
+            Text("Ask your coach to adjust a run or rebuild your whole plan.")
+                .font(AppTheme.body(13))
+                .foregroundColor(AppTheme.onAccentPrimary.opacity(0.75))
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Quick actions — the first two go through the coach (which returns an
+            // action the app applies); "Rebuild my plan" opens the questions directly.
+            FlowChips(chips: [
+                ("Easier run tomorrow", { queue("Give me an easier run tomorrow.") }),
+                ("Make my whole week easier", { queue("Make my whole week easier please.") }),
+                ("Make tomorrow a rest day", { queue("Make tomorrow a rest day please.") }),
+                ("Rebuild my plan", { showProfileEdit = true })
+            ])
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .appRaisedSurface(fill: green, cornerRadius: 20)
+    }
+
+    private func queue(_ text: String) {
+        if !subs.isPremium && usage.coachMessagesRemaining == 0 { showPaywall = true; return }
+        store.queuedUserMessage = text
     }
 
     private var emptyToday: some View {

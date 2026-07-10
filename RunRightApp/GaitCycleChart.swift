@@ -71,6 +71,14 @@ struct GaitCycleReferenceChart: View {
                     .foregroundColor(accent.opacity(0.9))
             }
 
+            // Plain-language explainer so beginners know what "flexion" means.
+            if !ref.explain.isEmpty {
+                Text(ref.explain)
+                    .font(AppTheme.body(11))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.55))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
             GeometryReader { geo in
                 curveBody(w: geo.size.width, h: geo.size.height, lo: lo, hi: hi, span: span, mean: allMean, userPlausible: userPlausible)
             }
@@ -142,7 +150,11 @@ struct GaitCycleReferenceChart: View {
         // varies a lot runner-to-runner, so the fixed fallback widens the
         // research half-widths (2.5x, with a generous per-axis floor); both clamp
         // to the fixed axis so the shaded range never paints off-card.
-        func bandW(_ i: Int) -> Double { personalHalfWidth?[i] ?? max(ref.band[i] * 2.5, span * 0.13) }
+        // Band = ~2.5x the published between-subject SD (a lenient "typical range",
+        // not a strict CI), floored so it never collapses below markerless noise.
+        // Floor lowered (0.13 -> 0.08 of span) so the SD structure shows through —
+        // tighter in stance where runners are consistent, wider through swing.
+        func bandW(_ i: Int) -> Double { personalHalfWidth?[i] ?? max(ref.band[i] * 2.5, span * 0.08) }
         let upper = (0...10).map { CGPoint(x: x($0), y: y(min(mean[$0] + bandW($0), hi))) }
         let lower = (0...10).map { CGPoint(x: x($0), y: y(max(mean[$0] - bandW($0), lo))) }
 

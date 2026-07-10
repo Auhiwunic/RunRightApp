@@ -154,7 +154,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.activityType = .fitness
         locationManager.distanceFilter = 5
-        // Keep tracking when the screen is locked / app is backgrounded (Strava-style).
+        // Keep tracking when the screen is locked / app is backgrounded.
         // Requires the "location" UIBackgroundMode (present in Info.plist).
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.pausesLocationUpdatesAutomatically = false
@@ -227,18 +227,29 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     private var liveMaxSpeed: Double = 0
     private var liveSpeedSum: Double = 0
     private var liveSpeedCount: Int = 0
+    /// After a pause the previous point is stale by the whole pause duration, so
+    /// the first post-resume update must re-anchor rather than fold the paused
+    /// displacement into distance/speed (#6).
+    private var resetAnchorOnNextUpdate = false
 
     private func resetLiveAccumulators() {
         liveDistance = 0; liveGain = 0; liveLoss = 0
         liveHighest = -.greatestFiniteMagnitude
         liveLowest = .greatestFiniteMagnitude
         liveMaxSpeed = 0; liveSpeedSum = 0; liveSpeedCount = 0
+        resetAnchorOnNextUpdate = false
     }
 
     /// Fold newly accepted points into the running totals. Call BEFORE they are
     /// appended to trackedLocations (the previous point anchors the deltas).
     private func accumulate(_ newLocations: [CLLocation]) {
         var prev = trackedLocations.last
+        if resetAnchorOnNextUpdate {
+            // Re-anchor on the first post-resume point so travel during the pause
+            // is not counted as distance run (#6).
+            prev = nil
+            resetAnchorOnNextUpdate = false
+        }
         for loc in newLocations {
             if let p = prev {
                 let d = loc.distance(from: p)
@@ -270,6 +281,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     public func resumeTracking() {
         guard isTracking && isPaused else { return }
         isPaused = false
+        resetAnchorOnNextUpdate = true   // don't count distance covered while paused (#6)
         locationManager.startUpdatingLocation()
     }
     

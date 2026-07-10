@@ -14,7 +14,7 @@
 
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import functionsV1 from "firebase-functions/v1";
+import * as functionsV1 from "firebase-functions/v1";
 import admin from "firebase-admin";
 
 admin.initializeApp();
@@ -24,9 +24,9 @@ admin.initializeApp();
 const RATE_LIMIT_MAX = 60;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-async function withinRateLimit(uid) {
+async function withinRateLimit(uid, feature) {
   try {
-    const ref = admin.firestore().collection("rateLimits").doc(uid);
+    const ref = admin.firestore().collection("rateLimits").doc(`${uid}_${feature}`);
     return await admin.firestore().runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       const now = Date.now();
@@ -41,6 +41,21 @@ async function withinRateLimit(uid) {
     });
   } catch (e) {
     return true; // fail-open
+  }
+}
+
+// Only an https Firebase Storage URL may be forwarded to OpenAI as an image
+// source; a raw user-supplied URL would be an SSRF-by-proxy (#17).
+function isAllowedImageUrl(u) {
+  try {
+    const parsed = new URL(String(u));
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    return host === "firebasestorage.googleapis.com"
+      || host === "storage.googleapis.com"
+      || host.endsWith(".firebasestorage.app");
+  } catch (e) {
+    return false;
   }
 }
 
@@ -141,7 +156,7 @@ export const analyzeShoe = onRequest(
     }
 
     // Per-user rate limit (fail-open) to guard against cost abuse.
-    if (!(await withinRateLimit(uid))) {
+    if (!(await withinRateLimit(uid, "scan"))) {
       res.status(429).json({ error: "Too many requests. Please try again later." });
       return;
     }
@@ -149,6 +164,12 @@ export const analyzeShoe = onRequest(
     const { imageBase64, imageUrl, side, previousZones } = req.body || {};
     if (!side || (!imageBase64 && !imageUrl)) {
       res.status(400).json({ error: "Provide side and imageBase64 (or imageUrl)." });
+      return;
+    }
+
+    // Reject an imageUrl that isn't our own https Storage URL (#17).
+    if (!imageBase64 && !isAllowedImageUrl(imageUrl)) {
+      res.status(400).json({ error: "imageUrl must be an https Firebase Storage URL." });
       return;
     }
 
@@ -235,7 +256,7 @@ export const coachChat = onRequest(
       return;
     }
 
-    if (!(await withinRateLimit(uid))) {
+    if (!(await withinRateLimit(uid, "coach"))) {
       res.status(429).json({ error: "Too many requests. Please try again later." });
       return;
     }
@@ -246,7 +267,18 @@ export const coachChat = onRequest(
       return;
     }
 
-    const system = `You are Gaita, a running form coach inside the Gaita iOS app. Style: a rally co driver crossed with a good club coach. Direct, brief, specific, warm underneath. Keep replies under 120 words. Ground every answer in the runner's own data from the context JSON (form cue scores 0 to 100, gait type, strike pattern, focus insights) and recommend only drills that appear in the context drills list, with their dosage. Plain language. Never use hyphens, dashes, or bullet lists in replies — write flowing sentences. You give general fitness guidance, not medical advice: never diagnose, and if the runner mentions pain or injury, tell them to see a professional. Do not invent data that is not in the context.
+    const system = `You are Gaita, a running form coach inside the Gaita iOS app. Style: a rally co driver crossed with a good club coach. Direct, brief, specific, warm underneath. Keep replies under 120 words. Ground every answer in the runner's own data from the context JSON (form cue scores 0 to 100, gait type, strike pattern, focus insights) and recommend only drills that appear in the context drills list, with their dosage. Plain language. Never use hyphens, dashes, or bullet lists in replies, write flowing sentences. You give general fitness guidance, not medical advice: never diagnose, and if the runner mentions pain or injury, tell them to see a professional. Do not invent data that is not in the context.
+
+YOU CAN ALSO TAKE ACTIONS on the runner's training plan. Set the "action" field. Days are "tomorrow", "today", or a weekday name like "saturday". Always fill all four fields (day, to, change) using null where not needed.
+- Change a specific run or day (easier, harder, rest): {type:"adjust_day", day:<day>, to:null, change:<"easier"|"harder"|"rest">}.
+- Move a run to a different day ("move my long run to Sunday"): {type:"move_run", day:<source day>, to:<target day>, change:null}. The source day becomes rest.
+- Swap two days ("swap Tuesday and Thursday"): {type:"swap_days", day:<day A>, to:<day B>, change:null}.
+- Change the WHOLE week ("make my week easier", "everything feels too hard"): {type:"adjust_week", day:null, to:null, change:<"easier"|"harder">}.
+- Change their training profile, goals, days they can run, or weekly mileage: {type:"edit_profile", day:null, to:null, change:null}. Your reply says you will pull up the quick questions to rebuild their plan.
+- Anything else (form questions, drills, encouragement): action null.
+Only set an action when the runner is clearly asking to change their plan or profile. Your reply should confirm what you are doing in one short sentence when you set an action.
+
+If the context contains a "liveRun" object, the runner is running RIGHT NOW: use its distanceMiles, elapsedSeconds, avgPaceSecPerMile, lastMilePaceSecPerMile and targetPaceSecPerMile to answer pace and distance questions directly (convert seconds to a m:ss per mile pace, so 465 becomes 7:45). If they are ahead of or behind targetPaceSecPerMile say so plainly. Never claim you lack their pace when liveRun is present. IMPORTANT: while liveRun is present you are coaching MID RUN, so NEVER set an action (do not adjust the plan, move runs, or rebuild the profile) — only give the runner their stats and a short in-the-moment tip. Set action to null.
 
 RUNNER CONTEXT JSON:
 ${JSON.stringify(context || {}).slice(0, 6000)}`;
@@ -278,6 +310,32 @@ ${JSON.stringify(context || {}).slice(0, 6000)}`;
           messages,
           max_tokens: 400,
           temperature: 0.6,
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "coach_response",
+              strict: true,
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["reply", "action"],
+                properties: {
+                  reply: { type: "string" },
+                  action: {
+                    type: ["object", "null"],
+                    additionalProperties: false,
+                    required: ["type", "day", "to", "change"],
+                    properties: {
+                      type: { type: "string", enum: ["adjust_day", "move_run", "swap_days", "adjust_week", "edit_profile"] },
+                      day: { type: ["string", "null"] },
+                      to: { type: ["string", "null"] },
+                      change: { type: ["string", "null"] },
+                    },
+                  },
+                },
+              },
+            },
+          },
         }),
       });
 
@@ -288,12 +346,21 @@ ${JSON.stringify(context || {}).slice(0, 6000)}`;
       }
 
       const data = await openaiRes.json();
-      const reply = data?.choices?.[0]?.message?.content?.trim();
+      const content = data?.choices?.[0]?.message?.content?.trim();
+      if (!content) {
+        res.status(502).json({ error: "No content from OpenAI." });
+        return;
+      }
+      // Structured output: parse { reply, action }. Fall back to raw text if the
+      // model ever returns plain text (older models / schema off).
+      let parsed;
+      try { parsed = JSON.parse(content); } catch { parsed = { reply: content, action: null }; }
+      const reply = (parsed.reply || "").trim();
       if (!reply) {
         res.status(502).json({ error: "No content from OpenAI." });
         return;
       }
-      res.status(200).json({ reply });
+      res.status(200).json({ reply, action: parsed.action ?? null });
     } catch (e) {
       res.status(500).json({ error: String(e?.message || e) });
     }
@@ -317,9 +384,15 @@ export const onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
     console.error(`[onUserDeleted] Firestore wipe failed for ${uid}:`, e);
   }
 
-  // Also clear any rate-limit record for this user.
+  // Also clear this user's rate-limit records: the per-feature docs plus any
+  // legacy single-doc record.
   try {
-    await admin.firestore().collection("rateLimits").doc(uid).delete();
+    const rl = admin.firestore().collection("rateLimits");
+    await Promise.all([
+      rl.doc(`${uid}_scan`).delete(),
+      rl.doc(`${uid}_coach`).delete(),
+      rl.doc(uid).delete(),
+    ]);
   } catch (e) {
     console.error(`[onUserDeleted] rateLimit wipe failed for ${uid}:`, e);
   }

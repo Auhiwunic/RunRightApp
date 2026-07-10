@@ -63,7 +63,13 @@ final class ShoeAnalysisService {
                 throw NSError(domain: "ShoeAnalysisService", code: 1, userInfo: [NSLocalizedDescriptionKey: msg])
             }
 
-            return try JSONDecoder().decode(SingleShoeResponse.self, from: data)
+            do {
+                return try JSONDecoder().decode(SingleShoeResponse.self, from: data)
+            } catch {
+                // Surface a clean "Failed to parse results" instead of a raw
+                // DecodingError string leaking to the UI (#13).
+                throw OpenAIError.parseError
+            }
         }
 
         guard let fallbackImage else {

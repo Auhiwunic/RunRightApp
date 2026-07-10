@@ -14,6 +14,8 @@ struct ProfileView: View {
     @AppStorage("useImperialUnits") private var useImperialUnits: Bool = true
     @AppStorage("gaita.appearance") private var appearance = "dark"
     @State private var showAuthSheet = false
+    @ObservedObject private var subscriptions = SubscriptionManager.shared
+    @State private var showPaywall = false
     @State private var stats: RunRepository.RunStats = .init()
     @State private var isLoading = true
     @State private var monthlyRunsByDay: [Int: Double] = [:]
@@ -236,6 +238,11 @@ struct ProfileView: View {
                 shoes.append(["shoe": name, "scans": scans.map { jsonObject($0) }])
             }
             export["shoes"] = shoes
+        }
+        // Weekly plans are stored in Firestore and removed on account deletion, so
+        // a complete export must include them too (#2).
+        if let plans = try? await PlanRepository.shared.fetchAllPlansForExport(uid: uid), !plans.isEmpty {
+            export["plans"] = plans
         }
 
         do {
@@ -489,7 +496,31 @@ struct ProfileView: View {
                 .font(AppTheme.head(16))
                 .foregroundColor(AppTheme.primaryText)
                 .padding(.bottom, 8)
-            
+
+            // Premium
+            if subscriptions.isPremium {
+                settingsRow(label: "Gaita Premium", icon: "checkmark.seal.fill") {
+                    Text("Active")
+                        .font(AppTheme.bodySemibold(12))
+                        .foregroundColor(AppTheme.accentColor)
+                }
+            } else {
+                Button(action: { showPaywall = true }) {
+                    settingsRow(label: "Get Premium", icon: "sparkles") {
+                        Text("Upgrade")
+                            .font(AppTheme.bodySemibold(12))
+                            .foregroundColor(AppTheme.onAccentPrimary)
+                            .padding(.horizontal, 12).padding(.vertical, 6)
+                            .background(Capsule().fill(AppTheme.accentColor))
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            Rectangle()
+                .fill(AppTheme.primaryText.opacity(0.06))
+                .frame(height: 1)
+
             // Units
             settingsRow(label: "Units", icon: "ruler") {
                 HStack(spacing: 0) {
@@ -530,6 +561,9 @@ struct ProfileView: View {
         .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
         .sheet(item: $legalDoc) { doc in
             LegalDocView(doc: doc)
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
         }
     }
     

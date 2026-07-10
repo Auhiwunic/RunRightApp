@@ -20,10 +20,10 @@ struct PaywallView: View {
     private let green = AppTheme.accentColor
 
     private let perks: [(icon: String, text: String)] = [
-        ("bubble.left.fill", "AI coach chat and drills"),
-        ("waveform", "Voice chats in the coach's own voice"),
-        ("shoeprints.fill", "Shoe gait scan"),
-        ("clock.arrow.circlepath", "Full analysis history")
+        ("shoeprints.fill", "Unlimited shoe scans"),
+        ("bubble.left.fill", "Unlimited coach chat and drills"),
+        ("waveform", "The coach speaks back, in Lewis's voice"),
+        ("mic.fill", "Talk to your coach with voice messages")
     ]
 
     var body: some View {

@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1080px; height:1920px; overflow:hidden; background:#000; }
+  #stage {
+    width:1080px; height:1920px; position:relative;
+    background: radial-gradient(120% 75% at 50% 8%, #1b2228 0%, #121518 58%);
+    font-family:-apple-system,"Helvetica Neue",Arial,sans-serif; color:#fff;
+  }
+  .abs { position:absolute; }
+  .mono { font-family: ui-monospace,"SF Mono",Menlo,monospace; }
+  #ring { width:120px; height:120px; border-radius:50%;
+    background:conic-gradient(#FF2D2D,#E89830,#00C46A,#00CED1,#FF2D2D); }
+  #ring::after { content:""; position:absolute; inset:20px; border-radius:50%; background:#121518; }
+  #wm { font-weight:800; font-size:56px; letter-spacing:2px; }
+  #wm .d { color:#FF2D2D; }
+  #kick { font-weight:700; letter-spacing:8px; font-size:30px; color:#00CED1; }
+  .head { font-weight:850; font-size:112px; line-height:0.98; letter-spacing:-2px; }
+  .head .em { color:#FF2D2D; }
+  #clabel { font-size:46px; color:rgba(255,255,255,0.55); font-weight:700; }
+  #cnum { font-weight:850; font-size:340px; line-height:0.8; letter-spacing:-8px; }
+  #cunit { font-size:96px; color:rgba(255,255,255,0.5); font-weight:700; }
+  #badge { display:inline-block; font-weight:800; font-size:38px; letter-spacing:3px;
+    padding:18px 34px; border-radius:18px; background:#00C46A; color:#121518; }
+  .cmp { width:900px; }
+  .cmpk { font-size:38px; color:rgba(255,255,255,0.55); }
+  .cmpv { font-size:56px; font-weight:800; }
+  .bar { height:24px; border-radius:12px; background:rgba(255,255,255,0.1); overflow:hidden; position:relative; }
+  .bar i { position:absolute; left:0; top:0; bottom:0; border-radius:12px; }
+  .tk { font-weight:850; font-size:76px; line-height:1.05; letter-spacing:-1px; }
+  .tk .em { color:#00CED1; }
+  #cta { font-weight:700; letter-spacing:3px; font-size:32px; color:rgba(255,255,255,0.5); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="abs" id="ringwrap" style="left:90px; top:120px"><div id="ring" class="abs"></div></div>
+  <div class="abs mono" id="wm" style="left:230px; top:150px">GAITA<span class="d">.</span></div>
+  <div class="abs mono" id="kick" style="right:90px; top:170px">FORM STUDY</div>
+
+  <div class="abs head" id="head" style="left:90px; top:520px; width:900px"></div>
+
+  <div class="abs" id="cwrap" style="left:90px; top:430px; width:900px"></div>
+</div>
+
+<script>
+const P = new URLSearchParams(location.search);
+const total = +(P.get('total')||300), fps = +(P.get('fps')||30);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+
+window.renderFrame = function(f){
+const t = f / fps;                          // seconds
+const easeOut=x=>1-Math.pow(1-clamp(x,0,1),3);
+const easeInOut=x=>{x=clamp(x,0,1);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;};
+// window(t, start, dur) -> 0..1 progress across [start, start+dur]
+const win=(s,d)=>easeOut((t-s)/d);
+const set=(el,o)=>{for(const k in o)el.style[k]=o[k];};
+
+const stage=document.getElementById('stage');
+const ringwrap=document.getElementById('ringwrap'), wm=document.getElementById('wm'), kick=document.getElementById('kick');
+const head=document.getElementById('head'), cwrap=document.getElementById('cwrap');
+
+// ---- Phase 1: brand in (0.0 - 1.6s), holds, drifts up as phase 2 enters
+const p1=win(0.1,1.2);
+const brandUp = -110*easeInOut((t-2.0)/0.6);
+set(ringwrap,{opacity:p1, transform:`translateY(${brandUp}px) scale(${0.6+0.4*p1})`});
+set(wm,{opacity:p1, transform:`translateY(${brandUp}px)`});
+set(kick,{opacity:win(0.5,1.0), transform:`translateY(${brandUp}px)`});
+
+// ---- Phase 2: headline (1.6 - 4.2s), word by word, fades out into phase 3
+const words=['Efficient','runners','barely','<span class="em">touch the ground</span>'];
+const hOut=1-easeInOut((t-3.9)/0.4);
+head.innerHTML=words.map((w,i)=>{
+  const o=easeOut((t-(1.7+i*0.25))/0.5)*hOut;
+  const y=24*(1-o);
+  return `<span style="display:inline-block;opacity:${clamp(o,0,1)};transform:translateY(${y}px);margin-right:24px">${w}</span>`;
+}).join('');
+set(head,{opacity: t<1.6?0:1});
+
+// ---- Phase 3: cadence callout (4.2 - 7.4s)
+const c=t-4.2;
+if (t>=4.0 && t<7.6){
+  const inP=easeOut(c/0.5), outP=1-easeInOut((t-7.2)/0.4);
+  const cadence=Math.round(182*easeOut(clamp((c-0.2)/1.4,0,1)));
+  const badgeP=easeOut((c-1.4)/0.4);
+  const barThem=easeOut((c-1.6)/0.7), barOpt=easeOut((c-1.9)/0.7);
+  cwrap.style.opacity = clamp(inP*outP,0,1);
+  cwrap.innerHTML = `
+    <div id="clabel" style="margin-bottom:6px">Steps per minute</div>
+    <div style="display:flex;align-items:flex-end;gap:20px">
+      <div id="cnum" class="mono">${cadence}</div><div id="cunit" style="padding-bottom:44px">spm</div>
+    </div>
+    <div style="margin-top:26px"><span id="badge" class="mono" style="opacity:${clamp(badgeP,0,1)};transform:scale(${0.7+0.3*clamp(badgeP,0,1)})">ELITE RANGE</span></div>
+    <div class="cmp" style="margin-top:70px;background:#252B31;border-radius:32px;padding:50px">
+      <div style="display:flex;justify-content:space-between"><span class="cmpk">This runner</span><span class="cmpv mono">182</span></div>
+      <div class="bar" style="margin:16px 0 34px"><i style="width:${92*clamp(barThem,0,1)}%;background:#fff"></i></div>
+      <div style="display:flex;justify-content:space-between"><span class="cmpk">Efficient range</span><span class="cmpv mono" style="color:#00CED1">165&ndash;190</span></div>
+      <div class="bar" style="margin-top:16px"><i style="width:${100*clamp(barOpt,0,1)}%;background:#00CED1"></i></div>
+    </div>`;
+} else { cwrap.style.opacity=0; }
+
+// ---- Phase 4: takeaway (7.5 - 10.0s)
+if (t>=7.4){
+  const k=t-7.4; const inP=easeOut(k/0.6);
+  cwrap.style.opacity=1;
+  cwrap.innerHTML=`
+    <div style="margin-top:120px">
+      <div class="tk" style="opacity:${clamp(inP,0,1)};transform:translateY(${20*(1-inP)}px)">The lesson is not run like them.<br>It is <span class="em">land under yourself.</span></div>
+      <div id="cta" class="mono" style="margin-top:60px;opacity:${clamp(easeOut((k-0.6)/0.6),0,1)}">FILM YOUR RUN &middot; SEE YOUR NUMBERS</div>
+    </div>`;
+}
+document.body.setAttribute('data-ready','1');
+};
+window.renderFrame(0);
+</script>
+</body>
+</html>

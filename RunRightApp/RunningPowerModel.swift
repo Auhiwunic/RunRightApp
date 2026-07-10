@@ -168,10 +168,34 @@ enum RunPowerModel {
         // ── Drive ROM (angle-based, robust at any frame rate) ──
         // Hip extension at toe-off (backside drive), ankle plantarflexion ROM
         // (push-off), knee drive ROM. Ranges in degrees over the gait cycle.
-        let hipScore: Double? = hipExtensionRangeDeg.map { ramp($0, 25, 55) }
+        // Hip drive (thigh sagittal sweep). Real backside drive tops out around a
+        // strong sweep; a plain ramp saturates and keeps rewarding past that, so a
+        // runner who over-drives the knee up and kicks the leg back excessively
+        // (thigh sweeping far past what a stride needs) reads as maximum power.
+        // Measured elite drive sits near ~60°; an exaggerated, "overdoing it"
+        // stride runs to ~110°+. Reward up to a strong sweep, hold a plateau for
+        // genuinely powerful runners, then fall off so exaggeration cannot max the
+        // dial. A normal-to-elite runner (≤ ~70°) is untouched.
+        let cfg = scoringConfig
+        let hipScore: Double? = hipExtensionRangeDeg.map { r in
+            if r <= cfg.hipRampHi { return ramp(r, cfg.hipRampLo, cfg.hipRampHi) }
+            if r <= cfg.hipPlateauMax { return 100 }
+            return clamp(100 - (r - cfg.hipPlateauMax) * cfg.hipFalloffSlope)
+        }
         let ankleScore: Double? = ankleRangeDeg.map { ramp($0, 18, 40) }
-        let kneeScore: Double? = kneeDriveRangeDeg.map { ramp($0, 60, 110) }
+        // Knee drive ROM. Strong drive shows a healthy knee-flexion range, but a
+        // plain ramp saturates at 100 and keeps rewarding past that — so an
+        // exaggerated, kipping recovery (heel flicking up far toward the glute)
+        // reads as maximum power when it is really wasted motion. Reward up to a
+        // strong range, hold a short plateau, then fall off so an over-kipped leg
+        // cannot max the dial. A normal-to-fast runner (≤ ~122°) is untouched.
+        let kneeScore: Double? = kneeDriveRangeDeg.map { r in
+            if r <= cfg.kneeRampHi { return ramp(r, cfg.kneeRampLo, cfg.kneeRampHi) }
+            if r <= cfg.kneePlateauMax { return 100 }
+            return clamp(100 - (r - cfg.kneePlateauMax) * cfg.kneeFalloffSlope)
+        }
         let driveScore = averageOfPresent([hipScore, ankleScore, kneeScore])
+        debugLog("[Power] hipROM=\(hipExtensionRangeDeg.map { Int($0) } ?? -1) ankleROM=\(ankleRangeDeg.map { Int($0) } ?? -1) kneeROM=\(kneeDriveRangeDeg.map { Int($0) } ?? -1) -> hipS=\(hipScore.map { Int($0) } ?? -1) ankleS=\(ankleScore.map { Int($0) } ?? -1) kneeS=\(kneeScore.map { Int($0) } ?? -1) drive=\(driveScore.map { Int($0) } ?? -1)")
 
         // ── Combine, weighted by frame-rate reliability ──
         let smScore = averageOfPresent([forceScore, springScore, dutyScore])
@@ -260,9 +284,10 @@ enum RunImpactModel {
         // elites; only penalise once the foot lands well ahead of the body.
         // Good up to ~10°, ramping to a fault by ~26°.
         let overstrideScore: Double? = shankAngleAtContactDeg.map { clamp(100.0 - ramp($0, 10, 26)) }
-        // Vertical oscillation: 6–11 cm typical; lower = softer ride. <8 cm
-        // excellent, >16 cm jarring.
-        let oscScore: Double? = verticalOscillationCm.map { clamp(100.0 - ramp($0, 8, 16)) }
+        // Vertical oscillation: typical distance running is ~6–11 cm; lower = a
+        // softer, more economical ride. Good ≤ ~9 cm, jarring by ~14 cm. The old
+        // 16 cm ceiling was far too lenient (a big bouncer still scored well).
+        let oscScore: Double? = verticalOscillationCm.map { clamp(100.0 - ramp($0, 9, 14)) }
         // Foot-strike loading: a heel strike raises the impact transient slightly
         // but is not a fault by itself for distance running (many elites heel
         // strike) — only a mild penalty, since overstride already captures the risk.
@@ -289,6 +314,7 @@ enum RunImpactModel {
         // Gentler worst-weighting: one moderate pillar shouldn't tank an
         // otherwise-good landing, but the worst still pulls the score down.
         let composite = 0.35 * worst + 0.65 * mean
+        debugLog("[Impact] shank=\(shankAngleAtContactDeg.map { String(format: "%.1f", $0) } ?? "nil") voCm=\(verticalOscillationCm.map { String(format: "%.1f", $0) } ?? "nil") strike=\(footStrike) -> over=\(overstrideScore.map { Int($0) } ?? -1) osc=\(oscScore.map { Int($0) } ?? -1) strikeS=\(strikeScore.map { Int($0) } ?? -1) -> \(Int(composite))")
 
         let score = Int(clamp(composite).rounded())
         let label: String

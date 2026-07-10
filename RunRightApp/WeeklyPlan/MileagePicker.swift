@@ -25,7 +25,7 @@ struct MileagePicker: View {
                 } label: {
                     VStack(spacing: 6) {
                         Text(range.rangeLabel)
-                            .font(.title2.bold())
+                            .font(AppTheme.display(22))
                             .foregroundStyle(PlanTheme.textPrimary)
 
                         Text(range.unitLabel)

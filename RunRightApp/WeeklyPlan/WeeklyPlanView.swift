@@ -58,11 +58,11 @@ struct WeeklyPlanView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Your week")
-                .font(.largeTitle.bold())
+                .font(AppTheme.display(32))
                 .foregroundStyle(PlanTheme.textPrimary)
 
             Text(plan.totalMilesLabel)
-                .font(.subheadline.weight(.semibold))
+                .font(AppTheme.bodySemibold(15))
                 .foregroundStyle(PlanTheme.accent)
         }
     }
@@ -107,11 +107,11 @@ struct WeeklyPlanView: View {
             // Day column
             VStack(spacing: 2) {
                 Text(shortDayName(for: run.weekday))
-                    .font(.caption.weight(.semibold))
+                    .font(AppTheme.bodySemibold(12))
                     .foregroundStyle(PlanTheme.accent)
 
                 Text(run.weekday.shortLabel)
-                    .font(.title3.bold())
+                    .font(AppTheme.headBold(20))
                     .foregroundStyle(PlanTheme.textPrimary)
             }
             .frame(width: 36)
@@ -120,14 +120,14 @@ struct WeeklyPlanView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .center) {
                     Text(run.title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(AppTheme.bodySemibold(15))
                         .foregroundStyle(PlanTheme.textPrimary)
 
                     Spacer()
 
                     // Distance badge
                     Text(run.distanceLabel)
-                        .font(.caption.weight(.semibold))
+                        .font(AppTheme.bodySemibold(12))
                         .foregroundStyle(.black)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)

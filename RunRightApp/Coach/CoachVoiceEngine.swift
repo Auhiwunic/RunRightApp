@@ -32,7 +32,6 @@ final class CoachVoiceEngine: ObservableObject {
 
     private var manager: KokoroAneManager?
     private let player = AudioPlaybackController()
-    private let fallback = AVSpeechBackend()
     private static let voiceName = "bm_lewis"
 
     private init() {}
@@ -94,7 +93,6 @@ final class CoachVoiceEngine: ObservableObject {
 
     func stop() {
         player.stop()
-        fallback.stop()
     }
 
     // MARK: - Lewis style vector

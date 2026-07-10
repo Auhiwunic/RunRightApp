@@ -54,11 +54,13 @@ private let sideDetectionVoteThreshold = 8
 private let scanQualityMinCleanRatio = 0.4
 // ~3s of clean framing is the reliable window; shorter clips still analyse but
 // are flagged low-confidence (a 2s clip is only ~3 gait cycles — noisy).
-private let scanQualityMinCleanSeconds = 3.0
+// Remote-Config tunable (ScoringConfig.scanMinCleanSeconds).
+private var scanQualityMinCleanSeconds: Double { scoringConfig.scanMinCleanSeconds }
 // Fraction of clean-window frames where the hip "snaps" implausibly far in one
 // frame. Above this the skeleton is choppy/unstable → the metrics can't be
 // trusted. Conservative (biased to under-trigger) until calibrated on real clips.
-private let scanQualityMaxJitterRatio = 0.06
+// Remote-Config tunable (ScoringConfig.scanMaxJitterRatio).
+private var scanQualityMaxJitterRatio: Double { scoringConfig.scanMaxJitterRatio }
 
 enum ShinStrideBand: String {
     case unknown
@@ -137,8 +139,8 @@ private enum TorsoAngleThresholds {
     static let unknownMin: Double = 0.1
     // More lenient bands (reduce false "too much lean" flags). Treadmill runners
     // often run a touch upright, so the optimal window starts low.
-    static let tooUprightMax: Double = 2.5
-    static let optimalMax: Double = 13.0
+    static let tooUprightMax: Double = 2.5   // retained for callers; no longer penalised
+    static let optimalMax: Double = 14.0
     static let goodMax: Double = 19.0
     static let moderateLeanMax: Double = 26.0
 }
@@ -148,17 +150,12 @@ func classifyTorsoAngle(angle: Double?) -> TorsoAngleClassification {
         return TorsoAngleClassification(band: .unknown, label: "Unknown", score: 50)
     }
     
-    if angle < TorsoAngleThresholds.tooUprightMax {
-        // Too upright
-        let score = max(45, min(59, Int(45 + (angle / TorsoAngleThresholds.tooUprightMax) * 14)))
-        return TorsoAngleClassification(band: .tooUpright, label: "Too Upright", score: score)
-    }
     if angle <= TorsoAngleThresholds.optimalMax {
-        // Optimal range (most runners)
-        let center = 8.0
-        let maxDist = 4.0
-        let dist = min(maxDist, abs(angle - center))
-        let score = max(88, min(100, Int(100 - (dist / maxDist) * 12)))
+        // 0–14°: efficient. A near-upright trunk is the MOST economical form
+        // (Carson 2024 causal experiment: upright 1.7° beat 4.3° and 8.2°); elites
+        // sit ~3° and lean rises with pace. So we do NOT penalise upright running —
+        // full marks across the band, easing only slightly toward the top.
+        let score = angle <= 10 ? 100 : max(90, Int((100 - (angle - 10) * 2.5).rounded()))
         return TorsoAngleClassification(band: .optimal, label: "Optimal", score: score)
     }
     if angle <= TorsoAngleThresholds.goodMax {
@@ -250,8 +247,9 @@ private enum ElbowAngleThresholds {
     static let tooTightMax: Double = 52.0
     static let goodLowerMax: Double = 65.0
     static let optimalMax: Double = 100.0
-    static let goodUpperMax: Double = 115.0
-    // > 110° = too straight
+    static let goodUpperMax: Double = 120.0
+    // > 120° = too straight (mean carriage ~90°; up to ~120° is normal — Pontzer
+    // 2019, Tartaruga 2012). Was 115; raised so a slightly-open arm isn't flagged.
 }
 
 func classifyElbowAngle(angle: Double?) -> ElbowAngleClassification {
@@ -445,8 +443,13 @@ func classifySprintKneeDrive(kneeFlexionRange: Double?) -> SprintClassification 
         score = 55 + (range - 42) * 1.05
     } else if range < 82 {
         score = 76 + (range - 62) * 0.72
+    } else if range <= 105 {
+        // Natural strong drive tops out here — do NOT keep rewarding more range.
+        score = min(96, 90.4 + (range - 82) * 0.24)
     } else {
-        score = min(97, 90.4 + (range - 82) * 0.38)
+        // Over ~105°: over-kipping the leg up — exaggerated and inefficient, not
+        // stronger. Penalise the excess so unnatural leg lift can't read as drive.
+        score = max(45, 96 - (range - 105) * 1.5)
     }
     let s = sprintScoreInt(score)
     let label: String
@@ -1009,10 +1012,79 @@ func faultSensitiveScore(_ dims: [Double]) -> Double {
     let sorted = dims.sorted()
     let k = max(1, dims.count / 3)
     let worst = sorted.prefix(k).reduce(0, +) / Double(k)
-    return max(0, min(100, 0.5 * mean + 0.5 * worst))
+    let w = scoringConfig.faultBlendMeanWeight
+    return max(0, min(100, w * mean + (1 - w) * worst))
 }
 
-func computeEfficiencyBreakdown(series: MetricSeries) -> EfficiencyBreakdown? {
+/// Subtract a centered moving mean so only motion faster than `window` frames
+/// survives — strips slow drift/pan before measuring stride bounce amplitude.
+func detrendMovingMean(_ v: [Double], window w: Int) -> [Double] {
+    guard v.count > 2, w >= 2 else { return v.map { _ in 0 } }
+    let half = max(1, w / 2)
+    return v.indices.map { i in
+        let lo = max(0, i - half), hi = min(v.count - 1, i + half)
+        var s = 0.0
+        for j in lo...hi { s += v[j] }
+        return v[i] - s / Double(hi - lo + 1)
+    }
+}
+
+/// Strength (0–1) of the dominant stride periodicity in a single-foot signal, via
+/// normalized autocorrelation over the physiological cadence band. A cleanly
+/// tracked run peaks strongly (~0.4+); a jittery / mistracked clip stays flat
+/// (~0.15). Returns -1 when it can't be assessed. Mirrors AnalyzeMath's cadence
+/// autocorrelation but reports the confidence rather than the period.
+func gaitPeriodicityStrength(_ series: [Double], frameRate: Double) -> Double {
+    let x = series.filter { $0.isFinite }
+    guard x.count >= 12, frameRate > 0 else { return -1 }
+    let mean = x.reduce(0, +) / Double(x.count)
+    let d = x.map { $0 - mean }
+    let energy = d.reduce(0) { $0 + $1 * $1 }
+    guard energy > 1e-9 else { return -1 }
+    let minLag = max(2, Int((frameRate * 120.0 / 230.0).rounded()))
+    let maxLag = min(d.count - 1, Int((frameRate * 120.0 / 120.0).rounded()))
+    guard maxLag > minLag else { return -1 }
+    var best = -Double.greatestFiniteMagnitude
+    for lag in minLag...maxLag {
+        var s = 0.0
+        for i in 0..<(d.count - lag) { s += d[i] * d[i + lag] }
+        best = max(best, s / energy)
+    }
+    return best
+}
+
+/// Post-metrics data-quality gate. Even when framing / window / jitter pass, the
+/// MEASURED data can be physiologically impossible or non-periodic — a sign the
+/// pose tracking was too unstable on this clip to sample honestly. Deliberately
+/// sensitive: a false "retake" costs less than confidently scoring bad footage.
+/// Returns a warning cause, or nil. Thresholds are Remote-Config tunable.
+func dataPlausibilityWarning(metrics: AnalysisMetrics, series: MetricSeries) -> String? {
+    let hipROM = max(metrics.hipExtensionRangeLeft, metrics.hipExtensionRangeRight)
+    let kneeROM = max(metrics.kneeFlexionRangeLeft, metrics.kneeFlexionRangeRight)
+    if hipROM > scoringConfig.scanMaxPlausibleHipROM || kneeROM > scoringConfig.scanMaxPlausibleKneeROM {
+        debugLog("[Plausibility] implausible ROM hip=\(Int(hipROM)) knee=\(Int(kneeROM)) -> FLAG")
+        return "The tracking looked unstable on this clip, so the numbers may be off. Retake side on with the runner well lit and clear of the background."
+    }
+    let footHip = !series.rightFootHipDistanceSeries.isEmpty
+        ? series.rightFootHipDistanceSeries : series.leftFootHipDistanceSeries
+    let dur = series.durationSeconds > 0.1 ? series.durationSeconds : 0
+    let fps = dur > 0 && !footHip.isEmpty ? Double(footHip.count) / dur : 30
+    let clarity = gaitPeriodicityStrength(footHip, frameRate: fps)
+    if clarity >= 0, clarity < scoringConfig.scanMinGaitClarity {
+        debugLog("[Plausibility] weak gait clarity=\(String(format: "%.2f", clarity)) -> FLAG")
+        return "The tracking looked jumpy on this clip, so the numbers may be off. Retake side on with the runner well lit and clear of the background."
+    }
+    debugLog("[Plausibility] ok hip=\(Int(hipROM)) knee=\(Int(kneeROM)) clarity=\(String(format: "%.2f", clarity))")
+    return nil
+}
+
+/// Efficiency (SMOOTH) composite. `armSwingRangeDeg`, when supplied, folds
+/// arm-swing amplitude into the cue set: a tight, economical carriage (elite
+/// clips measure ~15–25° of elbow-angle range) is efficient, while arms
+/// flailing wide open and shut (~100°+) waste energy and are a real smoothness
+/// fault the joint-angle cues alone miss. Passing nil preserves the old
+/// cue-only behaviour for callers without metrics.
+func computeEfficiencyBreakdown(series: MetricSeries, armSwingRangeDeg: Double? = nil) -> EfficiencyBreakdown? {
     guard !series.formCueScores.isEmpty else { return nil }
     let shinCls = classifyShinStrideSigned(
         angle: series.shankAngleAtContactSignedDeg.isFinite ? series.shankAngleAtContactSignedDeg : nil
@@ -1035,14 +1107,25 @@ func computeEfficiencyBreakdown(series: MetricSeries) -> EfficiencyBreakdown? {
     // not averaged away behind fine cues. Averaging only 4 lenient cues flat is
     // what let poor form score ~80. The shin/torso/gaze/elbow sub-objects are
     // still returned for the detail view.
-    let dims = series.formCueScores.map { Double($0.score) }
+    var dims = series.formCueScores.map { Double($0.score) }
     guard !dims.isEmpty else { return nil }
+    // Arm-swing amplitude as an efficiency cue. Elite carriage holds the elbow
+    // near-fixed (~15–25° of range); arms pumping wide open and shut waste energy.
+    // Tight is 100; it ramps down past a generous ceiling so only genuine flailing
+    // is penalised and a normal swing is untouched.
+    var armEff: Double? = nil
+    if let arm = armSwingRangeDeg, arm > 0.5 {
+        let cfg = scoringConfig
+        let e = arm <= cfg.armEffCeiling ? 100 : max(cfg.armEffFloor, 100 - (arm - cfg.armEffCeiling) * cfg.armEffSlope)
+        armEff = e
+        dims.append(e)
+    }
     let composite = Int(faultSensitiveScore(dims).rounded())
 #if DEBUG
     let dump = series.formCueScores
         .map { "\($0.cue.rawValue)=\(Int($0.score))" }
         .joined(separator: " | ")
-    debugLog("[FormScore] composite=\(composite) cues: \(dump)")
+    debugLog("[FormScore] composite=\(composite) armROM=\(armSwingRangeDeg.map { Int($0) } ?? -1) armEff=\(armEff.map { Int($0) } ?? -1) cues: \(dump)")
     let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     let f = dir.appendingPathComponent("form_cue_scores.csv")
     let header = "date," + FormCue.allCases.map { $0.rawValue }.joined(separator: ",") + ",composite\n"
@@ -2039,10 +2122,16 @@ class VideoProcessor: ObservableObject {
         }
         let computed = computeMetrics(frames: poseFrames, renderSize: CGSize(width: renderWidth, height: renderHeight), frameRate: fps)
         await publishProgress(0.98, force: true)
+        // The framing/window/jitter gate runs before metrics, so it can't see the
+        // measured data. Catch what it misses: physiologically impossible ROMs or
+        // a non-periodic (jittery) gait mean the numbers can't be trusted even when
+        // framing looked fine. Framing cause wins when both fire (it's more
+        // actionable); otherwise fall through to the plausibility warning.
+        let plausibility = dataPlausibilityWarning(metrics: computed.0, series: computed.1)
         await MainActor.run {
             self.analysisMetrics = computed.0
             self.metricSeries = computed.1
-            self.scanQualityWarning = quality.cause
+            self.scanQualityWarning = quality.cause ?? plausibility
         }
 
         // Encrypt the processed running video at rest (it depicts the user — health
@@ -3354,7 +3443,14 @@ class VideoProcessor: ObservableObject {
                     hipMovementY[index] = Double(hipMid.y)
                 }
             } else if let hip = point(frame, .leftHip) ?? point(frame, .rightHip) {
-                // Fallback: use single hip if available
+                // Fallback: single hip (the common side-view case — the far hip is
+                // occluded, so both-hips almost never both resolve in 2D). Vertical
+                // bounce is the same for either hip, so feed the near hip's Y into
+                // hipY so vertical oscillation is still measured. Without this,
+                // hipY stayed empty on every side-view clip → VO=0 → the Impact
+                // dial had no bounce input and read a constant ~88 for everyone.
+                // (hipDiffs / pelvic drop needs both hips, so it is skipped here.)
+                hipY.append(Double(hip.y))
                 hipMovementY[index] = Double(hip.y)
             }
             // else: already NaN
@@ -3678,7 +3774,18 @@ class VideoProcessor: ObservableObject {
             return max(0.0, min(45.0, abs(corrected)))
         }
         
-        let verticalOscillation = hipY.isEmpty ? 0 : (percentile(hipY, 0.9) - percentile(hipY, 0.1)) / bodyHeight * 100
+        // Vertical oscillation = STRIDE BOUNCE, not total vertical travel. Taking
+        // the raw p10–p90 of hip-Y conflates the bounce with slow drift (the runner
+        // creeping up/down the frame over the clip), which inflated it to ~24% of
+        // body height (an impossible ~40 cm). Detrend first — subtract a ~0.5 s
+        // moving average — so only the genuine per-stride bounce remains.
+        let detrendWindow = max(5, Int((frameRate * 0.5).rounded()))
+        let verticalOscillation: Double = {
+            guard !hipY.isEmpty else { return 0 }
+            let detrended = detrendMovingMean(hipY, window: detrendWindow)
+            return (percentile(detrended, 0.9) - percentile(detrended, 0.1)) / bodyHeight * 100
+        }()
+        debugLog("[VO] hipY.count=\(hipY.count) window=\(detrendWindow) -> VO=\(String(format: "%.2f", verticalOscillation))%")
         let trunkLean = trunkAngles.isEmpty ? 0 : trunkAngles.reduce(0, +) / Double(trunkAngles.count)
         // Honesty gate: a joint's mean must reflect a meaningful slice of the
         // analysis window, not a handful of stray frames, or it reads "--".
@@ -3766,9 +3873,24 @@ class VideoProcessor: ObservableObject {
         let hipDrop = hipDiffs.isEmpty ? 0 : (hipDiffs.reduce(0, +) / Double(hipDiffs.count)) / bodyHeight * 100
         let kneeValgus = kneeValgusVals.isEmpty ? 0 : kneeValgusVals.reduce(0, +) / Double(kneeValgusVals.count)
         
+        // Robust range: the 5th–95th percentile spread, NOT raw max−min. A single
+        // mistracked frame (a joint-angle spike from a jittery skeleton) otherwise
+        // blows up the range — hip/ankle/knee/elbow ROMs reading 130–150° when the
+        // real sagittal sweep is a fraction of that, which then saturates the drive
+        // dial so noisy footage reads as elite power. Trimming the extreme tails
+        // recovers the true physiologic range; a cleanly tracked clip is barely
+        // affected (its tails are already tight), while spike-inflated footage is
+        // brought back to reality.
         func range(_ values: [Double]) -> Double {
-            guard let minVal = values.min(), let maxVal = values.max() else { return 0 }
-            return maxVal - minVal
+            let clean = values.filter { $0.isFinite }
+            guard clean.count >= 5 else {
+                guard let minVal = clean.min(), let maxVal = clean.max() else { return 0 }
+                return maxVal - minVal
+            }
+            let sorted = clean.sorted()
+            let loIdx = Int((Double(sorted.count - 1) * 0.05).rounded())
+            let hiIdx = Int((Double(sorted.count - 1) * 0.95).rounded())
+            return max(0, sorted[hiIdx] - sorted[loIdx])
         }
         
         let kneeFlexLeftRange = range(leftKneeFlex)

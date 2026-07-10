@@ -94,7 +94,7 @@ struct OnboardingFlowView: View {
                     .foregroundStyle(PlanTheme.textSecondary)
 
                 TextField("", text: $name, prompt: Text("Your name").foregroundStyle(PlanTheme.textSecondary))
-                    .font(.title3.weight(.medium))
+                    .font(AppTheme.head(20))
                     .foregroundStyle(PlanTheme.textPrimary)
                     .tint(currentAccent)
                     .submitLabel(.done)
@@ -114,7 +114,7 @@ struct OnboardingFlowView: View {
 
                 VStack(alignment: .leading, spacing: 14) {
                     Text("Date of birth")
-                        .font(.subheadline.weight(.semibold))
+                        .font(AppTheme.bodySemibold(15))
                         .foregroundStyle(PlanTheme.textPrimary)
 
                     DatePicker(
@@ -132,7 +132,7 @@ struct OnboardingFlowView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Region")
-                        .font(.subheadline.weight(.semibold))
+                        .font(AppTheme.bodySemibold(15))
                         .foregroundStyle(PlanTheme.textPrimary)
 
                     HStack(spacing: 10) {
@@ -140,7 +140,7 @@ struct OnboardingFlowView: View {
                             let isOn = ageGateRegion == region
                             Button { ageGateRegion = region } label: {
                                 Text(region.displayName)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(AppTheme.bodySemibold(15))
                                     .foregroundStyle(isOn ? .black : PlanTheme.textSecondary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
@@ -158,7 +158,7 @@ struct OnboardingFlowView: View {
 
                 if !meetsAgeGate {
                     Text("Gaita is not available for this age in your selected region.")
-                        .font(.footnote.weight(.semibold))
+                        .font(AppTheme.bodySemibold(13))
                         .foregroundStyle(Color(hex: "#FF453A"))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -224,11 +224,11 @@ struct OnboardingFlowView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         Text("Age")
-                            .font(.subheadline.weight(.semibold))
+                            .font(AppTheme.bodySemibold(15))
                             .foregroundStyle(PlanTheme.textPrimary)
                         Spacer()
                         Text("\(Int(age))")
-                            .font(.title3.bold())
+                            .font(AppTheme.headBold(20))
                             .foregroundStyle(PlanTheme.textPrimary)   // all intro text white; accent stays for controls
                     }
                     Slider(value: $age, in: 15...80, step: 1)
@@ -240,14 +240,14 @@ struct OnboardingFlowView: View {
                 // Sex
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Sex")
-                        .font(.subheadline.weight(.semibold))
+                        .font(AppTheme.bodySemibold(15))
                         .foregroundStyle(PlanTheme.textPrimary)
                     HStack(spacing: 10) {
                         ForEach(["male", "female", "other"], id: \.self) { option in
                             let isOn = sex == option
                             Button { sex = option } label: {
                                 Text(option.capitalized)
-                                    .font(.subheadline.weight(.semibold))
+                                    .font(AppTheme.bodySemibold(15))
                                     .foregroundStyle(isOn ? .black : PlanTheme.textSecondary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 12)
@@ -312,7 +312,7 @@ struct OnboardingFlowView: View {
             Button("Back") {
                 goBack()
             }
-            .font(.subheadline.weight(.medium))
+            .font(AppTheme.bodyMedium(15))
             .foregroundStyle(PlanTheme.textSecondary)
 
             Spacer()

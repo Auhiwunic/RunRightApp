@@ -49,7 +49,9 @@ Gaita is a running-form and training companion. The App analyzes your running fo
 - **Device motion:** used only on-device to help you hold the phone level while scanning a shoe sole.
 
 ### e) Microphone & voice
-- Microphone and Siri access for **voice commands** during runs, and the cloud text-to-speech described in the highlighted section above.
+- **Microphone:** used only to record the audio track of running videos you choose to capture with the in-app camera. Gaita does not listen for voice commands and does not use the microphone for the coach.
+- **Voice input to the coach (optional):** if you send the coach a voice message, your speech is transcribed to text **on your device** (Apple on-device speech); only the resulting text is sent to the coach service. The audio is not uploaded.
+- **Coach speech output:** the cloud text-to-speech described in the highlighted section above.
 
 ### f) Automatically collected technical data
 - Basic device and diagnostic information needed to operate the App and our backend (e.g. app version, anonymous/authenticated user identifier, crash and error logs). We do **not** use third-party advertising or cross-app tracking SDKs.
@@ -129,7 +131,7 @@ To exercise any right, contact us at arjuncw2009@gmail.com.
 
 ## 9. Account and data deletion
 
-You can delete your account and associated cloud data from within the App, or by emailing arjuncw2009@gmail.com. Deleting the App from your device also removes locally stored data (analysis history, cached coach audio, settings). Cloud-stored data tied to your account is deleted on request within `[30]` days, subject to legal retention requirements.
+You can delete your account and associated cloud data from within the App, or by emailing arjuncw2009@gmail.com. Deleting the App from your device also removes locally stored data (analysis history, cached coach audio, settings). Cloud-stored data tied to your account is deleted on request within 30 days, subject to legal retention requirements.
 
 ## 10. Children's privacy
 

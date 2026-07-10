@@ -16,7 +16,7 @@ struct HomeView: View {
     private let backgroundColor = AppTheme.cardBgAlt
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
-    @StateObject private var vm = HomeViewModel()
+    @ObservedObject private var vm = HomeViewModel.shared
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
     @State private var scrollOffset: CGFloat = 0   // drives the header fade

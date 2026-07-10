@@ -16,7 +16,7 @@ struct GoalTile: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(goal.title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(AppTheme.bodySemibold(15))
                     .foregroundStyle(PlanTheme.textPrimary)
                     .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)

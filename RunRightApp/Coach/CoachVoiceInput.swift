@@ -92,7 +92,7 @@ final class CoachVoiceInput: ObservableObject {
 
 @available(iOS 26.0, *)
 @MainActor
-private final class LiveTranscriptionSession {
+final class LiveTranscriptionSession {
     private let audioEngine = AVAudioEngine()
     private var analyzer: SpeechAnalyzer?
     private var transcriber: SpeechTranscriber?

@@ -22,7 +22,7 @@ struct ExperienceTierPicker: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(level.title)
-                            .font(.subheadline.weight(.semibold))
+                            .font(AppTheme.bodySemibold(15))
                             .foregroundStyle(PlanTheme.textPrimary)
                             .lineLimit(1)
 

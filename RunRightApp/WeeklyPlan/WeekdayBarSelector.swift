@@ -26,7 +26,7 @@ struct WeekdayBarSelector: View {
                 } label: {
                     VStack(spacing: 10) {
                         Text(day.shortLabel)
-                            .font(.caption.weight(.semibold))
+                            .font(AppTheme.bodySemibold(12))
                             .foregroundStyle(isSelected ? accent : PlanTheme.textSecondary)
 
                         RoundedRectangle(cornerRadius: 8)

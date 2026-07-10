@@ -28,11 +28,17 @@ final class RemoteConfigManager: ObservableObject {
     private let rc = RemoteConfig.remoteConfig()
 
     private init() {
+        // Default scoring config = the shipped constants, encoded to JSON. Until a
+        // server value arrives, the store already holds ScoringConfig.default, so
+        // this default mainly documents the schema and keeps first-launch honest.
+        let scoringDefault = (try? JSONEncoder().encode(ScoringConfig.default))
+            .flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
         rc.setDefaults([
             "coach_enabled": true as NSObject,
             "scan_enabled": true as NSObject,
             "min_supported_build": 0 as NSObject,
-            "maintenance_message": "" as NSObject
+            "maintenance_message": "" as NSObject,
+            "scoring_config": scoringDefault as NSObject
         ])
         let settings = RemoteConfigSettings()
         #if DEBUG
@@ -56,6 +62,15 @@ final class RemoteConfigManager: ObservableObject {
         scanEnabled = rc["scan_enabled"].boolValue
         minSupportedBuild = rc["min_supported_build"].numberValue.intValue
         maintenanceMessage = rc["maintenance_message"].stringValue
+
+        // Live scoring calibration: decode the JSON blob and push it to the
+        // engine's thread-safe store. A malformed / empty value leaves the last
+        // good config in place (never crashes the pipeline over a typo).
+        let json = rc["scoring_config"].stringValue
+        if let data = json.data(using: .utf8), !data.isEmpty,
+           let cfg = try? JSONDecoder().decode(ScoringConfig.self, from: data) {
+            ScoringConfigStore.shared.update(cfg)
+        }
     }
 
     /// True when this build is below the server-mandated minimum (force-update).

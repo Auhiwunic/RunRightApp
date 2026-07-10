@@ -39,6 +39,8 @@
 	<string>Gaita uses your location while you run to calculate distance, pace, route maps, and local weather.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Gaita uses the microphone for the running videos you capture and for voice messages to your coach. Voice messages are transcribed on your device.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Gaita transcribes your voice on your device so you can talk to your coach and say "Hey Gaita" during a run.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>Gaita uses device motion only to help you hold the phone level while scanning your shoe sole.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
@@ -63,7 +65,10 @@
 		<string>audio</string>
 	</array>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>

@@ -5,7 +5,9 @@
 
 import Foundation
 
-/// Bundled coach voice → cache → cloud (and cache write) → system voice.
+/// Lewis or silence. Bundled coach clips first, then the opt-in cloud voice —
+/// NEVER the robotic system voice. Unknown/uncovered lines stay silent (the
+/// text is already on screen); a bad fallback is worse than none.
 @MainActor
 final class CompositeSpeechBackend: SpeechBackend {
     private(set) var displayName: String
@@ -38,8 +40,7 @@ final class CompositeSpeechBackend: SpeechBackend {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw SpeechBackendError.emptyText }
 
-        // The bundled coach voice covers every scripted cue and costs nothing —
-        // try it first in every mode; unknown sentences fall through.
+        // 1) Bundled Lewis clip for this exact cue → play it.
         if let bundledBackend, LewisVoiceBackend.clipSequence(for: trimmed) != nil {
             lastUsedLabel = bundledBackend.displayName
             try await bundledBackend.speak(trimmed)
@@ -47,54 +48,20 @@ final class CompositeSpeechBackend: SpeechBackend {
             return
         }
 
-        switch mode {
-        case .system:
-            lastUsedLabel = systemBackend.displayName
-            try await systemBackend.speak(trimmed)
-            displayName = lastUsedLabel
-            return
-
-        case .cloudOnly:
-            if let cloudBackend {
-                do {
-                    try await speakViaCloud(trimmed, cloud: cloudBackend)
-                    return
-                } catch {
-                    lastUsedLabel = "\(systemBackend.displayName) (fallback)"
-                    try await systemBackend.speak(trimmed)
-                    displayName = lastUsedLabel
-                    throw error
-                }
-            }
-            lastUsedLabel = systemBackend.displayName
-            try await systemBackend.speak(trimmed)
-            displayName = lastUsedLabel
-            return
-
-        case .hybrid:
+        // 2) Opt-in cloud voice only (mode != .system). Any failure → silence,
+        //    never the system voice.
+        if mode != .system, let cloudBackend {
             if let cached = SpeechAudioCache.cachedFileURL(for: trimmed, voice: voiceName) {
-                lastUsedLabel = "ElevenLabs · Cached"
-                try await player.play(fileURL: cached)
+                lastUsedLabel = cloudBackend.displayName
+                try? await player.play(fileURL: cached)
                 displayName = lastUsedLabel
                 return
             }
-
-            if let cloudBackend {
-                do {
-                    try await speakViaCloud(trimmed, cloud: cloudBackend)
-                    return
-                } catch {
-                    lastUsedLabel = "\(systemBackend.displayName) (fallback)"
-                    try await systemBackend.speak(trimmed)
-                    displayName = lastUsedLabel
-                    throw error
-                }
-            }
-
-            lastUsedLabel = systemBackend.displayName
-            try await systemBackend.speak(trimmed)
-            displayName = lastUsedLabel
+            try? await speakViaCloud(trimmed, cloud: cloudBackend)
+            return
         }
+
+        // 3) No clip, no opt-in cloud → stay silent. The text is on screen.
     }
 
     func stop() {

@@ -42,6 +42,8 @@ struct ScanView: View {
     @State private var currentPage = 0   // selected page in the wear-pattern history carousel
     @State private var scrollOffset: CGFloat = 0   // drives the header fade
     @ObservedObject private var scanVM = ScanViewModel.shared
+    @ObservedObject private var subscriptions = SubscriptionManager.shared
+    @ObservedObject private var usage = UsageLimits.shared
 
     private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
@@ -141,6 +143,14 @@ struct ScanView: View {
                     }
                     .disabled(isAnalyzing || !canScan)
                     .padding(.horizontal, 20)
+
+                    // Free-tier scan allowance (premium is unlimited).
+                    if !subscriptions.isPremium {
+                        Text("\(usage.scansRemaining) of \(UsageLimits.freeScansPerMonth) free scans left this month")
+                            .font(AppTheme.body(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.45))
+                            .padding(.top, 2)
+                    }
 
                     // ── Per-shoe error cards ──────────────────────────────
                     if let error = leftError {
@@ -371,6 +381,12 @@ struct ScanView: View {
                 ScorecardDataStore.shared.resetWearZonesIfShoeChanged(to: shoeName)
                 ScorecardDataStore.shared.saveWearZones(side: side, zones: result.wearZones)
 
+                // Count this scan against the free monthly allowance (premium is
+                // unlimited, so only meter free users). One count per side scanned.
+                if !SubscriptionManager.shared.isPremium {
+                    UsageLimits.shared.recordScan()
+                }
+
                 // ── Step 2: Show the heatmap NOW — nothing else gates the result ──
                 if side == "left" {
                     isAnalyzingLeft = false;  leftStatus = ""
@@ -545,9 +561,12 @@ struct ScanView: View {
                     TabView(selection: $currentPage) {
                         ForEach(scanVM.historyPages.indices, id: \.self) { index in
                             let page = scanVM.historyPages[index]
+                            // Balance the pair for the heatmaps only; the wear
+                            // analysis text below reads the raw per-shoe zones.
+                            let (balL, balR) = WearSymmetry.balanced(page.left?.zones, page.right?.zones)
                             HStack(spacing: 30) {
-                                FootHeatmapView(isLeft: true, wearZones: page.left?.zones)
-                                FootHeatmapView(isLeft: false, wearZones: page.right?.zones)
+                                FootHeatmapView(isLeft: true, wearZones: balL)
+                                FootHeatmapView(isLeft: false, wearZones: balR)
                             }
                             .tag(index)
                         }
@@ -798,7 +817,7 @@ struct FootHeatmapView: View {
         VStack(spacing: 8) {
             if showLabel {
                 Text(isLeft ? "Left" : "Right")
-                    .font(.system(size: 13, weight: .bold, design: labelDesign))
+                    .font(AppTheme.meta(13))
                     .foregroundColor(AppTheme.primaryText)
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -1000,12 +1019,15 @@ struct FootHeatmapView: View {
             return false
         }
         
-        // Sole view: flipping a shoe over mirrors its outline, so the LEFT sole
-        // uses the raw shape and the RIGHT sole is mirrored.
-        let actualCol = isLeft ? col : (columns - 1 - col)
-        return row < shoeShapeData.count &&
-               actualCol < shoeShapeData[row].count &&
-               shoeShapeData[row][actualCol] == 1
+        // Symmetric outline: a cell is part of the shoe only where the raw shape
+        // AND its mirror agree. This forces left and right to render the SAME
+        // spots (a matched, symmetric pair) instead of two differently-leaning
+        // outlines. Wear colours still map per real medial/lateral side.
+        guard row < shoeShapeData.count else { return false }
+        let mirrorCol = columns - 1 - col
+        let a = col >= 0 && col < shoeShapeData[row].count && shoeShapeData[row][col] == 1
+        let b = mirrorCol >= 0 && mirrorCol < shoeShapeData[row].count && shoeShapeData[row][mirrorCol] == 1
+        return a && b
     }
     
     private func rgba(from color: Color) -> RGBA {

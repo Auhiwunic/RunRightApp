@@ -27,9 +27,15 @@ final class SubscriptionManager: ObservableObject {
     @Published private(set) var isPremium: Bool = false
 
     #if DEBUG
-    /// Demo-only unlock so the gated → unlocked flow can be shown without a store.
-    @Published var debugUnlocked: Bool = false {
-        didSet { recompute() }
+    /// Testing-only unlock so the gated → unlocked flow can be exercised without a
+    /// store. Persisted (DEBUG builds only) so it survives relaunch — flip it once
+    /// and premium stays on until you turn it off. Compiled out of Release.
+    static let debugKey = "debug.premiumUnlocked"
+    @Published var debugUnlocked: Bool = UserDefaults.standard.bool(forKey: SubscriptionManager.debugKey) {
+        didSet {
+            UserDefaults.standard.set(debugUnlocked, forKey: Self.debugKey)
+            recompute()
+        }
     }
     #endif
 
@@ -46,7 +52,11 @@ final class SubscriptionManager: ObservableObject {
                 }
             }
         }
-        Task { await refresh() }
+        // At launch we only need the local entitlement check (gates premium
+        // features). The StoreKit product listing is a network call that is only
+        // used by the paywall, which loads it itself on appear — so don't pay
+        // that cost on every app open.
+        Task { await updateEntitlements() }
     }
 
     func refresh() async {

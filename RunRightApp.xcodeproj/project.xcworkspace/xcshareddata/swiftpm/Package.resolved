@@ -1,0 +1,33 @@
+{
+  "originHash" : "2482ef41d316498f85ae65581d240bfd4c480ef897c3b9002e1b439cca7d18aa",
+  "pins" : [
+    {
+      "identity" : "fluidaudio",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/FluidInference/FluidAudio.git",
+      "state" : {
+        "revision" : "19600a485baa4998812e4654b70d2bab8f2c9949",
+        "version" : "0.15.5"
+      }
+    },
+    {
+      "identity" : "musclemap",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/melihcolpan/MuscleMap.git",
+      "state" : {
+        "revision" : "7dc03071e03052e8bd4f6351e9176994cd28aa7d",
+        "version" : "1.6.4"
+      }
+    },
+    {
+      "identity" : "neumorphic",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/costachung/neumorphic.git",
+      "state" : {
+        "revision" : "aae74c3e39fba485a540927e8050f288eff1228c",
+        "version" : "2.0.7"
+      }
+    }
+  ],
+  "version" : 3
+}

@@ -66,6 +66,22 @@ struct WearZoneData: Codable {
         default: return "green"
         }
     }
+
+    mutating func set(_ zone: String, _ colorValue: String) {
+        switch zone {
+        case "bigToe": bigToe = colorValue
+        case "lesserToes": lesserToes = colorValue
+        case "medialBall": medialBall = colorValue
+        case "centralBall": centralBall = colorValue
+        case "lateralBall": lateralBall = colorValue
+        case "medialMidfoot": medialMidfoot = colorValue
+        case "lateralMidfoot": lateralMidfoot = colorValue
+        case "medialHeel": medialHeel = colorValue
+        case "centralHeel": centralHeel = colorValue
+        case "lateralHeel": lateralHeel = colorValue
+        default: break
+        }
+    }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -108,6 +124,12 @@ struct SingleShoeResponse: Codable {
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        // A real analysis carries at least a gait type or wear zones. If neither
+        // key is present the body isn't a shoe analysis (e.g. a backend error
+        // object), so fail instead of fabricating a fake all-green result (#12).
+        guard container.contains(.gaitType) || container.contains(.wearZones) else {
+            throw OpenAIError.parseError
+        }
         gaitType = (try? container.decode(String.self, forKey: .gaitType)) ?? "neutral"
         wearZones = try? container.decodeIfPresent(WearZoneData.self, forKey: .wearZones)
         strikePattern = try? container.decodeIfPresent(String.self, forKey: .strikePattern)

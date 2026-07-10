@@ -46,6 +46,11 @@ final class HomeViewModel: ObservableObject {
 
     private var cancellables = Set<AnyCancellable>()
 
+    /// Shared so the Home tab keeps its loaded data alive across tab switches
+    /// (the tab views persist now). Refresh is event-driven via `.runSaved`
+    /// below, so persisting never shows stale data after a new run.
+    static let shared = HomeViewModel()
+
     init() {
         // Reload all data whenever a run is saved
         NotificationCenter.default.publisher(for: .runSaved)
