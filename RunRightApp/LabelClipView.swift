@@ -277,9 +277,13 @@ struct LabelClipView: View {
         guard let s = processor.metricSeries, let m = processor.analysisMetrics else { return nil }
         let armROM = max(m.elbowRangeLeft, m.elbowRangeRight)
         guard let smooth = computeEfficiencyBreakdown(series: s, armSwingRangeDeg: armROM)?.composite else { return nil }
-        let drive = computeSprintPowerComposite(series: s, metrics: m, userBodyHeightMeters: bodyHeight)
-        let impact = impactResult(series: s, metrics: m, userBodyHeightMeters: bodyHeight).score
-        let overall = Int(faultSensitiveScore([Double(smooth), Double(drive), Double(impact)]).rounded())
+        let powerRes = powerResult(series: s, metrics: m)
+        let impactRes = impactResult(series: s, metrics: m, userBodyHeightMeters: bodyHeight)
+        let drive = powerRes.score
+        let impact = impactRes.score
+        let overall = overallFormScore(
+            smooth: smooth, drive: drive, impact: impact,
+            driveConfidence: powerRes.confidence, impactConfidence: impactRes.confidence)
         let gctVals = [m.groundContactLeft, m.groundContactRight].filter { $0 > 0 }
         let gct = gctVals.isEmpty ? .nan : gctVals.reduce(0, +) / Double(gctVals.count)
         return EngineReadout(

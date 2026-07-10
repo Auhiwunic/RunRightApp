@@ -935,13 +935,42 @@ func powerResult(series: MetricSeries, metrics: AnalysisMetrics) -> PowerResult 
     let hip = max(metrics.hipExtensionRangeLeft, metrics.hipExtensionRangeRight)
     let ankle = max(metrics.ankleDorsiRangeLeft, metrics.ankleDorsiRangeRight)
     let knee = max(metrics.kneeFlexionRangeLeft, metrics.kneeFlexionRangeRight)
-    return RunPowerModel.power(
+    let base = RunPowerModel.power(
         contactTimes: tcs,
         flightTimes: tfs,
         hipExtensionRangeDeg: hip > 0.5 ? hip : nil,
         ankleRangeDeg: ankle > 0.5 ? ankle : nil,
         kneeDriveRangeDeg: knee > 0.5 ? knee : nil,
         frameRate: series.frameRate
+    )
+
+    // The spring-mass model reads force production but is blind to WHERE the
+    // foot lands and how fast the legs turn over — which let a slow, clearly
+    // overstriding jog post an elite DRIVE. Overstride is braking (force spent
+    // decelerating in front of the body is not drive), so the landing evidence
+    // and the cadence band cap the physics score. Both factors are bounded so
+    // they refine the model, never dominate it.
+    // Only penalize cadence that is MEASURED and clearly below the running
+    // band. Below ~100 spm a running gait is physically implausible — that is a
+    // slow-motion clip or a broken cadence read, not a slow runner — so treat it
+    // as unmeasurable rather than punishing it. (The foot-under-COM penalty is
+    // deliberately NOT applied here until that metric is calibrated — see
+    // computeEfficiencyBreakdown.)
+    var factor = 1.0
+    let cad = metrics.cadence
+    if cad >= 100, cad < 150 {
+        factor *= max(0.6, 0.6 + 0.4 * (cad - 120) / 30)
+    }
+    guard factor < 0.999 else { return base }
+    let adjusted = max(0, min(100, Int((Double(base.score) * factor).rounded())))
+    return PowerResult(
+        score: adjusted,
+        confidence: base.confidence,
+        peakForceBW: base.peakForceBW,
+        dutyFactor: base.dutyFactor,
+        naturalFreqHz: base.naturalFreqHz,
+        label: base.label,
+        detail: base.detail
     )
 }
 
@@ -1006,6 +1035,33 @@ func classifyShinStrideSigned(angle: Double?) -> ShinStrideClassification {
 /// average lets one serious fault hide behind many fine cues (which is why poor
 /// form scored ~80). This weights the faults: elite form (all dimensions high)
 /// is barely affected, but real faults pull the score down the way they should.
+/// The one overall used by every surface. The time-based dials (drive/impact)
+/// report their own reliability — at phone frame rates contact/flight times are
+/// estimates at best — so a low-confidence dial defers toward the cue-based
+/// smooth score instead of swinging the verdict with noise. On the labeled
+/// reference clips the raw physics dials scored perfect form 39-40 and flawed
+/// form 83; letting them vote at full weight made the overall meaningless.
+func overallFormScore(
+    smooth: Int, drive: Int, impact: Int,
+    driveConfidence: MetricConfidence, impactConfidence: MetricConfidence
+) -> Int {
+    func weighted(_ dial: Int, _ conf: MetricConfidence) -> Double {
+        let w: Double
+        switch conf {
+        case .high: w = 1.0
+        case .estimate: w = 0.45
+        case .low: w = 0.2
+        }
+        return w * Double(dial) + (1 - w) * Double(smooth)
+    }
+    let dims = [
+        Double(smooth),
+        weighted(drive, driveConfidence),
+        weighted(impact, impactConfidence),
+    ]
+    return Int(faultSensitiveScore(dims).rounded())
+}
+
 func faultSensitiveScore(_ dims: [Double]) -> Double {
     guard !dims.isEmpty else { return 0 }
     let mean = dims.reduce(0, +) / Double(dims.count)
@@ -1107,7 +1163,14 @@ func computeEfficiencyBreakdown(series: MetricSeries, armSwingRangeDeg: Double? 
     // not averaged away behind fine cues. Averaging only 4 lenient cues flat is
     // what let poor form score ~80. The shin/torso/gaze/elbow sub-objects are
     // still returned for the detail view.
-    var dims = series.formCueScores.map { Double($0.score) }
+    // footUnderCOM is measured and displayed but NOT blended yet: ankle-ahead-
+    // of-hip has no speed-fair absolute banding (fast runners legitimately land
+    // further ahead), so until it is calibrated against labeled clips it would
+    // punish good runners or excuse reachers. The shin angle carries the
+    // overstride signal in the blend meanwhile.
+    var dims = series.formCueScores
+        .filter { $0.cue != .footUnderCOM }
+        .map { Double($0.score) }
     guard !dims.isEmpty else { return nil }
     // Arm-swing amplitude as an efficiency cue. Elite carriage holds the elbow
     // near-fixed (~15–25° of range); arms pumping wide open and shut waste energy.
@@ -1350,8 +1413,12 @@ private enum FormCueRanges {
         .shinVertical: FormCueRange(targetMin: 6, targetMax: 13, warnMin: 3, warnMax: 17, direction: .targetRange),
         .quietFeet: FormCueRange(targetMin: 0, targetMax: 0.08, warnMin: 0, warnMax: 0.15, direction: .lowerBetter),
         .tallPosture: FormCueRange(targetMin: 4, targetMax: 10, warnMin: 2, warnMax: 14, direction: .targetRange),
-        .shortQuickSteps: FormCueRange(targetMin: 175, targetMax: 195, warnMin: 165, warnMax: 205, direction: .targetRange),
-        .footUnderCOM: FormCueRange(targetMin: 0, targetMax: 0.06, warnMin: 0, warnMax: 0.12, direction: .lowerBetter),
+        // 165+ covers healthy easy-run turnover; 175-195 as target-only punished
+        // legitimately relaxed elite form (154-172 spm reads in the field).
+        .shortQuickSteps: FormCueRange(targetMin: 162, targetMax: 195, warnMin: 148, warnMax: 205, direction: .targetRange),
+        // Fraction of stride length the ankle lands ahead of the hip. ~a quarter
+        // stride is normal mechanics at any speed; past ~40% the foot is reaching.
+        .footUnderCOM: FormCueRange(targetMin: 0, targetMax: 0.27, warnMin: 0, warnMax: 0.42, direction: .lowerBetter),
         .elbows: FormCueRange(targetMin: 80, targetMax: 100, warnMin: 70, warnMax: 110, direction: .targetRange),
         .hipsStable: FormCueRange(targetMin: 0, targetMax: 4, warnMin: 0, warnMax: 7, direction: .lowerBetter),
         .eyesForward: FormCueRange(targetMin: -5, targetMax: 5, warnMin: -12, warnMax: 12, direction: .targetRange),
@@ -3514,19 +3581,24 @@ class VideoProcessor: ObservableObject {
                     // Only measure vertical tilt if there's meaningful horizontal separation
                     // If dx is very small, the head might be rotated, so use a minimum threshold
                     let minHorizontalSep = 0.01  // Minimum 1% of frame width for valid measurement
-                    
+
                     guard abs(dx) > minHorizontalSep else {
-                        // Head is too rotated or ear/nose too close - can't measure gaze reliably
-                        return 0.0  // Assume neutral
+                        // Can't measure — the nose has swung into the ear's column.
+                        // This happens MOST when the chin is tucked (severe head
+                        // down), so the old `return 0` scored the worst head-down
+                        // clips as perfect gaze. Unmeasurable must stay unmeasured;
+                        // the caller drops NaN frames.
+                        return Double.nan
                     }
-                    
+
                     // Calculate the angle of vertical tilt: atan2(vertical_offset, horizontal_distance)
                     // This gives us the downward tilt angle
                     let angle = atan2(dy, abs(dx)) * 180 / .pi
-                    
-                    // Return the angle (positive = looking down, negative = looking up)
-                    // Use abs for display, but we could keep sign to distinguish up/down
-                    return abs(angle)
+
+                    // Positive = looking down (the fault we score). Looking up is
+                    // not the head-down fault — clamp to neutral instead of folding
+                    // it into "down" via abs().
+                    return angle.isFinite ? max(0.0, angle) : Double.nan
                 }
                 
                 // Primary: use selected-side ear with nose
@@ -4015,19 +4087,81 @@ class VideoProcessor: ObservableObject {
             let deg = atan2(forwardX, vy) * 180.0 / .pi
             return deg.isFinite ? deg : nil
         }
+        // Strike detection rides a SMOOTHED foot-ahead-of-hip signal, so the
+        // detected index can lag true touchdown by a few frames — and by early
+        // stance the shank has already rotated to vertical, which read a clear
+        // overstride as ~3° "good stride". Measure the MOST FORWARD shank in a
+        // small window around each strike instead: that is the angle the foot
+        // actually landed with.
+        func windowedShank(_ idx: Int, knee: PoseJoint, ankle: PoseJoint) -> Double? {
+            var best: Double?
+            for j in max(0, idx - 3)...min(frames.count - 1, idx + 1) {
+                let f = frames[j]
+                if let k = point(f, knee), let a = point(f, ankle),
+                   let d = shankSignedDeg(knee: k, ankle: a, facingRight: f.facingRight) {
+                    if best == nil || d > best! { best = d }
+                }
+            }
+            return best
+        }
+        // Real foot-under-COM measurement: how far ahead of the hip the ankle
+        // lands (raw x units; normalized against stride length at scoring time —
+        // EVERY runner lands ahead of the hip, and faster runners land further
+        // ahead in absolute terms, so only the fraction of the stride is a fair
+        // overstride measure). The old cue just COPIED the shin score.
+        func underCOMOffset(_ idx: Int, hip: PoseJoint, ankle: PoseJoint) -> Double? {
+            guard idx < frames.count else { return nil }
+            var best: Double?
+            for j in max(0, idx - 3)...min(frames.count - 1, idx + 1) {
+                let f = frames[j]
+                if let h = point(f, hip), let a = point(f, ankle) {
+                    let fwd = Double(a.x - h.x) * (f.facingRight ? 1.0 : -1.0)
+                    if best == nil || fwd > best! { best = fwd }
+                }
+            }
+            return best.map { max(0, $0) }
+        }
+
+        // Heel contact during stance — the "heel never touches" red flag. A
+        // rolling contact ("peeling") brings the heel down to toe level at some
+        // point in stance; running purely on the toes never does. Measured per
+        // strike over the stance window; nil when the joints weren't tracked.
+        func heelTouches(_ idx: Int, heel: PoseJoint, toe: PoseJoint) -> Bool? {
+            guard idx < frames.count else { return nil }
+            var measured = false
+            for j in idx...min(frames.count - 1, idx + 6) {
+                let f = frames[j]
+                if let h = point(f, heel), let t = point(f, toe) {
+                    measured = true
+                    if Double(h.y) >= Double(t.y) - 0.005 { return true }   // y grows downward
+                }
+            }
+            return measured ? false : nil
+        }
+
         var shankSignedSamples: [Double] = []
+        var underCOMSamples: [Double] = []
+        var heelTouchSamples: [Bool] = []
         for idx in leftStrikes where idx < frames.count {
-            let f = frames[idx]
-            if let k = point(f, .leftKnee), let a = point(f, .leftAnkle),
-               let d = shankSignedDeg(knee: k, ankle: a, facingRight: f.facingRight) {
+            if let d = windowedShank(idx, knee: .leftKnee, ankle: .leftAnkle) {
                 shankSignedSamples.append(d)
+            }
+            if let o = underCOMOffset(idx, hip: .leftHip, ankle: .leftAnkle) {
+                underCOMSamples.append(o)
+            }
+            if let t = heelTouches(idx, heel: .leftHeel, toe: .leftFootIndex) {
+                heelTouchSamples.append(t)
             }
         }
         for idx in rightStrikes where idx < frames.count {
-            let f = frames[idx]
-            if let k = point(f, .rightKnee), let a = point(f, .rightAnkle),
-               let d = shankSignedDeg(knee: k, ankle: a, facingRight: f.facingRight) {
+            if let d = windowedShank(idx, knee: .rightKnee, ankle: .rightAnkle) {
                 shankSignedSamples.append(d)
+            }
+            if let o = underCOMOffset(idx, hip: .rightHip, ankle: .rightAnkle) {
+                underCOMSamples.append(o)
+            }
+            if let t = heelTouches(idx, heel: .rightHeel, toe: .rightFootIndex) {
+                heelTouchSamples.append(t)
             }
         }
         // Reject physiologically-impossible samples before taking the median: a
@@ -4570,11 +4704,27 @@ class VideoProcessor: ObservableObject {
         let cadenceStd = robustStats(cleanedCadence).std
         let cadenceScore = rangeBasedScore(value: cadenceMean, range: FormCueRanges.ranges[.shortQuickSteps]!)
 
-        // Only use selected side for foot under COM metric
-        let footYForCOM = useLeftSide && useRightSide
-            ? absArray(cleanedLeftFootY) + absArray(cleanedRightFootY)  // Both if auto-detection
-            : (useLeftSide ? absArray(cleanedLeftFootY) : absArray(cleanedRightFootY))  // Only selected side
-        let (comMean, comStd) = robustStats(footYForCOM)
+        // Foot under COM: how far ahead of the hip the ankle lands, as a
+        // FRACTION OF STRIDE LENGTH — self-normalizing across speed. An elite
+        // runner with a long stride lands ~a quarter stride ahead (fine); a slow
+        // jogger reaching the same absolute distance on a short stride is
+        // overstriding. The old cue never measured this at all (it copied the
+        // shin score), which is how a clear overstride passed as 98.
+        let underCOMClean = underCOMSamples.filter { $0.isFinite }
+        let strideMedian = RunPhysics.median(strideSeries.filter { $0.isFinite && $0 > 0.001 })
+        let underCOMFraction: Double? = {
+            guard underCOMClean.count >= 2, let m = RunPhysics.median(underCOMClean) else { return nil }
+            if let s = strideMedian, s > 0.001 { return m / s }
+            // No stride read: fall back to body height (a stride is roughly one
+            // body height at running speeds).
+            guard bodyHeight > 1 else { return nil }
+            return m / bodyHeight
+        }()
+        let (comMean, comStd) = (underCOMFraction ?? 0, 0.0)
+        let footUnderCOMScore: Double = underCOMFraction.map {
+            rangeBasedScore(value: $0, range: FormCueRanges.ranges[.footUnderCOM]!)
+        } ?? 50   // unmeasured
+        let underCOMMedian: Double? = underCOMFraction
 
         let frontHipSeries: [Double] = zip(frames, zip(cleanedLeftHip, cleanedRightHip)).map { (frame: PoseFrame, vals: (Double, Double)) -> Double in
             let useRight = frontSideByDepth(frame)
@@ -4587,7 +4737,7 @@ class VideoProcessor: ObservableObject {
             return useRight ? vals.1 : vals.0
         }
         let elbowMean = frontElbowSeries.reduce(0, +) / Double(max(frontElbowSeries.count, 1))
-        let elbowScoreForCue: Double
+        var elbowScoreForCue: Double
         let elbowMeanForCue: Double
         if elbowAngleMean > 0 {
             elbowScoreForCue = Double(classifyElbowAngle(angle: elbowAngleMean).score)
@@ -4595,6 +4745,14 @@ class VideoProcessor: ObservableObject {
         } else {
             elbowScoreForCue = rangeBasedScore(value: elbowMean, range: FormCueRanges.ranges[.elbows]!)
             elbowMeanForCue = elbowMean
+        }
+        // Inconsistent carriage: a mean inside the band can hide arms pumping
+        // open and shut every stride. Elite carriage holds the elbow near a
+        // fixed angle, so high swing variability is itself the fault. Threshold
+        // and slope are deliberately gentle — pose jitter inflates the std, and
+        // the first pass at 14°/2.5x false-flagged a perfect-form reference clip.
+        if elbowAngleStd.isFinite, elbowAngleStd > 20 {
+            elbowScoreForCue = max(45, elbowScoreForCue - (elbowAngleStd - 20) * 1.5)
         }
 
         let (hipMean, hipStd) = robustStats(cleanedHipDrop)
@@ -4629,14 +4787,26 @@ class VideoProcessor: ObservableObject {
             footPlacementMedian = robustStats(footPlacementAngles).mean
             footPlacementStd = max(robustStats(footPlacementAngles).std, 1)
         }
-        let footPlacementScore = rangeBasedScore(value: footPlacementMedian, range: FormCueRanges.ranges[.footPlacement]!)
+        var footPlacementScore = rangeBasedScore(value: footPlacementMedian, range: FormCueRanges.ranges[.footPlacement]!)
+        // "Heel never touches": persistent toes-only running (no heel drop in
+        // stance) overloads the calf/achilles and is the user-flagged red flag.
+        // Only applied below sprint turnover — genuine sprinting is forefoot by
+        // design. A rolling contact that brings the heel down passes untouched.
+        if heelTouchSamples.count >= 3, cadenceMean < 170 {
+            let noHeel = Double(heelTouchSamples.filter { !$0 }.count) / Double(heelTouchSamples.count)
+            if noHeel >= 0.7 {
+                footPlacementScore = min(footPlacementScore, 42)
+            } else if noHeel >= 0.4 {
+                footPlacementScore = min(footPlacementScore, 62)
+            }
+        }
 
         let formScores: [FormCueScore] = [
             FormCueScore(cue: .shinVertical, score: shinScore, rawValue: shinMeanForScore, mean: shinMeanForScore, std: shinStdEncoded),
             FormCueScore(cue: .quietFeet, score: quietScore, rawValue: quietMean, mean: quietMean, std: quietStd),
             FormCueScore(cue: .tallPosture, score: postureScoreForCue, rawValue: postureMeanForCue, mean: postureMeanForCue, std: postureStdForCue),
             FormCueScore(cue: .shortQuickSteps, score: cadenceScore, rawValue: cadenceMean, mean: cadenceMean, std: cadenceStd),
-            FormCueScore(cue: .footUnderCOM, score: shinScore, rawValue: comMean, mean: comMean, std: comStd),
+            FormCueScore(cue: .footUnderCOM, score: footUnderCOMScore, rawValue: underCOMMedian ?? comMean, mean: comMean, std: comStd),
             FormCueScore(cue: .elbows, score: elbowScoreForCue, rawValue: elbowMeanForCue, mean: elbowMeanForCue, std: elbowAngleStd),
             FormCueScore(cue: .hipsStable, score: hipsScore, rawValue: hipMean, mean: hipMean, std: hipStd),
             FormCueScore(cue: .eyesForward, score: headScoreForCue, rawValue: headMeanForCue, mean: headMeanForCue, std: headStdForCue),

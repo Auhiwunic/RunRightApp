@@ -1552,7 +1552,11 @@ struct AnalyzeView: View {
         // its dial — over-kipped legs pull DRIVE, flailing arms pull SMOOTH — so a
         // plain blend already reflects them; fault-sensitivity keeps one weak dial
         // from being averaged away behind two strong ones.
-        let overall = Int(faultSensitiveScore([Double(efficiency), Double(power), Double(impact)]).rounded())
+        let powerRes = powerResult(series: series, metrics: metrics)
+        let overall = overallFormScore(
+            smooth: efficiency, drive: power, impact: impact,
+            driveConfidence: powerRes.confidence,
+            impactConfidence: impactReading?.confidence ?? .low)
 #if DEBUG
         debugLog("[Overall] eff=\(efficiency) power=\(power) impact=\(impact) -> overall=\(overall)")
 #endif
