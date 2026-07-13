@@ -1174,14 +1174,20 @@ struct AnalyzeView: View {
         let gaitType = latest?.left?.gaitType ?? latest?.right?.gaitType ?? ScorecardDataStore.shared.loadGaitType()
         let strikePattern = latest?.left?.strikePattern ?? latest?.right?.strikePattern ?? ScorecardDataStore.shared.loadGaitStrike()
         let hasScan = leftZones != nil || rightZones != nil
-        let health = analyzeCombinedShoeHealth(left: leftZones, right: rightZones)
+        let health = analyzeCombinedShoeHealth(
+            leftPercents: latest?.left?.wearPercents, rightPercents: latest?.right?.wearPercents,
+            leftZones: leftZones, rightZones: rightZones)
+        // Replace shoes as a pair, so the more worn side sets the estimate.
+        let milesLeft = [latest?.left?.estimatedMilesRemaining, latest?.right?.estimatedMilesRemaining]
+            .compactMap { $0 }.min()
 
         return VStack(alignment: .leading, spacing: 10) {
             TabView(selection: $shoeCardPage) {
                 analyzeHeatGridPage(leftZones: leftZones, rightZones: rightZones,
                                      gaitType: gaitType, strikePattern: strikePattern, hasScan: hasScan)
                     .tag(0)
-                analyzeShoeMetricsPage(gaitType: gaitType, strikePattern: strikePattern, health: health)
+                analyzeShoeMetricsPage(gaitType: gaitType, strikePattern: strikePattern,
+                                        health: health, milesRemaining: milesLeft)
                     .tag(1)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -1280,12 +1286,21 @@ struct AnalyzeView: View {
     /// Page 2 — boxed GAIT / STRIKE / HEALTH stats + the wear-over-time trend
     /// (was its own SHOE HEALTH card; now lives a swipe away from the heatmaps
     /// instead of duplicating the same read lower on the page).
-    private func analyzeShoeMetricsPage(gaitType: String?, strikePattern: String?, health: Int?) -> some View {
+    private func analyzeShoeMetricsPage(gaitType: String?, strikePattern: String?,
+                                         health: Int?, milesRemaining: Int?) -> some View {
         Button(action: analyzeOpenScan) {
         VStack(alignment: .leading, spacing: 14) {
-            Text("SHOE HEALTH")
-                .font(.analyzeSection)
-                .foregroundColor(AppTheme.primaryText)
+            HStack {
+                Text("SHOE HEALTH")
+                    .font(.analyzeSection)
+                    .foregroundColor(AppTheme.primaryText)
+                Spacer()
+                if let milesRemaining {
+                    Text("~\(milesRemaining) MILES LEFT")
+                        .font(AppTheme.bodyMedium(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.75))
+                }
+            }
 
             HStack(spacing: 10) {
                 analyzeShoeStatBox(label: "GAIT", value: gaitType?.uppercased() ?? "--")
@@ -1346,10 +1361,25 @@ struct AnalyzeView: View {
         return "\(gait) · \(strikePattern.uppercased()) STRIKE"
     }
 
-    private func analyzeCombinedShoeHealth(left: WearZoneData?, right: WearZoneData?) -> Int? {
-        let values = [left, right].compactMap(analyzeShoeHealthPercent)
+    private func analyzeCombinedShoeHealth(leftPercents: [String: Int]?, rightPercents: [String: Int]?,
+                                            leftZones: WearZoneData?, rightZones: WearZoneData?) -> Int? {
+        let values = [
+            analyzeShoeHealthPercent(percents: leftPercents, zones: leftZones),
+            analyzeShoeHealthPercent(percents: rightPercents, zones: rightZones)
+        ].compactMap { $0 }
         guard !values.isEmpty else { return nil }
         return Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
+    }
+
+    /// Health per shoe. Scans from the gpt-5.6 upgrade carry numeric wear depth
+    /// per zone (0 fresh, 100 gone) — average those for a finer read. Older
+    /// scans fall back to the four color buckets.
+    private func analyzeShoeHealthPercent(percents: [String: Int]?, zones: WearZoneData?) -> Int? {
+        if let percents, !percents.isEmpty {
+            let avgWear = Double(percents.values.reduce(0, +)) / Double(percents.count)
+            return Int((100 - avgWear).rounded())
+        }
+        return analyzeShoeHealthPercent(zones: zones)
     }
 
     private func analyzeShoeHealthPercent(zones: WearZoneData?) -> Int? {

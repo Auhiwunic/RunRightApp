@@ -336,6 +336,14 @@ struct ScanView: View {
     @MainActor
     private func runScan(image: UIImage, side: String) {
         Task {
+            // Meter the paid backend: never exceed the free monthly allowance,
+            // even across both shoes or repeated scans within one open session.
+            let premium = SubscriptionManager.shared.isPremium
+            guard premium || usage.canScan(isPremium: premium) else {
+                let msg = "You've used all \(UsageLimits.freeScansPerMonth) free scans this month. Go Premium for unlimited scans."
+                if side == "left" { leftError = msg } else { rightError = msg }
+                return
+            }
             if side == "left" {
                 leftError = nil;  isAnalyzingLeft = true;  leftStatus = "Sending to AI…"
             } else {
@@ -437,31 +445,25 @@ struct ScanView: View {
     /// OpenAI errors come back as JSON: {"error":{"message":"...","type":"...","code":"..."}}
     private func friendlyError(_ error: Error) -> String {
         let raw = error.localizedDescription
-        // Try to extract the OpenAI "message" field from the JSON blob
-        if let data = raw.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let errObj = json["error"] as? [String: Any],
-           let msg = errObj["message"] as? String {
-            // Surface auth errors clearly
-            if let code = errObj["code"] as? String, code == "invalid_api_key" {
-                return "Shoe analysis backend is not configured. Deploy analyzeShoe with a valid OPENAI_API_KEY secret and set SHOE_ANALYSIS_ENDPOINT."
-            }
-            return msg
+        // Raw backend/OpenAI text (model id, quota, key state, config hints) must
+        // never reach the UI — it's an info leak and reads badly to a reviewer.
+        // Keep the detail in debug logs; show the user a plain, actionable line.
+        debugLog("[Scan] error raw=\(raw)")
+        let lower = raw.lowercased()
+        // Our own pre-flight guards carry safe, user-facing copy — pass through.
+        if lower.contains("not signed in") || lower.contains("select or add a shoe")
+            || lower.contains("free scans this month") {
+            return raw
         }
-        // OpenAI wraps the JSON in "API Error: {...}" — strip the prefix
-        if raw.hasPrefix("API Error: ") {
-            let jsonPart = String(raw.dropFirst("API Error: ".count))
-            if let data = jsonPart.data(using: .utf8),
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                let errObj = json["error"] as? [String: Any],
-               let msg = errObj["message"] as? String {
-                if let code = errObj["code"] as? String, code == "invalid_api_key" {
-                    return "Shoe analysis backend is not configured. Deploy analyzeShoe with a valid OPENAI_API_KEY secret and set SHOE_ANALYSIS_ENDPOINT."
-                }
-                return msg
-            }
+        if lower.contains("offline") || lower.contains("internet") || lower.contains("network")
+            || lower.contains("timed out") || lower.contains("connection") {
+            return "You appear to be offline. Reconnect and try again."
         }
-        return raw
+        if lower.contains("429") || lower.contains("rate") || lower.contains("quota")
+            || lower.contains("busy") || lower.contains("temporarily") {
+            return "Shoe scanning is busy right now. Please try again in a moment."
+        }
+        return "Couldn't analyze that photo. Make sure the sole is well lit and centered, then try again."
     }
 
     private func loadShoes() async {
@@ -695,7 +697,7 @@ struct ScanView: View {
     
     @ViewBuilder
     private func shoeAnalysisSection(snapshot shoe: ScanSnapshot, label: String) -> some View {
-        let health = shoeHealthPercent(zones: shoe.zones)
+        let health = shoeHealthPercent(snapshot: shoe)
         let strikeText = (shoe.strikePattern?.isEmpty == false) ? ", \(shoe.strikePattern!.lowercased()) strike" : ""
 
         // The heatmap above is the read. This is just a one line summary plus a
@@ -705,6 +707,12 @@ struct ScanView: View {
                 .font(AppTheme.meta(13))
                 .foregroundColor(accentLime)
 
+            if let miles = shoe.estimatedMilesRemaining {
+                Text("~\(miles) miles left")
+                    .font(AppTheme.bodySemibold(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.75))
+            }
+
             if let h = health {
                 Text("Tread health \(h)%. Replace shoes based on how they feel, not a number.")
                     .font(AppTheme.body(11))
@@ -713,6 +721,13 @@ struct ScanView: View {
                 Text("General fitness guidance, not medical advice. See a professional for pain or injury.")
                     .font(AppTheme.body(9))
                     .foregroundColor(AppTheme.primaryText.opacity(0.3))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let conf = shoe.confidence, conf < 50 {
+                Text("The photo was hard to read. Retake it in brighter light for a sharper result.")
+                    .font(AppTheme.body(11))
+                    .foregroundColor(Color(hex: "#E89830"))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -731,6 +746,17 @@ struct ScanView: View {
         }
     }
     
+    /// Health per shoe. Scans from the gpt-5.6 upgrade carry numeric wear depth
+    /// per zone (0 fresh, 100 gone) — average those for a finer read. Older
+    /// scans fall back to the four color buckets.
+    private func shoeHealthPercent(snapshot: ScanSnapshot) -> Int? {
+        if let percents = snapshot.wearPercents, !percents.isEmpty {
+            let avgWear = Double(percents.values.reduce(0, +)) / Double(percents.count)
+            return Int((100 - avgWear).rounded())
+        }
+        return shoeHealthPercent(zones: snapshot.zones)
+    }
+
     /// Compute shoe health % from wear zone data (0-100). Returns nil if no zones.
     private func shoeHealthPercent(zones: WearZoneData?) -> Int? {
         guard let z = zones else { return nil }

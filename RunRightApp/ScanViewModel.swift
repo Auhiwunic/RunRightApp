@@ -13,6 +13,11 @@ struct ScanSnapshot {
     let gaitCause: String?
     let concern: String?
     let severity: String?
+    // Detailed fields from the gpt-5.6 scan upgrade — nil on older scans and
+    // on-device snapshots (ScorecardDataStore doesn't persist them).
+    let wearPercents: [String: Int]?
+    let estimatedMilesRemaining: Int?
+    let confidence: Int?
 
     init(result: SingleShoeResponse) {
         zones            = result.wearZones
@@ -22,6 +27,9 @@ struct ScanSnapshot {
         gaitCause        = result.gaitCause
         concern          = result.concern
         severity         = result.severity
+        wearPercents     = result.wearPercents
+        estimatedMilesRemaining = result.estimatedMilesRemaining
+        confidence       = result.confidence
     }
 
     init(dto: ShoeScanDTO) {
@@ -32,6 +40,9 @@ struct ScanSnapshot {
         gaitCause        = dto.gaitCause
         concern          = dto.concern
         severity         = dto.severity
+        wearPercents     = dto.wearPercents
+        estimatedMilesRemaining = dto.estimatedMilesRemaining
+        confidence       = dto.confidence
     }
 
     /// From the on-device store — carries only what ScorecardDataStore persists.
@@ -43,6 +54,9 @@ struct ScanSnapshot {
         gaitCause          = nil
         concern            = nil
         severity           = nil
+        wearPercents       = nil
+        estimatedMilesRemaining = nil
+        confidence         = nil
     }
 }
 
