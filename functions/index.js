@@ -250,7 +250,8 @@ export const analyzeShoe = onRequest(
 
       if (!openaiRes.ok) {
         const errText = await openaiRes.text();
-        res.status(502).json({ error: `OpenAI error: ${errText}` });
+        console.error("Upstream OpenAI error", openaiRes.status, String(errText).slice(0, 500));
+        res.status(502).json({ error: "This feature is temporarily unavailable. Please try again." });
         return;
       }
 
@@ -264,7 +265,8 @@ export const analyzeShoe = onRequest(
       // Return the parsed SingleShoeResponse object directly.
       res.status(200).json(JSON.parse(content));
     } catch (e) {
-      res.status(500).json({ error: String(e?.message || e) });
+      console.error("Handler error", String(e?.stack || e?.message || e).slice(0, 800));
+      res.status(500).json({ error: "Something went wrong. Please try again." });
     }
   }
 );
@@ -388,7 +390,8 @@ ${JSON.stringify(context || {}).slice(0, 6000)}`;
 
       if (!openaiRes.ok) {
         const errText = await openaiRes.text();
-        res.status(502).json({ error: `OpenAI error: ${errText}` });
+        console.error("Upstream OpenAI error", openaiRes.status, String(errText).slice(0, 500));
+        res.status(502).json({ error: "This feature is temporarily unavailable. Please try again." });
         return;
       }
 
@@ -409,7 +412,8 @@ ${JSON.stringify(context || {}).slice(0, 6000)}`;
       }
       res.status(200).json({ reply, action: parsed.action ?? null });
     } catch (e) {
-      res.status(500).json({ error: String(e?.message || e) });
+      console.error("Handler error", String(e?.stack || e?.message || e).slice(0, 800));
+      res.status(500).json({ error: "Something went wrong. Please try again." });
     }
   }
 );

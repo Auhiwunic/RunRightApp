@@ -1665,13 +1665,16 @@ class VideoProcessor: ObservableObject {
                 progress = 1.0
             }
         } catch {
+            // Raw AVFoundation errors ("The operation couldn't be completed…")
+            // read as a bug to a reviewer. Log the detail, show something actionable.
+            debugLog("[VideoProcessor] processing failed: \(error.localizedDescription)")
             await MainActor.run {
-                self.error = error.localizedDescription
+                self.error = "We couldn't read that video. Film a fresh clip in the Camera app (screen recordings and downloaded or protected videos may not work)."
                 isProcessing = false
             }
         }
     }
-    
+
     // Public method to access PoseFrame at a specific index (for snapshot feature)
     func getPoseFrame(at index: Int) -> PoseFrame? {
         guard index >= 0 && index < poseFrames.count else {

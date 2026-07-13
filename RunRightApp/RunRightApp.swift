@@ -9,16 +9,31 @@ import FirebaseCore
 import FirebaseFirestore
 import GoogleSignIn
 
+/// App Check factory backed by App Attest. FirebaseAppCheck ships a
+/// `DeviceCheckProviderFactory` but NOT an App Attest one, so we wrap
+/// `AppAttestProvider` ourselves. Register the iOS app with **App Attest** in
+/// Firebase console → App Check to match this.
+private final class AppAttestProviderFactory: NSObject, AppCheckProviderFactory {
+    func createProvider(with app: FirebaseApp) -> AppCheckProvider? {
+        AppAttestProvider(app: app)
+    }
+}
+
 @main
 struct RunRightApp: App {
     /// "dark" (default) or "light" — the white mode toggle lives in Profile.
     @AppStorage("gaita.appearance") private var appearance = "dark"
 
     init() {
+        // App Check provider MUST match what's registered in the Firebase
+        // console, or every enforceAppCheck function call fails in production
+        // (the simulator's debug provider hides this). We use App Attest
+        // (iOS 14+, Apple/Firebase-recommended for new apps) — so register the
+        // iOS app with App Attest in Firebase console → App Check.
         #if DEBUG
         AppCheck.setAppCheckProviderFactory(AppCheckDebugProviderFactory())
         #else
-        AppCheck.setAppCheckProviderFactory(DeviceCheckProviderFactory())
+        AppCheck.setAppCheckProviderFactory(AppAttestProviderFactory())
         #endif
         FirebaseApp.configure()
 

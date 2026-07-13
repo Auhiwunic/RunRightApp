@@ -175,16 +175,20 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         // last moving value; the movement gate now does the noise filtering, and
         // GPS hardware is already on continuously so there is no battery cost.
         locationManager.distanceFilter = kCLDistanceFilterNone
-        // Keep tracking when the screen is locked / app is backgrounded.
-        // Requires the "location" UIBackgroundMode (present in Info.plist).
-        locationManager.allowsBackgroundLocationUpdates = true
+        // Background updates are enabled ONLY while a run is active (see
+        // startTracking/stopTracking), so the app never holds background-location
+        // permission open when the user isn't running — cleaner for App Review.
+        locationManager.allowsBackgroundLocationUpdates = false
         locationManager.pausesLocationUpdatesAutomatically = false
         locationManager.showsBackgroundLocationIndicator = true
     }
-    
+
     public func startTracking() {
         // Stop any existing tracking first
         locationManager.stopUpdatingLocation()
+        // Scope background location to the active run only (requires the
+        // "location" UIBackgroundMode, present in Info.plist).
+        locationManager.allowsBackgroundLocationUpdates = true
 
         // Clean state up front. On a first install the authorization prompt is
         // still pending here; with isTracking already true the delegate below
@@ -212,6 +216,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     
     public func stopTracking() -> ActivitySummary? {
         locationManager.stopUpdatingLocation()
+        locationManager.allowsBackgroundLocationUpdates = false
         isTracking = false
         isPaused = false
         currentSpeedMps = 0

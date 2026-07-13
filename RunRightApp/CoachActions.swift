@@ -186,8 +186,9 @@ enum CoachPlanActions {
         if d.contains("tomorrow") { return (todayIdx + 1) % 7 }
         if d.contains("today") { return todayIdx }
         for (i, name) in weekOrder.enumerated() where d.contains(name.lowercased()) { return i }
-        // Fallback: next non-rest day, else tomorrow.
-        return (todayIdx + 1) % 7
+        // No recognizable day → return nil so the caller can decline rather than
+        // silently mutating the WRONG day from a hallucinated LLM day string.
+        return nil
     }
 
     /// Today as a Mon=0…Sun=6 index (matches the plan array order).

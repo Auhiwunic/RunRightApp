@@ -21,6 +21,7 @@ struct ActiveRunView: View {
     @StateObject private var wake = HeyGaitaListener()
 
     @Environment(\.dismiss) var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var isPaused = false
     @State private var showFinishScreen = false
@@ -70,6 +71,22 @@ struct ActiveRunView: View {
         .onChange(of: coach.isEnabled) { _, on in
             if on && HeyGaitaListener.isSupported { Task { await wake.start() } }
             else { wake.stop() }
+        }
+        // The mic wake-word is FOREGROUND-ONLY. .onDisappear does not fire when
+        // the app is backgrounded/locked, so without this the mic tap would keep
+        // capturing behind the lock screen under the `audio` background mode — an
+        // App Review 5.1.1 reject. Tear it down on background, restore on return.
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background, .inactive:
+                wake.stop()
+            case .active:
+                if coach.isEnabled && HeyGaitaListener.isSupported && !showFinishScreen {
+                    Task { await wake.start() }
+                }
+            @unknown default:
+                wake.stop()
+            }
         }
     }
 

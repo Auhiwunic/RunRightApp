@@ -1,0 +1,71 @@
+{
+  "identifier" : "A1B2C3D4",
+  "nonRenewingSubscriptions" : [],
+  "products" : [],
+  "settings" : {
+    "_applicationInternalID" : "6740000000",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "20890000",
+      "localizations" : [],
+      "name" : "Gaita Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "7.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "60000001",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Monthly access to the AI coach and shoe scanner.",
+              "displayName" : "Gaita Premium — Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.runright.premium.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Premium Monthly",
+          "subscriptionGroupID" : "20890000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : []
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "59.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "60000002",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "A full year of the AI coach and shoe scanner.",
+              "displayName" : "Gaita Premium — Annual",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.runright.premium.annual",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Premium Annual",
+          "subscriptionGroupID" : "20890000",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : []
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}
