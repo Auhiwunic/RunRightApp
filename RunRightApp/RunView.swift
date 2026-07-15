@@ -204,6 +204,14 @@ struct RunView: View {
             if let saved = try await PlanRepository.shared.loadWeeklyPlan(uid: uid, weekId: weekId),
                saved.count == 7 {
                 weeklyPlans = saved
+            } else if let latest = try await PlanRepository.shared.loadLatestPlan(uid: uid),
+                      latest.count == 7 {
+                // No plan saved for THIS week yet (a new week began). Carry the
+                // user's most recent personalized week forward instead of silently
+                // reverting to the hardcoded advanced default, and persist it under
+                // this week's id so it sticks.
+                weeklyPlans = latest
+                try? await PlanRepository.shared.saveWeeklyPlan(uid: uid, weekId: weekId, days: latest)
             }
             planError = nil
         } catch {

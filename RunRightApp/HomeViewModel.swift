@@ -69,6 +69,9 @@ final class HomeViewModel: ObservableObject {
             return
         }
 
+        // Recover a run interrupted by a crash/force-quit (once per launch).
+        await RunSession.recoverInterruptedRunIfNeeded(uid: uid)
+
         loadError = nil
 
         // Pull latest HealthKit metrics (steps, calories, distance, active minutes)

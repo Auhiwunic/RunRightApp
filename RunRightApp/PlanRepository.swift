@@ -50,7 +50,22 @@ final class PlanRepository {
         let doc = plansCollection(uid: uid).document(weekId)
         let snapshot = try await doc.getDocument()
         guard snapshot.exists, let data = snapshot.data() else { return nil }
+        return decodeDays(data)
+    }
 
+    /// The user's most recently saved weekly plan, regardless of which week it was
+    /// for. Used to carry a personalized plan forward into a new week that has none
+    /// yet, so the app never silently reverts to the hardcoded default every Monday.
+    func loadLatestPlan(uid: String) async throws -> [DayPlan]? {
+        let snapshot = try await plansCollection(uid: uid)
+            .order(by: "weekStart", descending: true)
+            .limit(to: 1)
+            .getDocuments()
+        guard let data = snapshot.documents.first?.data() else { return nil }
+        return decodeDays(data)
+    }
+
+    private func decodeDays(_ data: [String: Any]) -> [DayPlan]? {
         guard let daysData = data["days"] as? [[String: Any]] else { return nil }
 
         var days: [DayPlan] = []

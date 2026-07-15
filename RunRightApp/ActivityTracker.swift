@@ -261,6 +261,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         isPaused = false
         currentSpeedMps = 0
         resetLiveAccumulators()
+        clearCrashSnapshot()   // run saved or discarded — no recovery needed
         locationManager.stopUpdatingLocation()
     }
 
@@ -351,6 +352,78 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         }
     }
     
+    // MARK: - Crash recovery
+    // The active run is snapshotted to disk as it progresses so a force-quit,
+    // crash, or OS background-kill mid-run doesn't silently lose it. The snapshot
+    // is cleared when the run is saved or discarded (reset()), and recovered on
+    // the next launch if it's still there.
+    private struct RunCrashSnapshot: Codable {
+        var distance: Double
+        var duration: TimeInterval
+        var elevationGain: Double
+        var elevationLoss: Double
+        var highestPoint: Double
+        var lowestPoint: Double
+        var averageSpeed: Double
+        var maxSpeed: Double
+        var startTime: Date
+        var endTime: Date
+        var route: [[Double]]   // [lat, lng] pairs
+    }
+
+    private static var crashFileURL: URL {
+        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("active_run_snapshot.json")
+    }
+    private var lastCrashPersistAt: Date = .distantPast
+
+    /// Write a snapshot of the run in progress, throttled to keep disk churn low.
+    private func persistCrashSnapshot() {
+        guard isTracking, let s = buildSummary() else { return }
+        let now = Date()
+        guard now.timeIntervalSince(lastCrashPersistAt) >= 8 else { return }
+        lastCrashPersistAt = now
+        let snap = RunCrashSnapshot(
+            distance: s.distance, duration: s.duration,
+            elevationGain: s.elevationGain, elevationLoss: s.elevationLoss,
+            highestPoint: s.highestPoint, lowestPoint: s.lowestPoint,
+            averageSpeed: s.averageSpeed, maxSpeed: s.maxSpeed,
+            startTime: s.startTime, endTime: s.endTime,
+            route: trackedLocations.map { [$0.coordinate.latitude, $0.coordinate.longitude] })
+        if let data = try? JSONEncoder().encode(snap) {
+            try? data.write(to: Self.crashFileURL, options: .atomic)
+        }
+    }
+
+    /// Remove the snapshot — the run is now saved or deliberately discarded.
+    func clearCrashSnapshot() {
+        lastCrashPersistAt = .distantPast
+        try? FileManager.default.removeItem(at: Self.crashFileURL)
+    }
+
+    /// If a prior run was interrupted (force-quit/crash), returns its summary +
+    /// route for recovery, then clears the snapshot. Returns nil when there is
+    /// none or the run was too short to be worth keeping.
+    static func recoverInterruptedRun() -> (summary: ActivitySummary, route: [CLLocationCoordinate2D])? {
+        let url = crashFileURL
+        defer { try? FileManager.default.removeItem(at: url) }
+        guard let data = try? Data(contentsOf: url),
+              let snap = try? JSONDecoder().decode(RunCrashSnapshot.self, from: data),
+              snap.distance >= 80 else {   // ignore trivial/abandoned runs (<80m)
+            return nil
+        }
+        let summary = ActivitySummary(
+            distance: snap.distance, duration: snap.duration,
+            elevationGain: snap.elevationGain, elevationLoss: snap.elevationLoss,
+            highestPoint: snap.highestPoint, lowestPoint: snap.lowestPoint,
+            averageSpeed: snap.averageSpeed, maxSpeed: snap.maxSpeed,
+            startTime: snap.startTime, endTime: snap.endTime, hasHeartRate: false)
+        let route = snap.route.compactMap {
+            $0.count == 2 ? CLLocationCoordinate2D(latitude: $0[0], longitude: $0[1]) : nil
+        }
+        return (summary, route)
+    }
+
     public func pauseTracking() {
         guard isTracking && !isPaused else { return }
         isPaused = true
@@ -423,6 +496,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         // accepts exactly one anchor fix, and without a liveSummary the
         // inactivity logic can't show its countdown before auto-cancelling.
         liveSummary = buildSummary()
+        persistCrashSnapshot()   // throttled to disk — survives a crash/force-quit
     }
 
     /// True when the step from `a` to `b` is real travel rather than GPS jitter.

@@ -123,6 +123,21 @@ final class RunSession: ObservableObject {
 
     /// Stop the live run (user tapped Finish). Keeps the session active so the
     /// finish/save screen can stay up; call `dismissSession()` afterwards.
+    private static var didAttemptRecovery = false
+
+    /// Recover a run interrupted by a force-quit / crash / background-kill by saving
+    /// it to history so it isn't silently lost. Runs at most once per launch, and
+    /// never while a run is active (the live snapshot would be misread as one that
+    /// was interrupted).
+    static func recoverInterruptedRunIfNeeded(uid: String) async {
+        guard !didAttemptRecovery, !shared.isActive else { return }
+        didAttemptRecovery = true
+        guard let recovered = ActivityTracker.recoverInterruptedRun() else { return }
+        try? await RunRepository.shared.saveRunSummary(
+            recovered.summary, shoeName: nil, route: recovered.route)
+        NotificationCenter.default.post(name: .runSaved, object: nil)
+    }
+
     func finishTracking() -> ActivitySummary? {
         hasFinished = true
         stopTimer()
