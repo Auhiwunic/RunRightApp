@@ -610,7 +610,14 @@ struct ScorecardShareScreen: View {
 
     @MainActor private func exportAndShare() {
         guard let data else { return }
-        let renderer = ImageRenderer(content: ShareCardView(data: data).frame(width: 400, height: 780))
+        // Render over an OPAQUE background — the card's own glow background is
+        // translucent, so without this the exported PNG carried alpha and looked
+        // washed out / unreadable when shared onto a light surface.
+        let renderer = ImageRenderer(content:
+            ShareCardView(data: data)
+                .frame(width: 400, height: 780)
+                .background(AppTheme.bgColor)
+        )
         renderer.proposedSize = ProposedViewSize(width: 400, height: 780)
         renderer.scale = 3
         guard let img = renderer.uiImage else { return }

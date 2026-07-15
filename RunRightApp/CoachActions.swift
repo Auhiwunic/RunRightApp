@@ -189,7 +189,13 @@ enum CoachPlanActions {
     private static func resolveDayIndex(_ day: String) -> Int? {
         let d = day.lowercased().trimmingCharacters(in: .whitespaces)
         let todayIdx = todayIndex()
-        if d.contains("tomorrow") { return (todayIdx + 1) % 7 }
+        if d.contains("tomorrow") {
+            // On Sunday (todayIdx 6) "tomorrow" is NEXT week's Monday, which isn't
+            // in this week's plan — wrapping to index 0 used to mutate the already-
+            // past Monday. Decline instead so the coach doesn't change the wrong day.
+            let t = todayIdx + 1
+            return t <= 6 ? t : nil
+        }
         if d.contains("today") { return todayIdx }
         for (i, name) in weekOrder.enumerated() where d.contains(name.lowercased()) { return i }
         // No recognizable day → return nil so the caller can decline rather than
@@ -282,7 +288,8 @@ enum CoachPlanActions {
     private static func runTypeLabel(_ t: RunType) -> String {
         switch t {
         case .easy: return "Easy"
-        case .longRun, .mediumLong: return "Long Run"
+        case .longRun: return "Long Run"
+        case .mediumLong: return "Medium Long"   // distinct label so a week never has two "Long Run" days (adaptive engine keys off it)
         case .tempo, .steadyRun: return "Tempo"
         case .workout, .strides: return "Intervals"
         case .recovery, .walkRun: return "Recovery"

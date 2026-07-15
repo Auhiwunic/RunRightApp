@@ -92,7 +92,7 @@ final class AdaptivePlanEngine {
 
         func plannedMiles(_ d: DayPlan) -> Double? { parseMiles(d.totalDistance) }
         func isHard(_ d: DayPlan) -> Bool {
-            !d.isRest && ["Long Run", "Tempo", "Intervals"].contains(d.runType)
+            !d.isRest && ["Long Run", "Medium Long", "Tempo", "Intervals"].contains(d.runType)
         }
         func isDone(_ i: Int) -> Bool {
             guard !week[i].isRest else { return true }
