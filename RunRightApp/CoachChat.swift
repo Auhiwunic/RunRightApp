@@ -439,10 +439,16 @@ struct CoachChatView: View {
             confirmation = await CoachPlanActions.applyAdjustWeek(change: change)
         case .editProfile:
             onEditProfile?()
-            confirmation = nil
+            return   // opening the profile editor needs no confirmation message
         }
         if let confirmation {
             store.messages.append(CoachMessage(role: .coach, text: confirmation))
+        } else {
+            // The plan action didn't apply (offline / no plan / unrecognized day).
+            // The LLM reply may have already said "Done" — correct that here so the
+            // user is never told a change happened when it didn't.
+            store.messages.append(CoachMessage(role: .coach,
+                text: "Actually, I couldn't make that change to your plan just now. Please try again."))
         }
     }
 

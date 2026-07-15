@@ -93,10 +93,16 @@ enum CoachPlanActions {
         let weekId = PlanRepository.shared.weekId(for: Date())
 
         var week: [DayPlan]
-        if let saved = try? await PlanRepository.shared.loadWeeklyPlan(uid: uid, weekId: weekId), saved.count == 7 {
-            week = saved
-        } else {
-            week = DayPlan.defaultWeek()
+        do {
+            if let saved = try await PlanRepository.shared.loadWeeklyPlan(uid: uid, weekId: weekId), saved.count == 7 {
+                week = saved
+            } else {
+                week = DayPlan.defaultWeek()   // genuinely no plan yet → seed from default
+            }
+        } catch {
+            // Transient load failure (offline): do NOT fall back to defaultWeek and
+            // save it — that would overwrite the user's real personalized plan.
+            return "I couldn't reach your plan just now. Try that again in a moment."
         }
 
         guard let confirmation = transform(&week) else { return nil }
