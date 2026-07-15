@@ -13,6 +13,8 @@ struct RunView: View {
     @ObservedObject private var tracker = ActivityTracker.shared
     // Shoe wear history for the selected shoe (heatgrid under the shoe name).
     @ObservedObject private var scanTrend = ScanViewModel.shared
+    // Voice coach settings — configurable here BEFORE a run, not just mid-run.
+    @ObservedObject private var coach = GaitaCoach.shared
     
     @State private var todaysRunEnabled = true
     @State private var selectedShoe = ""
@@ -57,6 +59,10 @@ struct RunView: View {
                     }
                     .frame(height: 200)
                     .padding(.horizontal, 20)
+
+                    // Gaita voice coach — set it up before the run starts.
+                    gaitaCoachCard
+                        .padding(.horizontal, 20)
 
                     // Shoe (retro green — swipe to change)
                     shoeCard
@@ -538,6 +544,68 @@ struct RunView: View {
         }
     }
     
+    // MARK: - Gaita coach card (pre-run coach setup)
+    private var gaitaCoachCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ToggleRow(label: "Gaita Coach", isOn: $coach.isEnabled)
+
+            if coach.isEnabled {
+                VStack(alignment: .leading, spacing: 14) {
+                    coachCueRow(label: "Mile updates",
+                                detail: "Mile markers with your pace",
+                                isOn: $coach.mileCuesEnabled)
+                    coachCueRow(label: "Pace updates",
+                                detail: "Speaks up when you drift off target",
+                                isOn: $coach.paceCuesEnabled)
+                    Text("Mic stays off during runs. Tap Talk to Gaita on the run screen to ask a question.")
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 16)
+                .transition(.opacity)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .animation(.easeInOut(duration: 0.25), value: coach.isEnabled)
+    }
+
+    /// Small toggle row for the coach card — same capsule design as ToggleRow,
+    /// scaled to a secondary row.
+    private func coachCueRow(label: String, detail: String, isOn: Binding<Bool>) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(AppTheme.bodySemibold(14))
+                    .foregroundColor(AppTheme.primaryText)
+                Text(detail)
+                    .font(AppTheme.body(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
+            }
+
+            Spacer()
+
+            ZStack {
+                Capsule()
+                    .fill(isOn.wrappedValue ? accentLime : AppTheme.insetFill)
+                    .overlay(Capsule().stroke(AppTheme.subtleBorder, lineWidth: isOn.wrappedValue ? 0 : 1))
+                    .frame(width: 44, height: 25)
+
+                Circle()
+                    .fill(isOn.wrappedValue ? Color.black : AppTheme.raisedFill)
+                    .frame(width: 19, height: 19)
+                    .offset(x: isOn.wrappedValue ? 9.5 : -9.5)
+            }
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isOn.wrappedValue.toggle()
+                }
+            }
+        }
+    }
+
     private var todaysRunCard: some View {
         let todayPlan = weeklyPlans[todayDayIndex]
         // Run type as the title — no redundant "Today's Run" / doubled "RUN".

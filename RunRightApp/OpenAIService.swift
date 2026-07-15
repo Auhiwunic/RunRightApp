@@ -5,6 +5,7 @@
 
 import Foundation
 import FirebaseAuth
+import FirebaseAppCheck
 import UIKit
 
 struct GaitAnalysisResponse: Codable {
@@ -206,6 +207,12 @@ class OpenAIService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        // The backend enforces App Check (appCheckOk verifies X-Firebase-AppCheck
+        // and 401s without it). The client MUST attach the attestation token or
+        // every scan/coach call is rejected in production.
+        if let appCheckToken = try? await AppCheck.appCheck().token(forcingRefresh: false) {
+            request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         request.timeoutInterval = 45   // fail in 45s instead of 90s
         debugLog("[OpenAI] sending \(side) shoe request (\(request.httpBody!.count / 1024) KB)…")

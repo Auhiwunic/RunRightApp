@@ -183,6 +183,14 @@ final class ScanRepository {
     }
 
     private func shoeDocumentId(from shoeName: String) -> String {
-        shoeName.lowercased().replacingOccurrences(of: " ", with: "_")
+        let lowered = shoeName.lowercased().replacingOccurrences(of: " ", with: "_")
+        // Firestore document IDs cannot contain "/" (it's the path separator) and
+        // cannot be "." or "..". A shoe named e.g. "Nike/Pegasus" used to build an
+        // invalid path and crash the app — sanitize before use.
+        var id = lowered
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: "\u{00}", with: "")
+        if id.isEmpty || id == "." || id == ".." { id = "shoe" }
+        return id
     }
 }

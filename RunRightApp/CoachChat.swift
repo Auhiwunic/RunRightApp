@@ -11,6 +11,7 @@
 
 import SwiftUI
 import FirebaseAuth
+import FirebaseAppCheck
 
 // MARK: - Model
 
@@ -83,6 +84,10 @@ final class CoachChatService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        // Backend enforces App Check (appCheckOk 401s without the token) — attach it.
+        if let appCheckToken = try? await AppCheck.appCheck().token(forcingRefresh: false) {
+            request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let data: Data

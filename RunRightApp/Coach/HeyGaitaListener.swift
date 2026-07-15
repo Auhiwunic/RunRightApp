@@ -130,6 +130,16 @@ final class HeyGaitaListener: ObservableObject {
 
     /// Cold start: no session running (tap-to-talk from .off/.answering).
     private func beginCapturing() async {
+        // Push-to-talk means the mic is off until now, so the first tap may need
+        // permission. The OS returns the cached grant instantly on later taps.
+        let mic = await AVAudioApplication.requestRecordPermission()
+        let speech = await withCheckedContinuation { (c: CheckedContinuation<Bool, Never>) in
+            SFSpeechRecognizer.requestAuthorization { c.resume(returning: $0 == .authorized) }
+        }
+        guard mic, speech else { returnToIdle(); return }
+        if SubscriptionManager.shared.isPremium {
+            Task { await CoachVoiceEngine.shared.ensureReady() }
+        }
         cancelSession()
         captureBaseline = ""; lastTranscript = ""
         heard = ""; wordCount = 0
@@ -195,8 +205,8 @@ final class HeyGaitaListener: ObservableObject {
         guard phase == .capturing else { return }
         let question = heard.trimmingCharacters(in: .whitespacesAndNewlines)
         guard wordCount >= 2, question.count >= 4 else {
-            // Not enough said — go back to waiting for the wake word.
-            await beginListening()
+            // Not enough said — drop back to mic-off idle (tap again to retry).
+            returnToIdle()
             return
         }
         cancelSession()
@@ -240,13 +250,25 @@ final class HeyGaitaListener: ObservableObject {
             await CoachVoiceEngine.shared.speak(answer)
         }
 
-        // Hold the answer on screen, then resume listening for the next "Hey Gaita".
+        // Hold the answer on screen, then go idle (mic OFF). Push-to-talk: the
+        // runner taps the mic button again to ask another question — we never sit
+        // on a hot mic, so their music plays uninterrupted between questions.
         dismissTask?.cancel()
         dismissTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 6_000_000_000)
             guard let self, !Task.isCancelled, self.phase == .answering else { return }
-            await self.beginListening()
+            self.returnToIdle()
         }
+    }
+
+    /// Return to the mic-off idle state and release the audio session so the
+    /// runner's music comes back up.
+    private func returnToIdle() {
+        silenceTask?.cancel(); dismissTask?.cancel()
+        cancelSession()
+        heard = ""; answer = ""; lastTranscript = ""; captureBaseline = ""
+        phase = .off
+        AudioSessionManager.deactivate()
     }
 
     // MARK: - Helpers

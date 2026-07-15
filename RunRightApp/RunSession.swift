@@ -68,6 +68,10 @@ final class RunSession: ObservableObject {
     private var lastProgressDistance: Double = 0
     /// Guards against a second (already-queued) tick re-entering auto-cancel.
     private var autoCancelInProgress = false
+    /// Set the instant finishTracking runs. A timer tick already queued at that
+    /// moment (Timer.invalidate can't recall an in-flight fire) would otherwise
+    /// re-enter evaluateInactivity/autoCancel and wipe the just-finished run.
+    private var hasFinished = false
 
     let tracker = ActivityTracker.shared
     private let coach = GaitaCoach.shared
@@ -94,6 +98,7 @@ final class RunSession: ObservableObject {
         lastMileTime = 0
         lastTick = Date()
         resetInactivity()
+        hasFinished = false
         isActive = true
         isPresented = true
 
@@ -119,6 +124,7 @@ final class RunSession: ObservableObject {
     /// Stop the live run (user tapped Finish). Keeps the session active so the
     /// finish/save screen can stay up; call `dismissSession()` afterwards.
     func finishTracking() -> ActivitySummary? {
+        hasFinished = true
         stopTimer()
         feed = nil
         clearInactivityPrompt()
@@ -264,6 +270,7 @@ final class RunSession: ObservableObject {
     }
 
     private func tick() {
+        guard !hasFinished else { return }   // drop ticks queued before Finish
         let now = Date()
         if isActive, !tracker.isPaused, let last = lastTick {
             elapsed += now.timeIntervalSince(last)

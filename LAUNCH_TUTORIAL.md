@@ -29,9 +29,9 @@ Your app now attests with **App Attest**. If Firebase isn't set to match, every 
 
 ## Part 2 — Redeploy the backend (5 min)
 The error-message fix from today isn't live until you deploy.
-- [ ] Open Terminal, then run:
+- [ ] Open Terminal, then run (from the REPO ROOT, where firebase.json lives — not the functions/ folder):
   ```
-  cd "/Users/chetanwategaonkar/Skeleton Analysis/RunRightApp/functions"
+  cd "/Users/chetanwategaonkar/Skeleton Analysis/RunRightApp"
   npx --yes firebase-tools@latest deploy --only functions --project corsa-51d8f
   ```
 - [ ] Confirm it finishes with "Deploy complete" and lists `analyzeShoe` + `coachChat`.

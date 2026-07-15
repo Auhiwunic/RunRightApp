@@ -62,31 +62,19 @@ struct ActiveRunView: View {
         // pause UI when the screen (re)appears.
         .onAppear {
             isPaused = tracker.isPaused
-            // Hands-free listening runs only while this screen is up (foreground).
-            if coach.isEnabled && HeyGaitaListener.isSupported {
-                Task { await wake.start() }
-            }
         }
+        // Push-to-talk: the mic is OFF unless the runner taps the mic button, so
+        // their music plays uninterrupted. We only ever STOP the listener here
+        // (on disappear / background / coach-off) — never auto-start it.
         .onDisappear { wake.stop() }
         .onChange(of: coach.isEnabled) { _, on in
-            if on && HeyGaitaListener.isSupported { Task { await wake.start() } }
-            else { wake.stop() }
+            if !on { wake.stop() }
         }
-        // The mic wake-word is FOREGROUND-ONLY. .onDisappear does not fire when
-        // the app is backgrounded/locked, so without this the mic tap would keep
-        // capturing behind the lock screen under the `audio` background mode — an
-        // App Review 5.1.1 reject. Tear it down on background, restore on return.
+        // The mic is foreground-only. If a tap-to-talk capture is in flight when
+        // the app backgrounds/locks, tear it down so nothing records behind the
+        // lock screen under the `audio` background mode (App Review 5.1.1).
         .onChange(of: scenePhase) { _, phase in
-            switch phase {
-            case .background, .inactive:
-                wake.stop()
-            case .active:
-                if coach.isEnabled && HeyGaitaListener.isSupported && !showFinishScreen {
-                    Task { await wake.start() }
-                }
-            @unknown default:
-                wake.stop()
-            }
+            if phase != .active { wake.stop() }
         }
     }
 
@@ -170,6 +158,17 @@ struct ActiveRunView: View {
                         .padding(.top, 50)
                     }
 
+                    // Per-cue controls: toggle mile markers and pace updates
+                    // independently, right in the run slide.
+                    if coach.isEnabled {
+                        HStack {
+                            coachCueToggles
+                                .padding(.leading, 16)
+                            Spacer()
+                        }
+                        .padding(.top, 8)
+                    }
+
                     // Gaita's most recent spoken cue (visible confirmation of coaching).
                     if coach.isEnabled, let cue = coach.lastSpoken {
                         Text(cue)
@@ -231,21 +230,47 @@ struct ActiveRunView: View {
         }
     }
 
+    // MARK: - Per-cue toggles (mile updates / pace updates)
+    private var coachCueToggles: some View {
+        HStack(spacing: 8) {
+            cueChip(label: "Miles", on: coach.mileCuesEnabled) { coach.mileCuesEnabled.toggle() }
+            cueChip(label: "Pace", on: coach.paceCuesEnabled) { coach.paceCuesEnabled.toggle() }
+        }
+    }
+
+    private func cueChip(label: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                    .font(AppTheme.meta(11))
+                Text(label)
+                    .font(AppTheme.meta(11))
+            }
+            .foregroundColor(.white.opacity(on ? 1 : 0.4))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Hey Gaita (hands-free voice coach)
     @ViewBuilder private var heyGaitaView: some View {
         switch wake.phase {
         case .off, .listening:
+            // Big, easy push-to-talk target. Mic only turns on while you hold a
+            // conversation, so music keeps playing the rest of the run.
             Button(action: { wake.tapToTalk() }) {
-                HStack(spacing: 8) {
+                HStack(spacing: 10) {
                     Image(systemName: "mic.fill")
-                        .font(AppTheme.meta(11))
-                        .symbolEffect(.pulse, options: .repeating)
-                    Text("Say \u{201C}Hey Gaita\u{201D}")
-                        .font(AppTheme.bodySemibold(12))
+                        .font(AppTheme.bodySemibold(18))
+                    Text("Talk to Gaita")
+                        .font(AppTheme.bodySemibold(17))
                 }
-                .foregroundColor(.white)
-                .padding(.horizontal, 14).padding(.vertical, 9)
-                .background(.ultraThinMaterial, in: Capsule())
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(AppTheme.accentColor, in: Capsule())
             }
             .buttonStyle(.plain)
 
@@ -803,9 +828,14 @@ struct ActiveRunView: View {
     }
 
     /// The live zone, or nil when basically stopped (warming up / paused).
+    /// A zone needs REAL movement, not GPS noise: a single spurious Doppler
+    /// reading while standing still used to light "Z2 Aerobic" at 0.00 miles.
+    /// Require a jogging-or-faster speed AND actual distance covered before
+    /// any zone shows; below that the gauge honestly says WARMING UP.
     private var currentZone: RunZone? {
         let s = currentSpeedMps
-        guard s >= 0.5 else { return nil }
+        let distance = tracker.liveSummary?.distance ?? 0
+        guard s >= 1.2, distance >= 30 else { return nil }
         return RunZone.classify(currentPaceSecPerMile: metersPerMile / s,
                                 thresholdSecPerMile: thresholdPaceSecPerMile)
     }
@@ -969,14 +999,21 @@ struct LiveRunMapView: UIViewRepresentable {
                 mapView.addOverlay(polyline)
             }
         }
-        if isTracking && mapView.userTrackingMode != .followWithHeading {
-            mapView.userTrackingMode = .followWithHeading
+        // Re-assert follow mode only when tracking STARTS — never per tick.
+        // MapKit drops follow mode on any user pan/zoom; forcing it back every
+        // 0.5s update re-animated the camera in an endless glitchy zoom fight.
+        if isTracking != context.coordinator.wasTracking {
+            context.coordinator.wasTracking = isTracking
+            if isTracking {
+                mapView.setUserTrackingMode(.followWithHeading, animated: true)
+            }
         }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
     class Coordinator: NSObject, MKMapViewDelegate {
         var renderedCount = -1
+        var wasTracking = true   // makeUIView already starts in follow mode
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polyline = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: polyline)

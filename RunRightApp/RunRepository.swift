@@ -16,7 +16,7 @@ final class RunRepository {
     /// Save a pre-built DTO directly (used by HealthKit sync).
     func saveRunDTO(_ dto: RunSummaryDTO, uid: String) async throws {
         let doc = runsCollection(uid: uid).document(dto.runId)
-        try await doc.setData(dto.toFirestore(), merge: true)
+        try await writeDurable(doc, dto.toFirestore())
     }
 
     func saveRunSummary(_ summary: ActivitySummary, shoeName: String? = nil,
@@ -39,7 +39,21 @@ final class RunRepository {
             routeLatLng: RunSummaryDTO.downsampleRoute(route)
         )
 
-        try await runDoc.setData(dto.toFirestore(), merge: true)
+        try await writeDurable(runDoc, dto.toFirestore())
+    }
+
+    /// Firestore's async `setData` only resumes on SERVER acknowledgement, so it
+    /// hangs forever offline — even though the write is already durable in the
+    /// local cache (offline persistence) and syncs on reconnect. Cap the wait: if
+    /// the server hasn't acked within `seconds`, return so the "Saving…" UI never
+    /// hangs; the run is safely queued. A fast online error still surfaces.
+    private func writeDurable(_ doc: DocumentReference, _ data: [String: Any], timeout seconds: Double = 5) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            group.addTask { try await doc.setData(data, merge: true) }
+            group.addTask { try? await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000)) }
+            _ = try await group.next()   // first to finish; a fast write error rethrows here
+            group.cancelAll()
+        }
     }
 
     // MARK: - Fetch single / recent

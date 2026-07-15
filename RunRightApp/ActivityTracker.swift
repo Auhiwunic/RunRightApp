@@ -210,8 +210,19 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
             return
         }
 
+        ensureFullAccuracy()
         // Start fresh
         locationManager.startUpdatingLocation()
+    }
+
+    /// Run distance/pace need PRECISE GPS. If the user granted only Approximate
+    /// location, every fix's accuracy exceeds the acceptance gate and the run
+    /// silently records 0.00 mi — so ask for temporary full accuracy for the run.
+    /// Requires NSLocationTemporaryUsageDescriptionDictionary["RunTracking"].
+    private func ensureFullAccuracy() {
+        if locationManager.accuracyAuthorization == .reducedAccuracy {
+            locationManager.requestTemporaryFullAccuracyAuthorization(withPurposeKey: "RunTracking")
+        }
     }
     
     public func stopTracking() -> ActivitySummary? {
@@ -220,13 +231,23 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         isTracking = false
         isPaused = false
         currentSpeedMps = 0
-        
+
+        // Ending WHILE paused: fold the in-progress pause's wall-clock in so the
+        // final active duration matches the live one (the pause hadn't been
+        // accumulated yet — resumeTracking is what normally does it).
+        if let s = pauseStartedAt {
+            pausedAccumulated += Date().timeIntervalSince(s)
+            pauseStartedAt = nil
+        }
+
         let valid = ActivityCalculator.filterValidLocations(trackedLocations)
         guard valid.count > 1 else {
             liveSummary = nil
             return nil
         }
-        let summary = ActivityCalculator.calculateActivitySummary(from: valid)
+        // Build from the pause-aware accumulators (NOT a raw-trace recompute, which
+        // re-added distance/time spent paused). Fall back only if unavailable.
+        let summary = buildSummary() ?? ActivityCalculator.calculateActivitySummary(from: valid)
         finalSummary = summary
         liveSummary = nil
         return summary
@@ -259,6 +280,11 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     /// the first post-resume update must re-anchor rather than fold the paused
     /// displacement into distance/speed (#6).
     private var resetAnchorOnNextUpdate = false
+    /// Wall-clock time spent paused, summed across every pause, so duration and
+    /// average pace reflect ACTIVE running only — the raw first→last fix span
+    /// still includes each pause gap.
+    private var pausedAccumulated: TimeInterval = 0
+    private var pauseStartedAt: Date?
 
     private func resetLiveAccumulators() {
         liveDistance = 0; liveGain = 0; liveLoss = 0
@@ -266,6 +292,31 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         liveLowest = .greatestFiniteMagnitude
         liveMaxSpeed = 0; liveSpeedSum = 0; liveSpeedCount = 0
         resetAnchorOnNextUpdate = false
+        pausedAccumulated = 0
+        pauseStartedAt = nil
+    }
+
+    /// Single source of truth for a run summary, built from the pause-aware live
+    /// accumulators. Both the live tick AND stopTracking use it, so the saved
+    /// run can never diverge from what was shown live. (stopTracking used to
+    /// recompute over the raw trace, re-adding paused travel + pause time.)
+    private func buildSummary() -> ActivitySummary? {
+        guard let first = trackedLocations.first, let last = trackedLocations.last else { return nil }
+        let raw = last.timestamp.timeIntervalSince(first.timestamp)
+        let duration = max(0, raw - pausedAccumulated)
+        return ActivitySummary(
+            distance: liveDistance,
+            duration: duration,
+            elevationGain: liveGain,
+            elevationLoss: liveLoss,
+            highestPoint: liveHighest,
+            lowestPoint: liveLowest,
+            averageSpeed: duration > 0 ? liveDistance / duration : 0,
+            maxSpeed: liveMaxSpeed,
+            startTime: first.timestamp,
+            endTime: last.timestamp,
+            hasHeartRate: false
+        )
     }
 
     /// Fold newly accepted points into the running totals. Call BEFORE they are
@@ -303,13 +354,20 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     public func pauseTracking() {
         guard isTracking && !isPaused else { return }
         isPaused = true
+        pauseStartedAt = Date()
         currentSpeedMps = 0
         locationManager.stopUpdatingLocation()
     }
-    
+
     public func resumeTracking() {
         guard isTracking && isPaused else { return }
         isPaused = false
+        // Fold this pause's wall-clock into the paused total so it's excluded
+        // from active duration / pace.
+        if let s = pauseStartedAt {
+            pausedAccumulated += Date().timeIntervalSince(s)
+            pauseStartedAt = nil
+        }
         resetAnchorOnNextUpdate = true   // don't count distance covered while paused (#6)
         locationManager.startUpdatingLocation()
     }
@@ -364,25 +422,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
         // Publish from the FIRST accepted fix (not the second): a stationary run
         // accepts exactly one anchor fix, and without a liveSummary the
         // inactivity logic can't show its countdown before auto-cancelling.
-        if let first = trackedLocations.first, let last = trackedLocations.last {
-            let duration = last.timestamp.timeIntervalSince(first.timestamp)
-            liveSummary = ActivitySummary(
-                distance: liveDistance,
-                duration: duration,
-                elevationGain: liveGain,
-                elevationLoss: liveLoss,
-                highestPoint: liveHighest,
-                lowestPoint: liveLowest,
-                // Time-weighted: total distance over total time. The old
-                // per-segment mean let one 10m jitter jump over 2s (5 m/s) weigh
-                // as much as a full steady minute, inflating pace while idle.
-                averageSpeed: duration > 0 ? liveDistance / duration : 0,
-                maxSpeed: liveMaxSpeed,
-                startTime: first.timestamp,
-                endTime: last.timestamp,
-                hasHeartRate: false
-            )
-        }
+        liveSummary = buildSummary()
     }
 
     /// True when the step from `a` to `b` is real travel rather than GPS jitter.
@@ -405,6 +445,7 @@ public class ActivityTracker: NSObject, ObservableObject, CLLocationManagerDeleg
     public func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
         if (status == .authorizedWhenInUse || status == .authorizedAlways) && isTracking {
+            ensureFullAccuracy()   // precise GPS needed for distance/pace
             locationManager.startUpdatingLocation()
         }
     }

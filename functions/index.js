@@ -19,6 +19,21 @@ import admin from "firebase-admin";
 
 admin.initializeApp();
 
+// App Check on onRequest is NOT auto-enforced: unlike onCall (whose runtime
+// verifies the token), the `enforceAppCheck` option on onRequest is only a
+// deployment annotation and is a runtime no-op. So verify the attestation
+// token ourselves. Returns true only for a request from the genuine app.
+async function appCheckOk(req) {
+  const token = req.get("X-Firebase-AppCheck");
+  if (!token) return false;
+  try {
+    await admin.appCheck().verifyToken(token);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 // Per-user rate limit for analyzeShoe: max calls per rolling window. Fail-open
 // (any error allows the request) so a limiter bug never blocks real analysis.
 const RATE_LIMIT_MAX = 60;
@@ -194,6 +209,12 @@ export const analyzeShoe = onRequest(
       return;
     }
 
+    // Verify App Check ourselves (onRequest does not enforce it — see appCheckOk).
+    if (!(await appCheckOk(req))) {
+      res.status(401).json({ error: "App verification failed." });
+      return;
+    }
+
     // Per-user rate limit (fail-open) to guard against cost abuse.
     if (!(await withinRateLimit(uid, "scan"))) {
       res.status(429).json({ error: "Too many requests. Please try again later." });
@@ -302,6 +323,12 @@ export const coachChat = onRequest(
       uid = decoded.uid;
     } catch (e) {
       res.status(401).json({ error: "Invalid auth token." });
+      return;
+    }
+
+    // Verify App Check ourselves (onRequest does not enforce it — see appCheckOk).
+    if (!(await appCheckOk(req))) {
+      res.status(401).json({ error: "App verification failed." });
       return;
     }
 

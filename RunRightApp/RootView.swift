@@ -320,23 +320,26 @@ private struct ConsentGateView: View {
         )
 
         Task {
-            do {
-                if let uid = Auth.auth().currentUser?.uid {
-                    var settings = (try? await UserSettingsRepository.shared.load(uid: uid)) ?? UserSettings()
+            if let uid = Auth.auth().currentUser?.uid {
+                // Read-modify-write, but ONLY when the real profile actually
+                // loaded. A failed/offline load used to fall back to a blank
+                // UserSettings() and save THAT — overwriting the user's real
+                // cloud profile (name, goals, HR) with defaults once it synced.
+                // So skip the cloud write on load failure; the next successful
+                // settings save carries consent up. Consent is authoritative
+                // locally either way (below).
+                if var settings = try? await UserSettingsRepository.shared.load(uid: uid) {
                     settings.consentRecord = record
-                    try await UserSettingsRepository.shared.save(uid: uid, settings: settings)
+                    try? await UserSettingsRepository.shared.save(uid: uid, settings: settings)
                 }
-                ConsentManager.shared.save(record)
-
-                await MainActor.run {
-                    isSaving = false
-                    onComplete()
-                }
-            } catch {
-                await MainActor.run {
-                    isSaving = false
-                    saveError = "Couldn't save consent. Please check your connection and try again."
-                }
+            }
+            // Local save always succeeds, so the gate can never hang — even fully
+            // offline the user can confirm consent and continue; the cloud mirror
+            // catches up on reconnect.
+            ConsentManager.shared.save(record)
+            await MainActor.run {
+                isSaving = false
+                onComplete()
             }
         }
     }

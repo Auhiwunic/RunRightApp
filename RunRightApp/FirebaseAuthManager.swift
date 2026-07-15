@@ -214,7 +214,13 @@ final class FirebaseAuthManager: ObservableObject {
         if let user = auth.currentUser, user.isAnonymous {
             do {
                 try await linkAnonymousUser(user, with: credential)
-            } catch let error as NSError where error.code == AuthErrorCode.credentialAlreadyInUse.rawValue {
+            } catch let error as NSError where
+                error.code == AuthErrorCode.credentialAlreadyInUse.rawValue
+                || error.code == AuthErrorCode.emailAlreadyInUse.rawValue {
+                // OAuth links fail with credentialAlreadyInUse; EMAIL links fail
+                // with emailAlreadyInUse. Both mean "this identity already has an
+                // account" — without catching emailAlreadyInUse, every returning
+                // email/password user was unable to sign in (the error propagated).
                 // The credential belongs to an existing account, so linking failed
                 // and guest data under the anonymous uid would be orphaned. Buffer
                 // it while this session can still read it, switch accounts, then

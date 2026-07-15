@@ -22,7 +22,9 @@ enum AudioSessionManager {
         let attempts: [() throws -> Void] = [
             {
                 // Duck (lower) the user's music while Gaita speaks, then restore it.
-                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                // .mixWithOthers keeps the music PLAYING (ducked) rather than
+                // stopping it, so the runner can listen to music through the run.
+                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .mixWithOthers])
                 try session.setActive(true)
             },
             {

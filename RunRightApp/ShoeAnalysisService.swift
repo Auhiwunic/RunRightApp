@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import FirebaseAuth
+import FirebaseAppCheck
 
 final class ShoeAnalysisService {
     static let shared = ShoeAnalysisService()
@@ -46,6 +47,10 @@ final class ShoeAnalysisService {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+            // Backend enforces App Check (appCheckOk 401s without the token).
+            if let appCheckToken = try? await AppCheck.appCheck().token(forcingRefresh: false) {
+                request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
+            }
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             request.timeoutInterval = 90
 
