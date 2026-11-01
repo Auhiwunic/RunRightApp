@@ -92,7 +92,7 @@ final class CoachVoiceInput: ObservableObject {
 
 @available(iOS 26.0, *)
 @MainActor
-private final class LiveTranscriptionSession {
+final class LiveTranscriptionSession {
     private let audioEngine = AVAudioEngine()
     private var analyzer: SpeechAnalyzer?
     private var transcriber: SpeechTranscriber?
@@ -154,6 +154,12 @@ private final class LiveTranscriptionSession {
         try await analyzer.start(inputSequence: inputSequence)
 
         let inputNode = audioEngine.inputNode
+        // Echo cancellation: without it the mic hears the phone's own speaker,
+        // so music or the coach's voice drowns the runner and "Hey Gaita" never
+        // triggers while anything is playing. Must be set BEFORE reading the tap
+        // format (it changes the input format). Best effort — unsupported routes
+        // (some simulators) just keep the raw mic.
+        try? inputNode.setVoiceProcessingEnabled(true)
         let tapFormat = inputNode.outputFormat(forBus: 0)
         let converter = AVAudioConverter(from: tapFormat, to: analyzerFormat)
         inputNode.installTap(onBus: 0, bufferSize: 4096, format: tapFormat) { buffer, _ in

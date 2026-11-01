@@ -20,6 +20,7 @@
 		4669C1AF160EA9F23A01FCB5 /* AudioPlaybackController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82B33A4493FD96CFF3AB827 /* AudioPlaybackController.swift */; };
 		4BABFE7D84A5F6351075F74B /* TargetPaceCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44BB6489BD7787B1DC07F1AA /* TargetPaceCalculator.swift */; };
 		51AD77E0642884B1D7582346 /* MandateWarningView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8653F8A7A74C62AF4FC320C4 /* MandateWarningView.swift */; };
+		51C42D9BCEDEF49AD15B20D4 /* SplashScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5498E28A2E6E340B4C09B55D /* SplashScreen.swift */; };
 		52F5AA23AA3C4AA5799F3D66 /* WeeklyPlanGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8D745DE49C8856BA041C568 /* WeeklyPlanGenerator.swift */; };
 		5A35C2B7DBD5ECD600C22CBE /* SpeechAudioCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5139D61C5458798872331CD /* SpeechAudioCache.swift */; };
 		5FD8452230916ACA338F05E9 /* WeekdayBarSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = B468BB2E3BD4B00CF04258A4 /* WeekdayBarSelector.swift */; };
@@ -32,6 +33,7 @@
 		82F7BDFF148487E454522F7D /* PlanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 577BF8D8652EAC3ECBA5D141 /* PlanTheme.swift */; };
 		835EC58BBD9EEE07BE0115A1 /* CompositeSpeechBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C0CF7D0E5D5E160B6990D17 /* CompositeSpeechBackend.swift */; };
 		87A0033140CDBF08AE4FFC85 /* LiveRunState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2210AFB24972D3A55C15372F /* LiveRunState.swift */; };
+		88453AE353FB7AC8B182471A /* LabelClipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D595FE7EF4394D1774CDA83F /* LabelClipView.swift */; };
 		A1000001 /* RunRightApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000001 /* RunRightApp.swift */; };
 		A1000002 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000002 /* MainTabView.swift */; };
 		A1000003 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000003 /* HomeView.swift */; };
@@ -86,6 +88,13 @@
 		A1000F15 /* Switzer-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F15 /* Switzer-Medium.ttf */; };
 		A1000F16 /* Switzer-Semibold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = A2000F16 /* Switzer-Semibold.ttf */; };
 		A1000FA1 /* LegalDocs.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FA1 /* LegalDocs.swift */; };
+		A1000FE1 /* UsageLimits.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FE1 /* UsageLimits.swift */; };
+		A1000FJ1 /* AdaptivePlanEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FJ1 /* AdaptivePlanEngine.swift */; };
+		A1000FK1 /* BacktestRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FK1 /* BacktestRunner.swift */; };
+		A1000FL1 /* AppTourView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FL1 /* AppTourView.swift */; };
+		A1000FG1 /* CoachActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FG1 /* CoachActions.swift */; };
+		A1000FH1 /* HeyGaitaListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FH1 /* HeyGaitaListener.swift */; };
+		A1000FF1 /* WearSymmetry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000FF1 /* WearSymmetry.swift */; };
 		A1000FA2 /* PRIVACY_POLICY.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA2 /* PRIVACY_POLICY.md */; };
 		A1000FA3 /* TERMS_AND_CONDITIONS.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA3 /* TERMS_AND_CONDITIONS.md */; };
 		A1000FA4 /* LICENSES.md in Resources */ = {isa = PBXBuildFile; fileRef = A2000FA4 /* LICENSES.md */; };
@@ -112,6 +121,7 @@
 		CA355F124DF03CD97EFC4935 /* AnimatedBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D4A11AB9FD841178A30F1FD /* AnimatedBackground.swift */; };
 		D1B0573BBA3A91AB0882BBA7 /* OnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1493825752ED2C37CFC3B6F9 /* OnboardingFlowView.swift */; };
 		D274E970102317512A761974 /* GoalTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FA9B3D9CF57578E6940E7E /* GoalTile.swift */; };
+		E16A3852F253A904036FC637 /* ScoringConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5034280344FE1A99C2DF37DB /* ScoringConfig.swift */; };
 		EA5BF7CF99F6146689196A6A /* RunSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FE7A97317D0F286DBC83E88 /* RunSession.swift */; };
 /* End PBXBuildFile section */
 
@@ -129,7 +139,9 @@
 		3FE7A97317D0F286DBC83E88 /* RunSession.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RunSession.swift; sourceTree = "<group>"; };
 		44BB6489BD7787B1DC07F1AA /* TargetPaceCalculator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = TargetPaceCalculator.swift; sourceTree = "<group>"; };
 		4E3126E5FA950CDCE6404D61 /* MileagePicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MileagePicker.swift; sourceTree = "<group>"; };
+		5034280344FE1A99C2DF37DB /* ScoringConfig.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScoringConfig.swift; sourceTree = "<group>"; };
 		53B8D5C1F4DDA94ED4C86DE7 /* VoiceAssistantMessageProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = VoiceAssistantMessageProvider.swift; sourceTree = "<group>"; };
+		5498E28A2E6E340B4C09B55D /* SplashScreen.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SplashScreen.swift; sourceTree = "<group>"; };
 		55F5F8A2E3021002B52B86CF /* WeeklyPlanView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WeeklyPlanView.swift; sourceTree = "<group>"; };
 		577BF8D8652EAC3ECBA5D141 /* PlanTheme.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PlanTheme.swift; sourceTree = "<group>"; };
 		6FAC568E683D2E73FFD9E317 /* GaitaCoach.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GaitaCoach.swift; sourceTree = "<group>"; };
@@ -196,6 +208,13 @@
 		A2000F15 /* Switzer-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Medium.ttf"; sourceTree = "<group>"; };
 		A2000F16 /* Switzer-Semibold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Switzer-Semibold.ttf"; sourceTree = "<group>"; };
 		A2000FA1 /* LegalDocs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalDocs.swift; sourceTree = "<group>"; };
+		A2000FE1 /* UsageLimits.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageLimits.swift; sourceTree = "<group>"; };
+		A2000FJ1 /* AdaptivePlanEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdaptivePlanEngine.swift; sourceTree = "<group>"; };
+		A2000FK1 /* BacktestRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BacktestRunner.swift; sourceTree = "<group>"; };
+		A2000FL1 /* AppTourView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTourView.swift; sourceTree = "<group>"; };
+		A2000FG1 /* CoachActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoachActions.swift; sourceTree = "<group>"; };
+		A2000FH1 /* HeyGaitaListener.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Coach/HeyGaitaListener.swift; sourceTree = "<group>"; };
+		A2000FF1 /* WearSymmetry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WearSymmetry.swift; sourceTree = "<group>"; };
 		A2000FA2 /* PRIVACY_POLICY.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = PRIVACY_POLICY.md; path = ../legal/PRIVACY_POLICY.md; sourceTree = "<group>"; };
 		A2000FA3 /* TERMS_AND_CONDITIONS.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = TERMS_AND_CONDITIONS.md; path = ../legal/TERMS_AND_CONDITIONS.md; sourceTree = "<group>"; };
 		A2000FA4 /* LICENSES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; name = LICENSES.md; path = ../legal/LICENSES.md; sourceTree = "<group>"; };
@@ -220,6 +239,7 @@
 		B6FA9B3D9CF57578E6940E7E /* GoalTile.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GoalTile.swift; sourceTree = "<group>"; };
 		C588F3ED701F070B9F199E44 /* ExperienceTierPicker.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExperienceTierPicker.swift; sourceTree = "<group>"; };
 		C8D745DE49C8856BA041C568 /* WeeklyPlanGenerator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WeeklyPlanGenerator.swift; sourceTree = "<group>"; };
+		D595FE7EF4394D1774CDA83F /* LabelClipView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = LabelClipView.swift; sourceTree = "<group>"; };
 		E82B33A4493FD96CFF3AB827 /* AudioPlaybackController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AudioPlaybackController.swift; sourceTree = "<group>"; };
 		F1025D171D9606F73B94A903 /* CoachTTSConfig.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CoachTTSConfig.swift; sourceTree = "<group>"; };
 		F5BF85C848792CC548F97C99 /* WelcomeView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
@@ -356,6 +376,13 @@
 				A2000E05 /* Subscriptions.swift */,
 				A2000E06 /* PaywallView.swift */,
 				A2000FA1 /* LegalDocs.swift */,
+				A2000FE1 /* UsageLimits.swift */,
+				A2000FJ1 /* AdaptivePlanEngine.swift */,
+				A2000FK1 /* BacktestRunner.swift */,
+				A2000FL1 /* AppTourView.swift */,
+				A2000FG1 /* CoachActions.swift */,
+				A2000FH1 /* HeyGaitaListener.swift */,
+				A2000FF1 /* WearSymmetry.swift */,
 				A2000FD1 /* FormReferenceModel.swift */,
 				A2000FD2 /* GaitCycleChart.swift */,
 				A2000FB1 /* LewisVoiceBackend.swift */,
@@ -391,6 +418,9 @@
 				3FE7A97317D0F286DBC83E88 /* RunSession.swift */,
 				B38F221C8A5BD365ED4D6541 /* CrashReporter.swift */,
 				711C01E3360DDE01569A787C /* RemoteConfigManager.swift */,
+				D595FE7EF4394D1774CDA83F /* LabelClipView.swift */,
+				5034280344FE1A99C2DF37DB /* ScoringConfig.swift */,
+				5498E28A2E6E340B4C09B55D /* SplashScreen.swift */,
 			);
 			path = RunRightApp;
 			sourceTree = "<group>";
@@ -600,6 +630,13 @@
 				A1000E05 /* Subscriptions.swift in Sources */,
 				A1000E06 /* PaywallView.swift in Sources */,
 				A1000FA1 /* LegalDocs.swift in Sources */,
+				A1000FE1 /* UsageLimits.swift in Sources */,
+				A1000FJ1 /* AdaptivePlanEngine.swift in Sources */,
+				A1000FK1 /* BacktestRunner.swift in Sources */,
+				A1000FL1 /* AppTourView.swift in Sources */,
+				A1000FG1 /* CoachActions.swift in Sources */,
+				A1000FH1 /* HeyGaitaListener.swift in Sources */,
+				A1000FF1 /* WearSymmetry.swift in Sources */,
 				A1000FD1 /* FormReferenceModel.swift in Sources */,
 				A1000FD2 /* GaitCycleChart.swift in Sources */,
 				A1000FB1 /* LewisVoiceBackend.swift in Sources */,
@@ -653,6 +690,9 @@
 				EA5BF7CF99F6146689196A6A /* RunSession.swift in Sources */,
 				17F07C3E40572436EADB11ED /* CrashReporter.swift in Sources */,
 				AB18C821492217C8EE59C9A6 /* RemoteConfigManager.swift in Sources */,
+				88453AE353FB7AC8B182471A /* LabelClipView.swift in Sources */,
+				E16A3852F253A904036FC637 /* ScoringConfig.swift in Sources */,
+				51C42D9BCEDEF49AD15B20D4 /* SplashScreen.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -787,7 +827,7 @@
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = RunRightApp/RunRightApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = S46M35FDN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -807,7 +847,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1";
 			};
 			name = Debug;
 		};
@@ -820,7 +860,7 @@
 				CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION = YES;
 				CODE_SIGN_ENTITLEMENTS = RunRightApp/RunRightApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = S46M35FDN9;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -840,7 +880,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1";
 			};
 			name = Release;
 		};

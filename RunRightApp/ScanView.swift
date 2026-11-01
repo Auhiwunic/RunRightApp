@@ -42,6 +42,8 @@ struct ScanView: View {
     @State private var currentPage = 0   // selected page in the wear-pattern history carousel
     @State private var scrollOffset: CGFloat = 0   // drives the header fade
     @ObservedObject private var scanVM = ScanViewModel.shared
+    @ObservedObject private var subscriptions = SubscriptionManager.shared
+    @ObservedObject private var usage = UsageLimits.shared
 
     private let accentLime = AppTheme.accentColor
     private let backgroundColor = AppTheme.bgColor
@@ -141,6 +143,14 @@ struct ScanView: View {
                     }
                     .disabled(isAnalyzing || !canScan)
                     .padding(.horizontal, 20)
+
+                    // Free-tier scan allowance (premium is unlimited).
+                    if !subscriptions.isPremium {
+                        Text("\(usage.scansRemaining) of \(UsageLimits.freeScansPerMonth) free scans left this month")
+                            .font(AppTheme.body(11))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.45))
+                            .padding(.top, 2)
+                    }
 
                     // ── Per-shoe error cards ──────────────────────────────
                     if let error = leftError {
@@ -326,6 +336,14 @@ struct ScanView: View {
     @MainActor
     private func runScan(image: UIImage, side: String) {
         Task {
+            // Meter the paid backend: never exceed the free monthly allowance,
+            // even across both shoes or repeated scans within one open session.
+            let premium = SubscriptionManager.shared.isPremium
+            guard premium || usage.canScan(isPremium: premium) else {
+                let msg = "You've used all \(UsageLimits.freeScansPerMonth) free scans this month. Go Premium for unlimited scans."
+                if side == "left" { leftError = msg } else { rightError = msg }
+                return
+            }
             if side == "left" {
                 leftError = nil;  isAnalyzingLeft = true;  leftStatus = "Sending to AI…"
             } else {
@@ -370,6 +388,12 @@ struct ScanView: View {
                 ScorecardDataStore.shared.saveGait(image: nil, gaitType: result.gaitType, strikePattern: result.strikePattern)
                 ScorecardDataStore.shared.resetWearZonesIfShoeChanged(to: shoeName)
                 ScorecardDataStore.shared.saveWearZones(side: side, zones: result.wearZones)
+
+                // Count this scan against the free monthly allowance (premium is
+                // unlimited, so only meter free users). One count per side scanned.
+                if !SubscriptionManager.shared.isPremium {
+                    UsageLimits.shared.recordScan()
+                }
 
                 // ── Step 2: Show the heatmap NOW — nothing else gates the result ──
                 if side == "left" {
@@ -421,31 +445,25 @@ struct ScanView: View {
     /// OpenAI errors come back as JSON: {"error":{"message":"...","type":"...","code":"..."}}
     private func friendlyError(_ error: Error) -> String {
         let raw = error.localizedDescription
-        // Try to extract the OpenAI "message" field from the JSON blob
-        if let data = raw.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-           let errObj = json["error"] as? [String: Any],
-           let msg = errObj["message"] as? String {
-            // Surface auth errors clearly
-            if let code = errObj["code"] as? String, code == "invalid_api_key" {
-                return "Shoe analysis backend is not configured. Deploy analyzeShoe with a valid OPENAI_API_KEY secret and set SHOE_ANALYSIS_ENDPOINT."
-            }
-            return msg
+        // Raw backend/OpenAI text (model id, quota, key state, config hints) must
+        // never reach the UI — it's an info leak and reads badly to a reviewer.
+        // Keep the detail in debug logs; show the user a plain, actionable line.
+        debugLog("[Scan] error raw=\(raw)")
+        let lower = raw.lowercased()
+        // Our own pre-flight guards carry safe, user-facing copy — pass through.
+        if lower.contains("not signed in") || lower.contains("select or add a shoe")
+            || lower.contains("free scans this month") {
+            return raw
         }
-        // OpenAI wraps the JSON in "API Error: {...}" — strip the prefix
-        if raw.hasPrefix("API Error: ") {
-            let jsonPart = String(raw.dropFirst("API Error: ".count))
-            if let data = jsonPart.data(using: .utf8),
-               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                let errObj = json["error"] as? [String: Any],
-               let msg = errObj["message"] as? String {
-                if let code = errObj["code"] as? String, code == "invalid_api_key" {
-                    return "Shoe analysis backend is not configured. Deploy analyzeShoe with a valid OPENAI_API_KEY secret and set SHOE_ANALYSIS_ENDPOINT."
-                }
-                return msg
-            }
+        if lower.contains("offline") || lower.contains("internet") || lower.contains("network")
+            || lower.contains("timed out") || lower.contains("connection") {
+            return "You appear to be offline. Reconnect and try again."
         }
-        return raw
+        if lower.contains("429") || lower.contains("rate") || lower.contains("quota")
+            || lower.contains("busy") || lower.contains("temporarily") {
+            return "Shoe scanning is busy right now. Please try again in a moment."
+        }
+        return "Couldn't analyze that photo. Make sure the sole is well lit and centered, then try again."
     }
 
     private func loadShoes() async {
@@ -545,9 +563,12 @@ struct ScanView: View {
                     TabView(selection: $currentPage) {
                         ForEach(scanVM.historyPages.indices, id: \.self) { index in
                             let page = scanVM.historyPages[index]
+                            // Balance the pair for the heatmaps only; the wear
+                            // analysis text below reads the raw per-shoe zones.
+                            let (balL, balR) = WearSymmetry.balanced(page.left?.zones, page.right?.zones)
                             HStack(spacing: 30) {
-                                FootHeatmapView(isLeft: true, wearZones: page.left?.zones)
-                                FootHeatmapView(isLeft: false, wearZones: page.right?.zones)
+                                FootHeatmapView(isLeft: true, wearZones: balL)
+                                FootHeatmapView(isLeft: false, wearZones: balR)
                             }
                             .tag(index)
                         }
@@ -676,7 +697,7 @@ struct ScanView: View {
     
     @ViewBuilder
     private func shoeAnalysisSection(snapshot shoe: ScanSnapshot, label: String) -> some View {
-        let health = shoeHealthPercent(zones: shoe.zones)
+        let health = shoeHealthPercent(snapshot: shoe)
         let strikeText = (shoe.strikePattern?.isEmpty == false) ? ", \(shoe.strikePattern!.lowercased()) strike" : ""
 
         // The heatmap above is the read. This is just a one line summary plus a
@@ -686,6 +707,12 @@ struct ScanView: View {
                 .font(AppTheme.meta(13))
                 .foregroundColor(accentLime)
 
+            if let miles = shoe.estimatedMilesRemaining {
+                Text("~\(miles) miles left")
+                    .font(AppTheme.bodySemibold(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.75))
+            }
+
             if let h = health {
                 Text("Tread health \(h)%. Replace shoes based on how they feel, not a number.")
                     .font(AppTheme.body(11))
@@ -694,6 +721,13 @@ struct ScanView: View {
                 Text("General fitness guidance, not medical advice. See a professional for pain or injury.")
                     .font(AppTheme.body(9))
                     .foregroundColor(AppTheme.primaryText.opacity(0.3))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let conf = shoe.confidence, conf < 50 {
+                Text("The photo was hard to read. Retake it in brighter light for a sharper result.")
+                    .font(AppTheme.body(11))
+                    .foregroundColor(Color(hex: "#E89830"))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -712,6 +746,17 @@ struct ScanView: View {
         }
     }
     
+    /// Health per shoe. Scans from the gpt-5.6 upgrade carry numeric wear depth
+    /// per zone (0 fresh, 100 gone) — average those for a finer read. Older
+    /// scans fall back to the four color buckets.
+    private func shoeHealthPercent(snapshot: ScanSnapshot) -> Int? {
+        if let percents = snapshot.wearPercents, !percents.isEmpty {
+            let avgWear = Double(percents.values.reduce(0, +)) / Double(percents.count)
+            return Int((100 - avgWear).rounded())
+        }
+        return shoeHealthPercent(zones: snapshot.zones)
+    }
+
     /// Compute shoe health % from wear zone data (0-100). Returns nil if no zones.
     private func shoeHealthPercent(zones: WearZoneData?) -> Int? {
         guard let z = zones else { return nil }
@@ -798,7 +843,7 @@ struct FootHeatmapView: View {
         VStack(spacing: 8) {
             if showLabel {
                 Text(isLeft ? "Left" : "Right")
-                    .font(.system(size: 13, weight: .bold, design: labelDesign))
+                    .font(AppTheme.meta(13))
                     .foregroundColor(AppTheme.primaryText)
                     .textCase(.uppercase)
                     .tracking(0.5)
@@ -1000,12 +1045,15 @@ struct FootHeatmapView: View {
             return false
         }
         
-        // Sole view: flipping a shoe over mirrors its outline, so the LEFT sole
-        // uses the raw shape and the RIGHT sole is mirrored.
-        let actualCol = isLeft ? col : (columns - 1 - col)
-        return row < shoeShapeData.count &&
-               actualCol < shoeShapeData[row].count &&
-               shoeShapeData[row][actualCol] == 1
+        // Symmetric outline: a cell is part of the shoe only where the raw shape
+        // AND its mirror agree. This forces left and right to render the SAME
+        // spots (a matched, symmetric pair) instead of two differently-leaning
+        // outlines. Wear colours still map per real medial/lateral side.
+        guard row < shoeShapeData.count else { return false }
+        let mirrorCol = columns - 1 - col
+        let a = col >= 0 && col < shoeShapeData[row].count && shoeShapeData[row][col] == 1
+        let b = mirrorCol >= 0 && mirrorCol < shoeShapeData[row].count && shoeShapeData[row][mirrorCol] == 1
+        return a && b
     }
     
     private func rgba(from color: Color) -> RGBA {

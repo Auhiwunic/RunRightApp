@@ -34,7 +34,7 @@ enum MetricGuide {
         title: "Cadence",
         what: "How many steps you take per minute, counting both feet.",
         why: "Quick steps keep each landing under your hips. Slow turnover stretches the stride out front, and a foot out front brakes you on every step and sends the shock up your shins and knees.",
-        target: "165 to 190 spm covers most good running. Elites cluster near 180. Yours will sit lower on easy runs, that is normal.",
+        target: "165 to 200 spm covers most good running. Cadence rises with pace, so fast efforts near 190 to 200 are normal, and easy runs sit lower. Taller runners run a little lower at any pace.",
         fix: "Run short stretches to a metronome set 5 to 10 percent above your natural rate. Think short, light, quick. The Cadence bump drill in Coach is built for exactly this."
     )
 
@@ -58,7 +58,7 @@ enum MetricGuide {
         title: "Ground contact",
         what: "How long each foot stays on the ground per step, in milliseconds, read from your video frame by frame.",
         why: "Ground time is where speed happens. Fast runners put big force into the ground in a short window and get back in the air. Long contacts usually mean the foot landed out front and spent time braking before it could push.",
-        target: "Under 250 ms is solid for steady running. Trained runners sit near 200 to 240. Elite sprinters at top speed touch down for under 100 ms with about four times body weight of force.",
+        target: "Contact time depends on pace. Trained runners sit near 200 to 240 ms; up to about 320 ms is normal at easy paces. Elite sprinters at top speed touch down for under 100 ms with about four times body weight of force.",
         fix: "Lift your cadence and land under your hips, that trims contact time fastest. Hops, skips and jump work build the leg spring that makes short contacts possible. Expect months, not days."
     )
 

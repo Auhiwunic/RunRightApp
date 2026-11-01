@@ -10,7 +10,12 @@ enum WeeklyPlanGenerator {
     // MARK: - Public entry point
 
     static func generate(from profile: OnboardingProfile) -> WeeklyPlan {
-        let sortedDays = profile.availableDays.sorted().compactMap { Weekday(rawValue: $0) }
+        // Order Monday-first. Weekday raw values are Sunday=1…Saturday=7, so a
+        // plain sort puts Sunday first and days.prefix(count) systematically drops
+        // Saturday when the user picks more days than their run count (#9).
+        let sortedDays = profile.availableDays
+            .compactMap { Weekday(rawValue: $0) }
+            .sorted { (($0.rawValue + 5) % 7) < (($1.rawValue + 5) % 7) }
         let mandateNotes = PlanMandateChecker.planNotes(from: profile)
 
         let totalMiles = resolvedWeeklyMiles(profile: profile)

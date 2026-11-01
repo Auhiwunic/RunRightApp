@@ -138,6 +138,8 @@ enum RunPowerModel {
     /// Compute the Power score.
     /// - contactTimes/flightTimes: per-step seconds (from detected gait cycles).
     /// - hip/ankle/knee ROM: sagittal range of motion in degrees (drive proxies); nil if unknown.
+    /// - cadenceSpm: measured step rate; turnover in the running band is direct
+    ///   propulsion evidence (stride power = force × turnover). nil if unknown.
     /// - frameRate: clip fps (gates the spring-mass weighting + confidence).
     static func power(
         contactTimes: [Double],
@@ -145,6 +147,7 @@ enum RunPowerModel {
         hipExtensionRangeDeg: Double?,
         ankleRangeDeg: Double?,
         kneeDriveRangeDeg: Double?,
+        cadenceSpm: Double? = nil,
         frameRate: Double
     ) -> PowerResult {
         let sm = RunPhysics.springMass(contactTimes: contactTimes, flightTimes: flightTimes)
@@ -168,10 +171,55 @@ enum RunPowerModel {
         // ── Drive ROM (angle-based, robust at any frame rate) ──
         // Hip extension at toe-off (backside drive), ankle plantarflexion ROM
         // (push-off), knee drive ROM. Ranges in degrees over the gait cycle.
-        let hipScore: Double? = hipExtensionRangeDeg.map { ramp($0, 25, 55) }
-        let ankleScore: Double? = ankleRangeDeg.map { ramp($0, 18, 40) }
-        let kneeScore: Double? = kneeDriveRangeDeg.map { ramp($0, 60, 110) }
-        let driveScore = averageOfPresent([hipScore, ankleScore, kneeScore])
+        // Hip drive (thigh sagittal sweep). Real backside drive tops out around a
+        // strong sweep; a plain ramp saturates and keeps rewarding past that, so a
+        // runner who over-drives the knee up and kicks the leg back excessively
+        // (thigh sweeping far past what a stride needs) reads as maximum power.
+        // Measured elite drive sits near ~60°; an exaggerated, "overdoing it"
+        // stride runs to ~110°+. Reward up to a strong sweep, hold a plateau for
+        // genuinely powerful runners, then fall off so exaggeration cannot max the
+        // dial. A normal-to-elite runner (≤ ~70°) is untouched.
+        let cfg = scoringConfig
+        let hipScore: Double? = hipExtensionRangeDeg.map { r in
+            if r <= cfg.hipRampHi { return ramp(r, cfg.hipRampLo, cfg.hipRampHi) }
+            if r <= cfg.hipPlateauMax { return 100 }
+            return clamp(100 - (r - cfg.hipPlateauMax) * cfg.hipFalloffSlope)
+        }
+        // Ankle plantarflexion ROM (push-off). Same reward-plateau-falloff
+        // shape as hip/knee: the old plain ramp saturated at 40°, so clean and
+        // floppy ankles alike scored 100 and the term was pure inflation.
+        let ankleScore: Double? = ankleRangeDeg.map { r in
+            if r <= cfg.ankleRampHi { return ramp(r, cfg.ankleRampLo, cfg.ankleRampHi) }
+            if r <= cfg.anklePlateauMax { return 100 }
+            return clamp(100 - (r - cfg.anklePlateauMax) * cfg.ankleFalloffSlope)
+        }
+        // Knee drive ROM. Strong drive shows a healthy knee-flexion range, but a
+        // plain ramp saturates at 100 and keeps rewarding past that — so an
+        // exaggerated, kipping recovery (heel flicking up far toward the glute)
+        // reads as maximum power when it is really wasted motion. Reward up to a
+        // strong range, hold a short plateau, then fall off so an over-kipped leg
+        // cannot max the dial. A normal-to-fast runner (≤ ~122°) is untouched.
+        let kneeScore: Double? = kneeDriveRangeDeg.map { r in
+            if r <= cfg.kneeRampHi { return ramp(r, cfg.kneeRampLo, cfg.kneeRampHi) }
+            if r <= cfg.kneePlateauMax { return 100 }
+            return clamp(100 - (r - cfg.kneePlateauMax) * cfg.kneeFalloffSlope)
+        }
+        // Turnover pillar: quick steps in the running band are propulsion the
+        // joint sweeps can't see (an elite 172 spm stride drives hard with a
+        // COMPACT sweep, which the ROM ramps under-credit). Outside 100-200
+        // spm the read is slow-mo footage or a broken count → unmeasurable.
+        let cadenceScore: Double? = cadenceSpm.flatMap { cad in
+            guard cad >= 100, cad <= 200 else { return nil }
+            return ramp(cad, cfg.driveCadRampLo, cfg.driveCadRampHi)
+        }
+        var driveScore = averageOfPresent([hipScore, ankleScore, kneeScore, cadenceScore])
+        // A single surviving pillar (often just one joint after plausibility
+        // filtering) is too little evidence to certify elite drive.
+        let pillarCount = [hipScore, ankleScore, kneeScore, cadenceScore].compactMap { $0 }.count
+        if pillarCount == 1, let d = driveScore {
+            driveScore = min(d, cfg.driveLonePillarCap)
+        }
+        debugLog("[Power] hipROM=\(hipExtensionRangeDeg.map { Int($0) } ?? -1) ankleROM=\(ankleRangeDeg.map { Int($0) } ?? -1) kneeROM=\(kneeDriveRangeDeg.map { Int($0) } ?? -1) cad=\(cadenceSpm.map { Int($0) } ?? -1) -> hipS=\(hipScore.map { Int($0) } ?? -1) ankleS=\(ankleScore.map { Int($0) } ?? -1) kneeS=\(kneeScore.map { Int($0) } ?? -1) cadS=\(cadenceScore.map { Int($0) } ?? -1) pillars=\(pillarCount) drive=\(driveScore.map { Int($0) } ?? -1)")
 
         // ── Combine, weighted by frame-rate reliability ──
         let smScore = averageOfPresent([forceScore, springScore, dutyScore])
@@ -183,20 +231,29 @@ enum RunPowerModel {
             confidence = .high
         } else if let driveScore {
             // Low fps or sparse timing: lean on robust drive angles; fold in any
-            // spring-mass read at reduced weight and flag as an estimate.
-            if let smScore {
+            // spring-mass read at reduced weight and flag as an estimate — but
+            // only while the two reads roughly agree. Below 60 fps a single
+            // 33 ms frame is a large slice of an elite flight, so when the
+            // timing-based score flatly contradicts the angle-based one, the
+            // timing is quantization noise and the angles win.
+            if let smScore, abs(driveScore - smScore) <= cfg.driveSmDiscrepancyGate {
                 composite = 0.6 * driveScore + 0.4 * smScore
             } else {
                 composite = driveScore
             }
             confidence = .estimate
-        } else if let smScore {
+        } else if let smScore, fpsReliable {
             composite = smScore
             confidence = .estimate
         } else {
+            // No drive angles AND sub-60fps timing: pure quantized contact/
+            // flight cannot stand alone (a one-frame rounding error swings
+            // peak force ~40%). Unmeasurable, not a fake number.
             composite = nil
             confidence = .low
         }
+
+        debugLog("[Power] smS=\(smScore.map { Int($0) } ?? -1) fps=\(Int(frameRate)) conf=\(confidence.rawValue) composite=\(composite.map { Int($0) } ?? -1)")
 
         guard let composite else {
             return PowerResult(
@@ -260,9 +317,10 @@ enum RunImpactModel {
         // elites; only penalise once the foot lands well ahead of the body.
         // Good up to ~10°, ramping to a fault by ~26°.
         let overstrideScore: Double? = shankAngleAtContactDeg.map { clamp(100.0 - ramp($0, 10, 26)) }
-        // Vertical oscillation: 6–11 cm typical; lower = softer ride. <8 cm
-        // excellent, >16 cm jarring.
-        let oscScore: Double? = verticalOscillationCm.map { clamp(100.0 - ramp($0, 8, 16)) }
+        // Vertical oscillation: typical distance running is ~6–11 cm; lower = a
+        // softer, more economical ride. Good ≤ ~9 cm, jarring by ~14 cm. The old
+        // 16 cm ceiling was far too lenient (a big bouncer still scored well).
+        let oscScore: Double? = verticalOscillationCm.map { clamp(100.0 - ramp($0, 9, 14)) }
         // Foot-strike loading: a heel strike raises the impact transient slightly
         // but is not a fault by itself for distance running (many elites heel
         // strike) — only a mild penalty, since overstride already captures the risk.
@@ -289,6 +347,7 @@ enum RunImpactModel {
         // Gentler worst-weighting: one moderate pillar shouldn't tank an
         // otherwise-good landing, but the worst still pulls the score down.
         let composite = 0.35 * worst + 0.65 * mean
+        debugLog("[Impact] shank=\(shankAngleAtContactDeg.map { String(format: "%.1f", $0) } ?? "nil") voCm=\(verticalOscillationCm.map { String(format: "%.1f", $0) } ?? "nil") strike=\(footStrike) -> over=\(overstrideScore.map { Int($0) } ?? -1) osc=\(oscScore.map { Int($0) } ?? -1) strikeS=\(strikeScore.map { Int($0) } ?? -1) -> \(Int(composite))")
 
         let score = Int(clamp(composite).rounded())
         let label: String

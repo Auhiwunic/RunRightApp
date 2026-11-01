@@ -10,10 +10,21 @@ enum AudioSessionManager {
     static func activate(showErrors: Bool = false) -> Bool {
         let session = AVAudioSession.sharedInstance()
 
+        // Idempotent fast path: the player calls this before EVERY sentence and
+        // every clip in a composite cue. Re-setting the category each time can
+        // click and re-pump the music ducking between sentences — and mid-run it
+        // would flip the Hey Gaita mic's .playAndRecord session to .playback.
+        // If a playback-capable category is already configured, just stay active.
+        if session.category == .playback || session.category == .playAndRecord {
+            if (try? session.setActive(true)) != nil { return true }
+        }
+
         let attempts: [() throws -> Void] = [
             {
                 // Duck (lower) the user's music while Gaita speaks, then restore it.
-                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+                // .mixWithOthers keeps the music PLAYING (ducked) rather than
+                // stopping it, so the runner can listen to music through the run.
+                try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers, .mixWithOthers])
                 try session.setActive(true)
             },
             {

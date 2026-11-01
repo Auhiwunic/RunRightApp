@@ -94,6 +94,18 @@ struct OnboardingView: View {
         if let uid = Auth.auth().currentUser?.uid {
             Task { try? await UserSettingsRepository.shared.save(uid: uid, settings: settings) }
         }
+
+        // Generate this week's plan from the profile and save it, so the Run tab
+        // reflects the answers immediately (first onboarding AND coach-triggered
+        // profile rebuilds both land here). Notify so any open plan view reloads.
+        if let uid = Auth.auth().currentUser?.uid {
+            let days = CoachPlanActions.dayPlans(from: WeeklyPlanGenerator.generate(from: profile))
+            let weekId = PlanRepository.shared.weekId(for: Date())
+            Task {
+                try? await PlanRepository.shared.saveWeeklyPlan(uid: uid, weekId: weekId, days: days)
+                await MainActor.run { NotificationCenter.default.post(name: .planUpdated, object: nil) }
+            }
+        }
     }
 }
 
@@ -181,7 +193,7 @@ struct OnboardingSignInView: View {
 
                     Button(action: onDone) {
                         Text("Maybe later")
-                            .font(.subheadline.weight(.medium))
+                            .font(AppTheme.bodyMedium(15))
                             .foregroundStyle(PlanTheme.textSecondary)
                             .padding(.vertical, 8)
                     }

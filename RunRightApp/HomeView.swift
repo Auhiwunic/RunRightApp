@@ -16,7 +16,8 @@ struct HomeView: View {
     private let backgroundColor = AppTheme.cardBgAlt
     private let cardBackground = AppTheme.cardBg
     private let cardBackgroundSoft = AppTheme.cardBgAlt
-    @StateObject private var vm = HomeViewModel()
+    @ObservedObject private var vm = HomeViewModel.shared
+    @Environment(\.scenePhase) private var scenePhase
     @State private var lastRunGraphMetric: LastRunMetric = .pace
     @State private var visibleSections: [Bool] = Array(repeating: false, count: 4)
     @State private var scrollOffset: CGFloat = 0   // drives the header fade
@@ -115,6 +116,11 @@ struct HomeView: View {
         }
         .refreshable {
             await vm.load()
+        }
+        // Refresh when the app returns to the foreground so the TODAY panel and
+        // stats aren't stale after the phone sat overnight (or across midnight).
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await vm.load() } }
         }
         .onAppear {
             // Stagger the entrance once per app session — the tab views are

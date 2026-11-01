@@ -32,7 +32,6 @@ final class CoachVoiceEngine: ObservableObject {
 
     private var manager: KokoroAneManager?
     private let player = AudioPlaybackController()
-    private let fallback = AVSpeechBackend()
     private static let voiceName = "bm_lewis"
 
     private init() {}
@@ -82,9 +81,24 @@ final class CoachVoiceEngine: ObservableObject {
         guard let manager, case .ready = state else { return }
         _ = AudioSessionManager.activate()
 
+        let parts = Self.chunks(Self.speakable(trimmed))
+        guard !parts.isEmpty else { return }
         do {
-            for chunk in Self.chunks(trimmed) {
-                let wav = try await manager.synthesize(text: chunk, voice: Self.voiceName, speed: 1.05)
+            // Pipeline synthesis with playback: the next sentence is synthesized
+            // WHILE the current one plays. The old serial synth→play loop left a
+            // dead gap equal to the neural synthesis time at every sentence
+            // boundary, which is exactly what made the voice sound choppy.
+            var pending = Task { [manager] in
+                try await manager.synthesize(text: parts[0], voice: Self.voiceName, speed: 1.05)
+            }
+            for i in parts.indices {
+                let wav = try await pending.value
+                if i + 1 < parts.count {
+                    let next = parts[i + 1]
+                    pending = Task { [manager] in
+                        try await manager.synthesize(text: next, voice: Self.voiceName, speed: 1.05)
+                    }
+                }
                 try await player.play(data: wav)
             }
         } catch {
@@ -92,9 +106,15 @@ final class CoachVoiceEngine: ObservableObject {
         }
     }
 
+    /// Rewrite text so the voice reads it naturally: a multiplication "x" between
+    /// numbers (interval notation like "4x400") is otherwise pronounced as the
+    /// letter "ex" by the synthesizer, so turn it into the spoken word "by".
+    static func speakable(_ text: String) -> String {
+        text.replacing(/(\d)\s*[xX×]\s*(\d)/) { match in "\(match.1) by \(match.2)" }
+    }
+
     func stop() {
         player.stop()
-        fallback.stop()
     }
 
     // MARK: - Lewis style vector

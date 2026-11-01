@@ -9,25 +9,21 @@ struct MainTabView: View {
     @State private var selectedTab = 2 // Home is center (index 2)
     @ObservedObject private var run = RunSession.shared
     @ObservedObject private var remoteConfig = RemoteConfigManager.shared
+    @State private var showCancelToast = false
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
             // Always-visible app background — never exposes the black UIKit window
             AppTheme.bgColor.ignoresSafeArea()
 
-            // Only the active tab renders. The Group fills the full ZStack so
-            // GeometryReaders and NavigationStacks in each view get the correct
-            // available frame (NOT bottom-aligned like ZStack(alignment:.bottom)).
-            Group {
-                switch selectedTab {
-                case 0: AnalyzeView()
-                case 1: CoachTabView()
-                case 3: RunView()
-                case 4: ProfileView()
-                default: HomeView(onOpenCoach: { selectedTab = 1 })
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            // Tabs are built once on first visit and kept alive (see
+            // PersistentTabContent). Previously this was a `switch` that destroyed
+            // and rebuilt the whole tab view tree on every tap — that teardown +
+            // reconstruction (plus each view's data reload) was the visible freeze
+            // when switching tabs. Now a repeat switch is just an opacity toggle.
+            PersistentTabContent(selectedTab: $selectedTab)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             // Custom tab bar pinned to the very bottom. Only the BAR ignores the
             // keyboard (so it doesn't ride up) — putting the modifier on the whole
@@ -49,6 +45,35 @@ struct MainTabView: View {
                     maintenanceBanner(remoteConfig.maintenanceMessage)
                     Spacer()
                 }
+            }
+
+            // Brief note when an idle run was auto-cancelled (nothing to save).
+            if showCancelToast {
+                VStack(spacing: 0) {
+                    cancelToast
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        // Adaptive plan: reconcile the week with what actually happened — on
+        // launch, on every return to foreground, and after each saved run.
+        .task { await AdaptivePlanEngine.shared.evaluateIfNeeded() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                Task { await AdaptivePlanEngine.shared.evaluateIfNeeded() }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .runSaved)) { _ in
+            Task { await AdaptivePlanEngine.shared.evaluateIfNeeded() }
+        }
+        .onChange(of: run.autoCancelledNotice) { _, cancelled in
+            guard cancelled else { return }
+            run.autoCancelledNotice = false
+            withAnimation { showCancelToast = true }
+            Task {
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                await MainActor.run { withAnimation { showCancelToast = false } }
             }
         }
         // The live run lives above every tab, so it keeps tracking + coaching when
@@ -79,6 +104,29 @@ struct MainTabView: View {
         .background(AppTheme.accentColor)
         .padding(.horizontal, 12)
         .padding(.top, 4)
+    }
+
+    // MARK: - Idle auto-cancel toast
+    private var cancelToast: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "moon.zzz.fill")
+                .font(AppTheme.meta(12))
+            Text("Run cancelled after inactivity")
+                .font(AppTheme.meta(12))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .foregroundColor(AppTheme.primaryText)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(AppTheme.tabBarBg)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(AppTheme.accentColor.opacity(0.4), lineWidth: 1)
+        )
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
     }
 
     // MARK: - Running banner (shown across tabs while a run is minimized)
@@ -117,6 +165,51 @@ struct MainTabView: View {
             .padding(.bottom, 6)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Persistent tab content
+//
+// Keeps each tab alive after its first visit instead of destroying and
+// rebuilding it on every switch. A tab is built lazily the first time it is
+// selected (no upfront cost for tabs you never open), then held in the ZStack
+// and shown/hidden by opacity — so returning to a tab is instant and its data
+// loads run once, not on every tap.
+//
+// Refresh after persistence stays correct because each tab is event-driven:
+// Home (HomeViewModel.shared) and Profile observe `.runSaved`; Coach observes
+// `.analysisSaved`; Run observes `.runSaved`; Analyze reads live shared
+// singletons (VideoProcessor/AnalysisHistoryStore). Nothing relies on the old
+// "rebuilt on every switch" behavior to refresh.
+private struct PersistentTabContent: View {
+    @Binding var selectedTab: Int
+    // Home (index 2) is the launch tab, so it is loaded from the start.
+    @State private var loaded: Set<Int> = [2]
+
+    var body: some View {
+        ZStack {
+            ForEach(loaded.sorted(), id: \.self) { index in
+                tab(index)
+                    .opacity(index == selectedTab ? 1 : 0)
+                    .allowsHitTesting(index == selectedTab)
+                    .zIndex(index == selectedTab ? 1 : 0)
+                    .accessibilityHidden(index != selectedTab)
+            }
+        }
+        .onChange(of: selectedTab) { _, newValue in
+            loaded.insert(newValue)
+        }
+    }
+
+    @ViewBuilder
+    private func tab(_ index: Int) -> some View {
+        switch index {
+        case 0: AnalyzeView()
+        case 1: CoachTabView()
+        case 3: RunView()
+        case 4: ProfileView()
+        default: HomeView(onOpenCoach: { selectedTab = 1 })
+        }
     }
 }
 

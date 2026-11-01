@@ -1,6 +1,7 @@
 import Foundation
 import UIKit
 import FirebaseAuth
+import FirebaseAppCheck
 
 final class ShoeAnalysisService {
     static let shared = ShoeAnalysisService()
@@ -46,6 +47,10 @@ final class ShoeAnalysisService {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+            // Backend enforces App Check (appCheckOk 401s without the token).
+            if let appCheckToken = try? await AppCheck.appCheck().token(forcingRefresh: false) {
+                request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
+            }
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
             request.timeoutInterval = 90
 
@@ -63,7 +68,13 @@ final class ShoeAnalysisService {
                 throw NSError(domain: "ShoeAnalysisService", code: 1, userInfo: [NSLocalizedDescriptionKey: msg])
             }
 
-            return try JSONDecoder().decode(SingleShoeResponse.self, from: data)
+            do {
+                return try JSONDecoder().decode(SingleShoeResponse.self, from: data)
+            } catch {
+                // Surface a clean "Failed to parse results" instead of a raw
+                // DecodingError string leaking to the UI (#13).
+                throw OpenAIError.parseError
+            }
         }
 
         guard let fallbackImage else {

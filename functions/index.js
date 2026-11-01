@@ -14,19 +14,34 @@
 
 import { onRequest } from "firebase-functions/v2/https";
 import { defineSecret } from "firebase-functions/params";
-import functionsV1 from "firebase-functions/v1";
+import * as functionsV1 from "firebase-functions/v1";
 import admin from "firebase-admin";
 
 admin.initializeApp();
+
+// App Check on onRequest is NOT auto-enforced: unlike onCall (whose runtime
+// verifies the token), the `enforceAppCheck` option on onRequest is only a
+// deployment annotation and is a runtime no-op. So verify the attestation
+// token ourselves. Returns true only for a request from the genuine app.
+async function appCheckOk(req) {
+  const token = req.get("X-Firebase-AppCheck");
+  if (!token) return false;
+  try {
+    await admin.appCheck().verifyToken(token);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
 
 // Per-user rate limit for analyzeShoe: max calls per rolling window. Fail-open
 // (any error allows the request) so a limiter bug never blocks real analysis.
 const RATE_LIMIT_MAX = 60;
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000; // 1 hour
 
-async function withinRateLimit(uid) {
+async function withinRateLimit(uid, feature) {
   try {
-    const ref = admin.firestore().collection("rateLimits").doc(uid);
+    const ref = admin.firestore().collection("rateLimits").doc(`${uid}_${feature}`);
     return await admin.firestore().runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       const now = Date.now();
@@ -44,7 +59,64 @@ async function withinRateLimit(uid) {
   }
 }
 
+// Only an https Firebase Storage URL may be forwarded to OpenAI as an image
+// source; a raw user-supplied URL would be an SSRF-by-proxy (#17).
+function isAllowedImageUrl(u) {
+  try {
+    const parsed = new URL(String(u));
+    if (parsed.protocol !== "https:") return false;
+    const host = parsed.hostname.toLowerCase();
+    return host === "firebasestorage.googleapis.com"
+      || host === "storage.googleapis.com"
+      || host.endsWith(".firebasestorage.app");
+  } catch (e) {
+    return false;
+  }
+}
+
 const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
+
+// The 10 sole zones every scan grades, in one place.
+const SCAN_ZONES = [
+  "bigToe", "lesserToes", "medialBall", "centralBall", "lateralBall",
+  "medialMidfoot", "lateralMidfoot", "medialHeel", "centralHeel", "lateralHeel",
+];
+
+// Enforced output schema for the scan (strict structured outputs): the API
+// itself rejects any response whose enums/types drift, so the client decoder
+// never sees out-of-vocabulary values.
+const SHOE_SCAN_SCHEMA = (() => {
+  const zoneObject = (valueSchema) => ({
+    type: "object",
+    additionalProperties: false,
+    required: SCAN_ZONES,
+    properties: Object.fromEntries(SCAN_ZONES.map((z) => [z, valueSchema])),
+  });
+  return {
+    type: "object",
+    additionalProperties: false,
+    required: [
+      "overallCondition", "zoneNotes", "gaitType", "wearZones", "wearPercents",
+      "strikePattern", "primaryWearAreas", "gaitCause", "concern", "severity",
+      "estimatedMilesRemaining", "confidence", "treadNote",
+    ],
+    properties: {
+      overallCondition: { type: "string" },
+      zoneNotes: { type: "string" },
+      gaitType: { type: "string", enum: ["neutral", "pronation", "supination", "overpronation"] },
+      wearZones: zoneObject({ type: "string", enum: ["green", "yellow", "orange", "red"] }),
+      wearPercents: zoneObject({ type: "integer" }),
+      strikePattern: { type: "string", enum: ["heel", "midfoot", "forefoot"] },
+      primaryWearAreas: { type: "string" },
+      gaitCause: { type: "string" },
+      concern: { type: "string" },
+      severity: { type: "string", enum: ["mild", "moderate", "severe"] },
+      estimatedMilesRemaining: { type: ["integer", "null"] },
+      confidence: { type: "integer" },
+      treadNote: { type: "string" },
+    },
+  };
+})();
 
 function buildSingleShoePrompt(side, previousZones) {
   const s = String(side || "").toUpperCase();
@@ -83,27 +155,24 @@ Rubber wear only progresses. Each zone must be the SAME or MORE worn than the ba
 Respond with ONLY this JSON object — no markdown, no text outside it.
 Fill "zoneNotes" FIRST with what you actually observe per zone (forces you to look before grading).
 Each wearZones value MUST be exactly one of: green, yellow, orange, red.
+wearPercents is the SAME 10 zones as a precise 0-100 wear depth (0 = factory fresh, 100 = worn through). It MUST agree with the color: green 0-25, yellow 26-50, orange 51-75, red 76-100.
+estimatedMilesRemaining: integer miles of useful life left across the whole shoe based on the worst load-bearing zones and visible midsole compression; null only if the photo truly cannot support an estimate.
+confidence: 0-100 — how clearly the photo shows the tread (lighting, focus, angle, full sole visible).
+treadNote: one sentence about tread depth and pattern condition (lugs, exposed midsole, smoothing).
 {
   "overallCondition": "<one sentence: how worn overall>",
   "zoneNotes": "<bigToe: ...; lesserToes: ...; medialBall: ...; centralBall: ...; lateralBall: ...; medialMidfoot: ...; lateralMidfoot: ...; medialHeel: ...; centralHeel: ...; lateralHeel: ...>",
   "gaitType": "<neutral|pronation|supination|overpronation>",
-  "wearZones": {
-    "bigToe": "<green|yellow|orange|red>",
-    "lesserToes": "<green|yellow|orange|red>",
-    "medialBall": "<green|yellow|orange|red>",
-    "centralBall": "<green|yellow|orange|red>",
-    "lateralBall": "<green|yellow|orange|red>",
-    "medialMidfoot": "<green|yellow|orange|red>",
-    "lateralMidfoot": "<green|yellow|orange|red>",
-    "medialHeel": "<green|yellow|orange|red>",
-    "centralHeel": "<green|yellow|orange|red>",
-    "lateralHeel": "<green|yellow|orange|red>"
-  },
+  "wearZones": { "bigToe": "<green|yellow|orange|red>", ... all 10 zones ... },
+  "wearPercents": { "bigToe": <0-100>, ... all 10 zones ... },
   "strikePattern": "<heel|midfoot|forefoot>",
   "primaryWearAreas": "<comma-separated most-worn zones>",
   "gaitCause": "<one sentence biomechanical cause referencing anatomy>",
   "concern": "<one sentence injury risk>",
-  "severity": "<mild|moderate|severe>"
+  "severity": "<mild|moderate|severe>",
+  "estimatedMilesRemaining": <integer or null>,
+  "confidence": <0-100>,
+  "treadNote": "<one sentence on tread depth and pattern>"
 }`;
 
   return prompt;
@@ -140,8 +209,14 @@ export const analyzeShoe = onRequest(
       return;
     }
 
+    // Verify App Check ourselves (onRequest does not enforce it — see appCheckOk).
+    if (!(await appCheckOk(req))) {
+      res.status(401).json({ error: "App verification failed." });
+      return;
+    }
+
     // Per-user rate limit (fail-open) to guard against cost abuse.
-    if (!(await withinRateLimit(uid))) {
+    if (!(await withinRateLimit(uid, "scan"))) {
       res.status(429).json({ error: "Too many requests. Please try again later." });
       return;
     }
@@ -149,6 +224,12 @@ export const analyzeShoe = onRequest(
     const { imageBase64, imageUrl, side, previousZones } = req.body || {};
     if (!side || (!imageBase64 && !imageUrl)) {
       res.status(400).json({ error: "Provide side and imageBase64 (or imageUrl)." });
+      return;
+    }
+
+    // Reject an imageUrl that isn't our own https Storage URL (#17).
+    if (!imageBase64 && !isAllowedImageUrl(imageUrl)) {
+      res.status(400).json({ error: "imageUrl must be an https Firebase Storage URL." });
       return;
     }
 
@@ -164,7 +245,10 @@ export const analyzeShoe = onRequest(
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4.1",
+          // gpt-5.6-sol: OpenAI's flagship vision model (July 2026) — markedly
+          // better fine-detail tread reading than gpt-4.1. Scans are metered
+          // (5 free/month + rate limit), so the ~1 cent/scan cost is fine.
+          model: "gpt-5.6-sol",
           messages: [
             {
               role: "user",
@@ -174,15 +258,21 @@ export const analyzeShoe = onRequest(
               ],
             },
           ],
-          max_tokens: 2000,
+          max_tokens: 3000,
           temperature: 0.1,
-          response_format: { type: "json_object" },
+          // Enforced schema: enums and integer types are validated by the API,
+          // so colors/gait/strike can never drift out of the app's vocabulary.
+          response_format: {
+            type: "json_schema",
+            json_schema: { name: "shoe_scan", strict: true, schema: SHOE_SCAN_SCHEMA },
+          },
         }),
       });
 
       if (!openaiRes.ok) {
         const errText = await openaiRes.text();
-        res.status(502).json({ error: `OpenAI error: ${errText}` });
+        console.error("Upstream OpenAI error", openaiRes.status, String(errText).slice(0, 500));
+        res.status(502).json({ error: "This feature is temporarily unavailable. Please try again." });
         return;
       }
 
@@ -196,7 +286,8 @@ export const analyzeShoe = onRequest(
       // Return the parsed SingleShoeResponse object directly.
       res.status(200).json(JSON.parse(content));
     } catch (e) {
-      res.status(500).json({ error: String(e?.message || e) });
+      console.error("Handler error", String(e?.stack || e?.message || e).slice(0, 800));
+      res.status(500).json({ error: "Something went wrong. Please try again." });
     }
   }
 );
@@ -235,7 +326,13 @@ export const coachChat = onRequest(
       return;
     }
 
-    if (!(await withinRateLimit(uid))) {
+    // Verify App Check ourselves (onRequest does not enforce it — see appCheckOk).
+    if (!(await appCheckOk(req))) {
+      res.status(401).json({ error: "App verification failed." });
+      return;
+    }
+
+    if (!(await withinRateLimit(uid, "coach"))) {
       res.status(429).json({ error: "Too many requests. Please try again later." });
       return;
     }
@@ -246,7 +343,18 @@ export const coachChat = onRequest(
       return;
     }
 
-    const system = `You are Gaita, a running form coach inside the Gaita iOS app. Style: a rally co driver crossed with a good club coach. Direct, brief, specific, warm underneath. Keep replies under 120 words. Ground every answer in the runner's own data from the context JSON (form cue scores 0 to 100, gait type, strike pattern, focus insights) and recommend only drills that appear in the context drills list, with their dosage. Plain language. Never use hyphens, dashes, or bullet lists in replies — write flowing sentences. You give general fitness guidance, not medical advice: never diagnose, and if the runner mentions pain or injury, tell them to see a professional. Do not invent data that is not in the context.
+    const system = `You are Gaita, a running form coach inside the Gaita iOS app. Style: a rally co driver crossed with a good club coach. Direct, brief, specific, warm underneath. Keep replies under 120 words. Ground every answer in the runner's own data from the context JSON (formVideoAnalysis cue scores 0 to 100, gait type, strike pattern, focus insights) and recommend only drills that appear in the context drills list, with their dosage. CRITICAL DATA RULE: everything inside formVideoAnalysis was measured in a PAST recorded form video, not now. Its cadenceInThatVideo is the cadence in that clip, never the runner's current cadence. When asked about a CURRENT or live stat, use ONLY the liveRun object, which contains nothing but elapsed time, distance, and paces. If they ask for a live stat that is not in liveRun (cadence, heart rate, elevation, anything else), say plainly that you do not measure that live yet and, if useful, mention what the last form video showed, clearly labeled as from that video. Never present a stored or past number as a live one. Plain language. Never use hyphens, dashes, or bullet lists in replies, write flowing sentences. You give general fitness guidance, not medical advice: never diagnose, and if the runner mentions pain or injury, tell them to see a professional. Do not invent data that is not in the context. Your replies are read aloud by a voice, so write for the ear: spell out intervals and multipliers as words (say "four by 400 meters", never "4x400"), and never use a placeholder letter like X or Y in place of a value, always state the actual number.
+
+YOU CAN ALSO TAKE ACTIONS on the runner's training plan. Set the "action" field. Days are "tomorrow", "today", or a weekday name like "saturday". Always fill all four fields (day, to, change) using null where not needed.
+- Change a specific run or day (easier, harder, rest): {type:"adjust_day", day:<day>, to:null, change:<"easier"|"harder"|"rest">}.
+- Move a run to a different day ("move my long run to Sunday"): {type:"move_run", day:<source day>, to:<target day>, change:null}. The source day becomes rest.
+- Swap two days ("swap Tuesday and Thursday"): {type:"swap_days", day:<day A>, to:<day B>, change:null}.
+- Change the WHOLE week ("make my week easier", "everything feels too hard"): {type:"adjust_week", day:null, to:null, change:<"easier"|"harder">}.
+- Change their training profile, goals, days they can run, or weekly mileage: {type:"edit_profile", day:null, to:null, change:null}. Your reply says you will pull up the quick questions to rebuild their plan.
+- Anything else (form questions, drills, encouragement): action null.
+Only set an action when the runner is clearly asking to change their plan or profile. Your reply should confirm what you are doing in one short sentence when you set an action.
+
+If the context contains a "liveRun" object, the runner is running RIGHT NOW: use its distanceMiles, elapsedSeconds, avgPaceSecPerMile, lastMilePaceSecPerMile and targetPaceSecPerMile to answer pace and distance questions directly (convert seconds to a m:ss per mile pace, so 465 becomes 7:45). If they are ahead of or behind targetPaceSecPerMile say so plainly. Never claim you lack their pace when liveRun is present. IMPORTANT: while liveRun is present you are coaching MID RUN, so NEVER set an action (do not adjust the plan, move runs, or rebuild the profile) — only give the runner their stats and a short in-the-moment tip. BREVITY IS CRITICAL MID RUN: they are breathing hard and listening, not reading. One short sentence is ideal, two short sentences is the absolute maximum, never more. No preamble, no sign off, just the answer. Set action to null.
 
 RUNNER CONTEXT JSON:
 ${JSON.stringify(context || {}).slice(0, 6000)}`;
@@ -278,24 +386,61 @@ ${JSON.stringify(context || {}).slice(0, 6000)}`;
           messages,
           max_tokens: 400,
           temperature: 0.6,
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "coach_response",
+              strict: true,
+              schema: {
+                type: "object",
+                additionalProperties: false,
+                required: ["reply", "action"],
+                properties: {
+                  reply: { type: "string" },
+                  action: {
+                    type: ["object", "null"],
+                    additionalProperties: false,
+                    required: ["type", "day", "to", "change"],
+                    properties: {
+                      type: { type: "string", enum: ["adjust_day", "move_run", "swap_days", "adjust_week", "edit_profile"] },
+                      day: { type: ["string", "null"] },
+                      to: { type: ["string", "null"] },
+                      change: { type: ["string", "null"] },
+                    },
+                  },
+                },
+              },
+            },
+          },
         }),
       });
 
       if (!openaiRes.ok) {
         const errText = await openaiRes.text();
-        res.status(502).json({ error: `OpenAI error: ${errText}` });
+        console.error("Upstream OpenAI error", openaiRes.status, String(errText).slice(0, 500));
+        res.status(502).json({ error: "This feature is temporarily unavailable. Please try again." });
         return;
       }
 
       const data = await openaiRes.json();
-      const reply = data?.choices?.[0]?.message?.content?.trim();
+      const content = data?.choices?.[0]?.message?.content?.trim();
+      if (!content) {
+        res.status(502).json({ error: "No content from OpenAI." });
+        return;
+      }
+      // Structured output: parse { reply, action }. Fall back to raw text if the
+      // model ever returns plain text (older models / schema off).
+      let parsed;
+      try { parsed = JSON.parse(content); } catch { parsed = { reply: content, action: null }; }
+      const reply = (parsed.reply || "").trim();
       if (!reply) {
         res.status(502).json({ error: "No content from OpenAI." });
         return;
       }
-      res.status(200).json({ reply });
+      res.status(200).json({ reply, action: parsed.action ?? null });
     } catch (e) {
-      res.status(500).json({ error: String(e?.message || e) });
+      console.error("Handler error", String(e?.stack || e?.message || e).slice(0, 800));
+      res.status(500).json({ error: "Something went wrong. Please try again." });
     }
   }
 );
@@ -317,9 +462,15 @@ export const onUserDeleted = functionsV1.auth.user().onDelete(async (user) => {
     console.error(`[onUserDeleted] Firestore wipe failed for ${uid}:`, e);
   }
 
-  // Also clear any rate-limit record for this user.
+  // Also clear this user's rate-limit records: the per-feature docs plus any
+  // legacy single-doc record.
   try {
-    await admin.firestore().collection("rateLimits").doc(uid).delete();
+    const rl = admin.firestore().collection("rateLimits");
+    await Promise.all([
+      rl.doc(`${uid}_scan`).delete(),
+      rl.doc(`${uid}_coach`).delete(),
+      rl.doc(uid).delete(),
+    ]);
   } catch (e) {
     console.error(`[onUserDeleted] rateLimit wipe failed for ${uid}:`, e);
   }

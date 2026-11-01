@@ -10,6 +10,16 @@ struct RootView: View {
     @State private var showSyncPrompt = false
     @AppStorage("hasSeenSyncPrompt") private var hasSeenSyncPrompt = false   // once dismissed, never shown again
     @AppStorage("hasCompletedWeeklyOnboarding") private var hasOnboarded = false
+    @AppStorage("hasSeenAppTour") private var hasSeenTour = false
+    @State private var showTour = false
+
+    // Branded launch splash. Shows on every cold launch as a short brand beat
+    // over the first-frame build, then fades once the app is ready. On an
+    // offline first launch it stays and surfaces a retry (never an endless
+    // spinner). Returning users are already authenticated, so it is just the
+    // ~0.9s beat and adds no real wait.
+    @State private var splashActive = true
+    @State private var minSplashElapsed = false
 
     var body: some View {
         ZStack {
@@ -27,48 +37,9 @@ struct RootView: View {
             } else if auth.isAuthenticated {
                 MainTabView()
                     .transition(.opacity)
-            } else {
-                // Brief loading state while anonymous sign-in bootstraps
-                // (only seen on very first install with no cached session)
-                VStack(spacing: 16) {
-                    Image(systemName: "figure.run.circle.fill")
-                        .font(AppTheme.body(56))
-                        .foregroundColor(AppTheme.primaryText)
-
-                    ProgressView()
-                        .tint(AppTheme.primaryText)
-                        .scaleEffect(1.2)
-
-                    if let error = auth.errorMessage {
-                        Text(error)
-                            .font(AppTheme.bodyMedium(13))
-                            .foregroundColor(AppTheme.primaryText.opacity(0.75))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 28)
-                            .padding(.top, 4)
-
-                        // Anonymous sign-in needs the network; on a fresh install
-                        // with no connection it fails and there is nothing to fall
-                        // back to. Without this, the user is pinned on the spinner
-                        // forever. Let them retry once they're back online.
-                        Button("Try Again") {
-                            Task { await auth.signInAnonymouslyIfNeeded() }
-                        }
-                        .font(AppTheme.bodySemibold(15))
-                        .foregroundColor(.black)
-                        .padding(.horizontal, 28)
-                        .padding(.vertical, 12)
-                        .background(Capsule().fill(AppTheme.accentColor))
-                        .padding(.top, 8)
-                    } else {
-                        Text("Getting ready…")
-                            .font(AppTheme.bodyMedium(13))
-                            .foregroundColor(AppTheme.primaryText.opacity(0.4))
-                    }
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .transition(.opacity)
             }
+            // While unauthenticated the splash overlay below covers the window,
+            // so there is nothing to render here (bgColor already fills the base).
 
             // One-time, centered sign-in prompt for guests — shown once at the very
             // beginning; "Not now" (or tapping outside) closes it for good.
@@ -87,8 +58,28 @@ struct RootView: View {
                 .transition(.opacity)
                 .zIndex(10)
             }
+
+            // Branded launch splash — on top of everything until the app is ready.
+            if splashActive {
+                BrandedSplashScreen(
+                    errorMessage: auth.errorMessage,
+                    onRetry: auth.errorMessage == nil ? nil : {
+                        Task { await auth.signInAnonymouslyIfNeeded() }
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(50)
+            }
         }
         .animation(.easeInOut(duration: 0.25), value: auth.isAuthenticated)
+        .animation(.easeOut(duration: 0.4), value: splashActive)
+        .task {
+            // Minimum brand beat so the splash reads as intentional, not a flash.
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            minSplashElapsed = true
+            dismissSplashIfReady()
+        }
+        .onChange(of: auth.isAuthenticated) { _, _ in dismissSplashIfReady() }
         .task {
             await auth.signInAnonymouslyIfNeeded()
             if !hasOnboarded {
@@ -99,9 +90,11 @@ struct RootView: View {
                 // consent before HealthKit sync, background GPS, or video analysis.
                 showConsentGate = true
             } else {
-                // Sync Apple Health metrics + running workouts every time the app opens
-                await HealthKitManager.shared.syncAll()
+                // Show the guest sync prompt immediately; the Health sync (4 HK
+                // queries + a 60-day workout sync) runs concurrently in its own
+                // Task so it never delays the first interactive moment.
                 maybeShowSyncPrompt()
+                Task { await HealthKitManager.shared.syncAll() }
             }
         }
         .sheet(isPresented: $showAuthSheet) {
@@ -131,8 +124,25 @@ struct RootView: View {
                 // regular sign-in path from the Profile tab.
                 hasSeenSyncPrompt = true
                 Task { await HealthKitManager.shared.syncAll() }
+                // New users get the short how-to tour next (always skippable).
+                if !hasSeenTour { showTour = true }
             }
         }
+        .fullScreenCover(isPresented: $showTour) {
+            AppTourView {
+                hasSeenTour = true
+                showTour = false
+            }
+        }
+    }
+
+    /// Fade the launch splash once the minimum brand beat has elapsed AND the
+    /// app is authenticated (so we never reveal a half-built, signed-out state).
+    /// If sign-in never completes (offline first launch) the splash stays and
+    /// shows its retry, which is the correct behavior.
+    private func dismissSplashIfReady() {
+        guard minSplashElapsed, auth.isAuthenticated, splashActive else { return }
+        splashActive = false
     }
 
     /// Show the centered sync prompt once, for guests who haven't dismissed it.
@@ -166,14 +176,17 @@ private struct ConsentGateView: View {
 
     var body: some View {
         ZStack {
-            AnimatedBackground()
+            // Theme aware: this gate appears over whatever theme the user chose,
+            // so it uses AppTheme tokens — a fixed-dark takeover on a light theme
+            // read as broken.
+            AppTheme.bgColor.ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Privacy")
                             .font(AppTheme.display(42))
-                            .foregroundStyle(PlanTheme.textPrimary)
+                            .foregroundStyle(AppTheme.primaryText)
                         Text("check-in.")
                             .font(AppTheme.display(42))
                             .foregroundStyle(accent)
@@ -182,7 +195,7 @@ private struct ConsentGateView: View {
 
                     Text("Confirm these once so Gaita can keep using health, location, and video features for your training.")
                         .font(AppTheme.body(17))
-                        .foregroundStyle(PlanTheme.textSecondary)
+                        .foregroundStyle(AppTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
                     ageSection
@@ -205,7 +218,7 @@ private struct ConsentGateView: View {
 
                     if let saveError {
                         Text(saveError)
-                            .font(.footnote.weight(.semibold))
+                            .font(AppTheme.bodySemibold(13))
                             .foregroundStyle(Color(hex: "#FF453A"))
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -231,7 +244,6 @@ private struct ConsentGateView: View {
                 .padding(.horizontal, 28)
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     private var ageSection: some View {
@@ -244,20 +256,20 @@ private struct ConsentGateView: View {
             )
             .datePickerStyle(.compact)
             .tint(accent)
-            .foregroundStyle(PlanTheme.textPrimary)
+            .foregroundStyle(AppTheme.primaryText)
 
             HStack(spacing: 10) {
                 ForEach(AgeGateRegion.allCases) { option in
                     let selected = region == option
                     Button { region = option } label: {
                         Text(option.displayName)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(selected ? .black : PlanTheme.textSecondary)
+                            .font(AppTheme.bodySemibold(15))
+                            .foregroundStyle(selected ? .black : AppTheme.secondaryText)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                             .background(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(selected ? accent : PlanTheme.barUnselected)
+                                    .fill(selected ? accent : AppTheme.insetFill)
                             )
                     }
                     .buttonStyle(.plain)
@@ -266,13 +278,13 @@ private struct ConsentGateView: View {
 
             if !isOldEnough {
                 Text("Gaita is not available for this age in your selected region.")
-                    .font(.footnote.weight(.semibold))
+                    .font(AppTheme.bodySemibold(13))
                     .foregroundStyle(Color(hex: "#FF453A"))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(PlanTheme.card))
+        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(AppTheme.cardBg))
     }
 
     private func consentRow(title: String, text: String, isOn: Binding<Bool>) -> some View {
@@ -280,16 +292,16 @@ private struct ConsentGateView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(title)
                     .font(AppTheme.bodySemibold(17))
-                    .foregroundStyle(PlanTheme.textPrimary)
+                    .foregroundStyle(AppTheme.primaryText)
                 Text(text)
                     .font(AppTheme.body(13))
-                    .foregroundStyle(PlanTheme.textSecondary)
+                    .foregroundStyle(AppTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
         .toggleStyle(SwitchToggleStyle(tint: accent))
         .padding(18)
-        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(PlanTheme.card))
+        .background(RoundedRectangle(cornerRadius: PlanTheme.cardRadius).fill(AppTheme.cardBg))
     }
 
     private func saveConsent() {
@@ -308,23 +320,26 @@ private struct ConsentGateView: View {
         )
 
         Task {
-            do {
-                if let uid = Auth.auth().currentUser?.uid {
-                    var settings = (try? await UserSettingsRepository.shared.load(uid: uid)) ?? UserSettings()
+            if let uid = Auth.auth().currentUser?.uid {
+                // Read-modify-write, but ONLY when the real profile actually
+                // loaded. A failed/offline load used to fall back to a blank
+                // UserSettings() and save THAT — overwriting the user's real
+                // cloud profile (name, goals, HR) with defaults once it synced.
+                // So skip the cloud write on load failure; the next successful
+                // settings save carries consent up. Consent is authoritative
+                // locally either way (below).
+                if var settings = try? await UserSettingsRepository.shared.load(uid: uid) {
                     settings.consentRecord = record
-                    try await UserSettingsRepository.shared.save(uid: uid, settings: settings)
+                    try? await UserSettingsRepository.shared.save(uid: uid, settings: settings)
                 }
-                ConsentManager.shared.save(record)
-
-                await MainActor.run {
-                    isSaving = false
-                    onComplete()
-                }
-            } catch {
-                await MainActor.run {
-                    isSaving = false
-                    saveError = "Couldn't save consent. Please check your connection and try again."
-                }
+            }
+            // Local save always succeeds, so the gate can never hang — even fully
+            // offline the user can confirm consent and continue; the cloud mirror
+            // catches up on reconnect.
+            ConsentManager.shared.save(record)
+            await MainActor.run {
+                isSaving = false
+                onComplete()
             }
         }
     }
@@ -441,6 +456,12 @@ struct AuthSheet: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 50)
                         .background(Color.white)
+                        .overlay(
+                            // Outline so the white pill doesn't wash into the
+                            // light-mode sheet (the Apple button already has one).
+                            RoundedRectangle(cornerRadius: 14)
+                                .stroke(AppTheme.subtleBorder, lineWidth: 1)
+                        )
                         .cornerRadius(14)
                     }
                     .disabled(isLoading)
@@ -600,7 +621,7 @@ private struct ForceUpdateView: View {
 
             VStack(spacing: 20) {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 56))
+                    .font(AppTheme.display(56))
                     .foregroundColor(AppTheme.accentColor)
 
                 Text("Update Gaita")

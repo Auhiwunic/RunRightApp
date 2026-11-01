@@ -5,6 +5,7 @@
 
 import Foundation
 import FirebaseAuth
+import FirebaseAppCheck
 import UIKit
 
 struct GaitAnalysisResponse: Codable {
@@ -66,6 +67,22 @@ struct WearZoneData: Codable {
         default: return "green"
         }
     }
+
+    mutating func set(_ zone: String, _ colorValue: String) {
+        switch zone {
+        case "bigToe": bigToe = colorValue
+        case "lesserToes": lesserToes = colorValue
+        case "medialBall": medialBall = colorValue
+        case "centralBall": centralBall = colorValue
+        case "lateralBall": lateralBall = colorValue
+        case "medialMidfoot": medialMidfoot = colorValue
+        case "lateralMidfoot": lateralMidfoot = colorValue
+        case "medialHeel": medialHeel = colorValue
+        case "centralHeel": centralHeel = colorValue
+        case "lateralHeel": lateralHeel = colorValue
+        default: break
+        }
+    }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -105,9 +122,20 @@ struct SingleShoeResponse: Codable {
     let gaitCause: String?          // biomechanical cause referencing anatomy
     let concern: String?            // injury risk from this pattern
     let severity: String?           // "mild" | "moderate" | "severe"
-    
+    // Detailed fields (gpt-5.6 upgrade) — optional so older responses still decode.
+    let wearPercents: [String: Int]?    // per zone, 0-100 wear depth
+    let estimatedMilesRemaining: Int?   // useful life left, nil when unestimable
+    let confidence: Int?                // 0-100 photo readability
+    let treadNote: String?              // one sentence on tread depth/pattern
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        // A real analysis carries at least a gait type or wear zones. If neither
+        // key is present the body isn't a shoe analysis (e.g. a backend error
+        // object), so fail instead of fabricating a fake all-green result (#12).
+        guard container.contains(.gaitType) || container.contains(.wearZones) else {
+            throw OpenAIError.parseError
+        }
         gaitType = (try? container.decode(String.self, forKey: .gaitType)) ?? "neutral"
         wearZones = try? container.decodeIfPresent(WearZoneData.self, forKey: .wearZones)
         strikePattern = try? container.decodeIfPresent(String.self, forKey: .strikePattern)
@@ -115,19 +143,25 @@ struct SingleShoeResponse: Codable {
         gaitCause = try? container.decodeIfPresent(String.self, forKey: .gaitCause)
         concern = try? container.decodeIfPresent(String.self, forKey: .concern)
         severity = try? container.decodeIfPresent(String.self, forKey: .severity)
+        wearPercents = try? container.decodeIfPresent([String: Int].self, forKey: .wearPercents)
+        estimatedMilesRemaining = try? container.decodeIfPresent(Int.self, forKey: .estimatedMilesRemaining)
+        confidence = try? container.decodeIfPresent(Int.self, forKey: .confidence)
+        treadNote = try? container.decodeIfPresent(String.self, forKey: .treadNote)
     }
-    
+
     private enum CodingKeys: String, CodingKey {
         case gaitType, wearZones, strikePattern, primaryWearAreas, gaitCause, concern, severity
+        case wearPercents, estimatedMilesRemaining, confidence, treadNote
     }
 }
 
 class OpenAIService {
     static let shared = OpenAIService()
 
-    /// Vision model used for wear analysis. gpt-4.1 follows the zone instructions
-    /// and reads fine tread detail noticeably better than gpt-4o. Change in one place.
-    static let visionModel = "gpt-4.1"
+    /// Vision model used for wear analysis. gpt-5.6-sol (OpenAI's flagship
+    /// vision model, July 2026) reads fine tread detail noticeably better than
+    /// the gpt-4 family. Change in one place; keep in sync with functions/index.js.
+    static let visionModel = "gpt-5.6-sol"
 
     /// Firebase HTTPS Cloud Function that holds the OpenAI key server-side.
     /// The app sends a Firebase ID token plus the single-shoe request body.
@@ -173,6 +207,12 @@ class OpenAIService {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(idToken)", forHTTPHeaderField: "Authorization")
+        // The backend enforces App Check (appCheckOk verifies X-Firebase-AppCheck
+        // and 401s without it). The client MUST attach the attestation token or
+        // every scan/coach call is rejected in production.
+        if let appCheckToken = try? await AppCheck.appCheck().token(forcingRefresh: false) {
+            request.setValue(appCheckToken.token, forHTTPHeaderField: "X-Firebase-AppCheck")
+        }
         request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         request.timeoutInterval = 45   // fail in 45s instead of 90s
         debugLog("[OpenAI] sending \(side) shoe request (\(request.httpBody!.count / 1024) KB)…")

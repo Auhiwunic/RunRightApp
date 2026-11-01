@@ -214,7 +214,13 @@ final class FirebaseAuthManager: ObservableObject {
         if let user = auth.currentUser, user.isAnonymous {
             do {
                 try await linkAnonymousUser(user, with: credential)
-            } catch let error as NSError where error.code == AuthErrorCode.credentialAlreadyInUse.rawValue {
+            } catch let error as NSError where
+                error.code == AuthErrorCode.credentialAlreadyInUse.rawValue
+                || error.code == AuthErrorCode.emailAlreadyInUse.rawValue {
+                // OAuth links fail with credentialAlreadyInUse; EMAIL links fail
+                // with emailAlreadyInUse. Both mean "this identity already has an
+                // account" — without catching emailAlreadyInUse, every returning
+                // email/password user was unable to sign in (the error propagated).
                 // The credential belongs to an existing account, so linking failed
                 // and guest data under the anonymous uid would be orphaned. Buffer
                 // it while this session can still read it, switch accounts, then
@@ -269,7 +275,13 @@ final class FirebaseAuthManager: ObservableObject {
                     let exists = (try? await ref.getDocument())?.exists
                     if exists != false { continue }
                 }
-                try? await ref.setData(fields, merge: true)
+                // Don't silently drop a guest doc on a write failure — at minimum
+                // record it so a lost run/scan merge is detectable (#3).
+                do {
+                    try await ref.setData(fields, merge: true)
+                } catch {
+                    CrashReporter.record(error, context: "mergeGuestData.write.\(name)")
+                }
             }
         }
     }
@@ -381,8 +393,20 @@ final class FirebaseAuthManager: ObservableObject {
     private static func deleteStorageFolder(path: String) async throws {
         let ref = Storage.storage().reference(withPath: path)
         let list = try await ref.listAll()
-        for item in list.items { try? await item.delete() }
-        for prefix in list.prefixes { try await deleteStorageFolder(path: prefix.fullPath) }
+        // Attempt every file and subfolder, but do NOT swallow failures — a
+        // silently-skipped delete leaves the user's photos in Storage while
+        // deletion reports success, violating 5.1.1(v). Surface the first failure
+        // so the caller reports incompleteness; a retry re-lists and finishes (#1).
+        var firstError: Error?
+        for item in list.items {
+            do { try await item.delete() }
+            catch { if firstError == nil { firstError = error } }
+        }
+        for prefix in list.prefixes {
+            do { try await deleteStorageFolder(path: prefix.fullPath) }
+            catch { if firstError == nil { firstError = error } }
+        }
+        if let firstError { throw firstError }
     }
 
     private static func clearLocalData() {

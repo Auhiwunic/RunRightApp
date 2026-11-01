@@ -250,7 +250,7 @@ struct ShareCardView: View {
             // ── Title ──
             HStack {
                 Text("SCORECARD")
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(AppTheme.headBold(22))
                     .foregroundColor(.white)
                 Spacer()
             }
@@ -284,7 +284,7 @@ struct ShareCardView: View {
                 VStack(alignment: .trailing, spacing: 0) {
                     VStack(alignment: .trailing, spacing: 3) {
                         Text("\(data.overall)")
-                            .font(.system(size: 56, weight: .heavy))
+                            .font(AppTheme.display(56))
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
                             .foregroundStyle(
@@ -295,7 +295,7 @@ struct ShareCardView: View {
                             .frame(width: 46, height: 3)
                             .cornerRadius(1.5)
                         Text("OVERALL")
-                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .font(AppTheme.meta(10))
                             .foregroundColor(.white)
                     }
 
@@ -332,7 +332,7 @@ struct ShareCardView: View {
                             heatmapPanel
                             if !data.gaitType.isEmpty {
                                 Text(data.gaitType)
-                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .font(AppTheme.meta(9))
                                     .foregroundColor(accent)
                             }
                         }
@@ -380,18 +380,18 @@ struct ShareCardView: View {
 
     private func heroStat(_ value: String) -> some View {
         Text(value)
-            .font(.system(size: 15, weight: .bold, design: .monospaced))
+            .font(AppTheme.displayTabular(15))
             .foregroundColor(.white)
     }
 
     private func inlineStat(_ label: String, _ value: String, _ color: Color) -> some View {
         VStack(alignment: .center, spacing: 4) {
             Text(value)
-                .font(.system(size: 21, weight: .bold, design: .monospaced))
+                .font(AppTheme.displayTabular(21))
                 .foregroundColor(color)
                 .lineLimit(1).minimumScaleFactor(0.55)
             Text(label)
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(11))
                 .foregroundColor(.white)
         }
     }
@@ -408,11 +408,11 @@ struct ShareCardView: View {
     private func statChip(_ label: String, _ value: String, color: Color = .white, big: Bool = false) -> some View {
         VStack(spacing: 4) {
             Text(value)
-                .font(.system(size: big ? 30 : 24, weight: .bold, design: .monospaced))
+                .font(AppTheme.displayTabular(big ? 30 : 24))
                 .foregroundColor(color)
                 .lineLimit(1).minimumScaleFactor(0.5)
             Text(label)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(9))
                 .foregroundColor(.white)
         }
         .frame(maxWidth: .infinity)
@@ -423,13 +423,13 @@ struct ShareCardView: View {
 
     private func sectionLabel(_ t: String) -> some View {
         Text(t)
-            .font(.system(size: 12, weight: .bold, design: .monospaced))
+            .font(AppTheme.meta(12))
             .foregroundColor(.white)
     }
 
     private func placeholder(_ text: String) -> some View {
         Text(text)
-            .font(.system(size: 12, weight: .medium, design: .monospaced))
+            .font(AppTheme.meta(12))
             .foregroundColor(.white)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -443,7 +443,7 @@ struct ShareCardView: View {
             RingMeter(value: value, color: color, lineWidth: 6, fontSize: 16)
                 .frame(width: 54, height: 54)
             Text(label)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(9))
                 .foregroundColor(.white)
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
@@ -454,7 +454,7 @@ struct ShareCardView: View {
                           _ values2: [Double] = [], _ color2: Color = .white) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .font(AppTheme.meta(9))
                 .foregroundColor(.white)
             Sparkline(values: values, color: color, values2: values2, color2: color2)
                 .frame(maxWidth: .infinity)
@@ -486,7 +486,7 @@ private struct RingMeter: View {
                 .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             Text("\(value)")
-                .font(.system(size: fontSize, weight: .heavy, design: .monospaced))
+                .font(AppTheme.displayTabular(fontSize))
                 .foregroundColor(.white)
         }
     }
@@ -576,7 +576,7 @@ struct ScorecardShareScreen: View {
         .overlay(alignment: .topLeading) {
             Button(action: { onClose?() ?? dismiss() }) {
                 Image(systemName: "xmark").accessibilityLabel("Close")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(AppTheme.bodySemibold(15))
                     .foregroundColor(.white.opacity(0.8))
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(Color.black.opacity(0.55)))
@@ -591,7 +591,7 @@ struct ScorecardShareScreen: View {
                         Image(systemName: "square.and.arrow.up")
                         Text("Share")
                     }
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(AppTheme.bodySemibold(15))
                     .foregroundColor(.black)
                     .padding(.horizontal, 26)
                     .padding(.vertical, 12)
@@ -610,7 +610,14 @@ struct ScorecardShareScreen: View {
 
     @MainActor private func exportAndShare() {
         guard let data else { return }
-        let renderer = ImageRenderer(content: ShareCardView(data: data).frame(width: 400, height: 780))
+        // Render over an OPAQUE background — the card's own glow background is
+        // translucent, so without this the exported PNG carried alpha and looked
+        // washed out / unreadable when shared onto a light surface.
+        let renderer = ImageRenderer(content:
+            ShareCardView(data: data)
+                .frame(width: 400, height: 780)
+                .background(AppTheme.bgColor)
+        )
         renderer.proposedSize = ProposedViewSize(width: 400, height: 780)
         renderer.scale = 3
         guard let img = renderer.uiImage else { return }

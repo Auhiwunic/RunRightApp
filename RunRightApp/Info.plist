@@ -35,6 +35,13 @@
 	<string>Gaita uses the camera to capture shoe-sole photos and running videos you choose for form analysis.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Gaita reads steps, active energy, exercise minutes, walking/running distance, heart rate, and running workouts to show your activity, stats, and run history.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Gaita can save your completed runs to the Health app so they appear alongside your other workouts. You choose whether to enable this.</string>
+	<key>NSLocationTemporaryUsageDescriptionDictionary</key>
+	<dict>
+		<key>RunTracking</key>
+		<string>Gaita needs your precise location to measure the distance, pace, and route of your run. Approximate location cannot track a run accurately.</string>
+	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Gaita uses your location while you run to calculate distance, pace, route maps, and local weather.</string>
 	<key>NSMicrophoneUsageDescription</key>
@@ -45,6 +52,8 @@
 	<string>Gaita saves processed running-form videos to your photo library only when you tap Save.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Gaita uses photo library access so you can choose shoe photos or running videos for analysis.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Gaita transcribes your voice on your device so you can talk to your coach and say "Hey Gaita" during a run.</string>
 	<key>SHOE_ANALYSIS_ENDPOINT</key>
 	<string>https://us-central1-corsa-51d8f.cloudfunctions.net/analyzeShoe</string>
 	<key>UIAppFonts</key>
@@ -63,7 +72,10 @@
 		<string>audio</string>
 	</array>
 	<key>UILaunchScreen</key>
-	<dict/>
+	<dict>
+		<key>UIColorName</key>
+		<string>LaunchBackground</string>
+	</dict>
 	<key>UIRequiresFullScreen</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>

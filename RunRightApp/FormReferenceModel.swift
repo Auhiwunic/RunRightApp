@@ -43,6 +43,21 @@ struct JointReference {
     /// human/measurement spread, so it never rescales to one runner's data.
     let axisLo: Double
     let axisHi: Double
+
+    /// Plain-language, one line: what this joint's curve means for a beginner.
+    /// Keyed off `name` so the six mode variants share one explanation.
+    var explain: String {
+        switch name {
+        case "Knee flexion":
+            return "How much your knee bends. Nearly straight when your foot lands, then it folds up to swing your leg through."
+        case "Hip flexion":
+            return "How far your thigh swings. Forward as your knee drives up, backward as you push off behind you."
+        case "Ankle":
+            return "How your ankle bends. It flexes up toward your shin as you land, then points down to push off."
+        default:
+            return ""
+        }
+    }
 }
 
 enum FormReference {
@@ -54,10 +69,15 @@ enum FormReference {
         case .distance:
             return JointReference(
                 name: "Knee flexion", unit: "°",
-                mean: [12, 31, 42, 30, 17, 50, 90, 95, 75, 35, 12],
-                band: [6, 7, 6, 7, 7, 9, 9, 8, 9, 8, 6],
-                landmarks: [(0.20, "Stance peak ~42°"), (0.40, "Toe-off"), (0.70, "Swing peak ~95°")],
-                axisLo: -10, axisHi: 140)
+                // Novacheck 1998 run curve + n=50 recreational runners at 3.0 m/s
+                // (knee ~11° at contact, stance peak ~41°); swing peak ~94° for
+                // distance pace (below the ~105° sprint value). Band = published
+                // between-subject SD, widened through swing where a 2D markerless
+                // side view is noisiest (fast, out-of-plane, trailing-limb occlusion).
+                mean: [15, 38, 40, 28, 22, 48, 80, 94, 74, 38, 15],
+                band: [5, 5, 5, 6, 6, 7, 8, 8, 8, 6, 5],
+                landmarks: [(0.20, "Stance peak ~40°"), (0.40, "Toe-off"), (0.70, "Swing peak ~94°")],
+                axisLo: -10, axisHi: 125)
         case .sprint:
             return JointReference(
                 name: "Knee flexion", unit: "°",
@@ -92,10 +112,16 @@ enum FormReference {
         case .distance:
             return JointReference(
                 name: "Ankle", unit: "°",
-                mean: [3, 0, 22, 10, -20, -10, 0, 5, 3, 1, 3],
-                band: [6, 6, 6, 7, 7, 6, 6, 6, 6, 6, 6],
-                landmarks: [(0.20, "Dorsiflex ~22°"), (0.40, "Push-off ~ -20°")],
-                axisLo: -40, axisHi: 35)
+                // Dorsiflexion positive. Near-neutral at contact, dorsiflexes
+                // through loading to a midstance peak ~+23° (Fukuchi 2017 ~22-25°),
+                // then plantarflexes fast through toe-off to a peak ~-16° in early
+                // swing, returning toward neutral. The old curve wrongly showed 0°
+                // dorsiflexion during loading. Widest band at push-off (highest
+                // variability, and the least reliable phase from a side view).
+                mean: [3, 15, 23, 22, -8, -16, -6, 2, 4, 5, 3],
+                band: [5, 5, 5, 6, 8, 8, 7, 6, 5, 5, 5],
+                landmarks: [(0.20, "Dorsiflex ~23°"), (0.50, "Push-off ~ -16°")],
+                axisLo: -38, axisHi: 40)
         case .sprint:
             return JointReference(
                 name: "Ankle", unit: "°",
@@ -210,7 +236,7 @@ enum AdaptiveForm {
             let med = median(col)
             let mad = median(col.map { abs($0 - med) })
             let robustSD = 1.4826 * mad                       // MAD → SD
-            let popBand = max(joint.band[k] * 2.5, span * 0.13)  // matches the chart's lenient pop width
+            let popBand = max(joint.band[k] * 2.5, span * 0.08)  // matches the chart's lenient pop width
             // Floor = sensor noise (can't resolve tighter). Ceiling = the
             // population band ITSELF (per-joint, so it scales with the knee's
             // larger range too): a very consistent runner tightens toward the

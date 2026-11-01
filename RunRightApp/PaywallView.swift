@@ -16,14 +16,16 @@ struct PaywallView: View {
     @State private var purchasing = false
     @State private var legalDoc: LegalDoc?
     @State private var pendingNotice = false
+    @State private var purchaseFailed = false
+    @State private var restoreEmpty = false
 
     private let green = AppTheme.accentColor
 
     private let perks: [(icon: String, text: String)] = [
-        ("bubble.left.fill", "AI coach chat and drills"),
-        ("waveform", "Voice chats in the coach's own voice"),
-        ("shoeprints.fill", "Shoe gait scan"),
-        ("clock.arrow.circlepath", "Full analysis history")
+        ("shoeprints.fill", "Unlimited shoe scans"),
+        ("bubble.left.fill", "Unlimited coach chat and drills"),
+        ("waveform", "The coach speaks back, in Lewis's voice"),
+        ("mic.fill", "Talk to your coach with voice messages")
     ]
 
     var body: some View {
@@ -88,7 +90,7 @@ struct PaywallView: View {
                     }
 
                     HStack {
-                        Button("Restore Purchases") { Task { await subs.restore(); if subs.isPremium { dismiss() } } }
+                        Button("Restore Purchases") { Task { await subs.restore(); if subs.isPremium { dismiss() } else { restoreEmpty = true } } }
                             .font(AppTheme.bodyMedium(12)).foregroundColor(AppTheme.primaryText.opacity(0.5))
                         Spacer()
                         Text("Cancel anytime").font(AppTheme.body(12)).foregroundColor(AppTheme.primaryText.opacity(0.35))
@@ -134,6 +136,16 @@ struct PaywallView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text("Your purchase needs approval (Ask to Buy or your bank). Premium unlocks automatically once it's approved — no need to buy again.")
+        }
+        .alert("Purchase failed", isPresented: $purchaseFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Something went wrong and you were not charged. Check your connection and try again.")
+        }
+        .alert("Nothing to restore", isPresented: $restoreEmpty) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("We couldn't find a previous subscription on this Apple ID. If you subscribed with a different Apple ID, sign in with that one and try again.")
         }
         .task { await subs.loadProducts() }
     }
@@ -213,8 +225,10 @@ struct PaywallView: View {
                 // Don't leave an Ask-to-Buy / SCA user staring at a reverted
                 // button assuming it failed — tell them approval is pending.
                 pendingNotice = true
-            case .cancelled, .failed:
-                break
+            case .cancelled:
+                break   // user backed out — no message needed
+            case .failed:
+                purchaseFailed = true
             }
         }
     }

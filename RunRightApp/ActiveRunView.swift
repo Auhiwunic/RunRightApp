@@ -17,8 +17,11 @@ struct ActiveRunView: View {
     @ObservedObject private var coach = GaitaCoach.shared
     // Splits live on the session so they survive minimize/restore.
     @ObservedObject private var session = RunSession.shared
+    // Hands-free "Hey Gaita" voice coach (foreground only).
+    @StateObject private var wake = HeyGaitaListener()
 
     @Environment(\.dismiss) var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var isPaused = false
     @State private var showFinishScreen = false
@@ -46,20 +49,86 @@ struct ActiveRunView: View {
             } else {
                 runningMapView
             }
+
+            // Idle warning + countdown before the run auto-cancels.
+            if session.inactivityPrompt && !showFinishScreen {
+                inactivityOverlay
+            }
         }
         .ignoresSafeArea(.all)
         .statusBar(hidden: !isExpanded && !isPaused)
         // The global RunSession starts the coach and feeds it on GPS updates, so
         // cues continue when this screen is minimized. Here we only sync the local
         // pause UI when the screen (re)appears.
-        .onAppear { isPaused = tracker.isPaused }
+        .onAppear {
+            isPaused = tracker.isPaused
+        }
+        // Push-to-talk: the mic is OFF unless the runner taps the mic button, so
+        // their music plays uninterrupted. We only ever STOP the listener here
+        // (on disappear / background / coach-off) — never auto-start it.
+        .onDisappear { wake.stop() }
+        .onChange(of: coach.isEnabled) { _, on in
+            if !on { wake.stop() }
+        }
+        // The mic is foreground-only. If a tap-to-talk capture is in flight when
+        // the app backgrounds/locks, tear it down so nothing records behind the
+        // lock screen under the `audio` background mode (App Review 5.1.1).
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { wake.stop() }
+        }
+    }
+
+    // MARK: - Inactivity overlay
+    private var inactivityOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.78).ignoresSafeArea()
+
+            VStack(spacing: 18) {
+                Image(systemName: "figure.stand")
+                    .font(.system(size: 40, weight: .semibold))
+                    .foregroundColor(AppTheme.accentColor)
+
+                Text("Still running?")
+                    .font(AppTheme.head(22))
+                    .foregroundColor(AppTheme.primaryText)
+
+                Text("We haven't seen you move in a while. This run ends in \(session.inactivityCountdown)s.")
+                    .font(AppTheme.body(14))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button(action: { session.noteActivity() }) {
+                    Text("I'm still running")
+                        .font(AppTheme.bodySemibold(17))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .background(AppTheme.accentColor)
+                        .cornerRadius(27)
+                }
+
+                Button(action: { finishRun() }) {
+                    Text("End run")
+                        .font(AppTheme.bodySemibold(16))
+                        .foregroundColor(AppTheme.primaryText)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 54)
+                        .appRaisedSurface(fill: cardBackground, cornerRadius: 27)
+                }
+            }
+            .padding(28)
+            .background(backgroundColor)
+            .cornerRadius(24)
+            .padding(.horizontal, 32)
+        }
     }
     
     // MARK: - Running Map View
     private var runningMapView: some View {
         GeometryReader { geometry in
             ZStack(alignment: .bottom) {
-                StravaMapView(
+                LiveRunMapView(
                     coordinates: tracker.trackedLocations.map { $0.coordinate },
                     isTracking: true
                 )
@@ -74,19 +143,30 @@ struct ActiveRunView: View {
                         corsaToggle
                             .padding(.top, 50)
                         Spacer()
-                        HStack(spacing: 4) {
-                            Image(systemName: "location.fill")
-                                .font(AppTheme.body(10))
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(Color.white)
+                                .frame(width: 6, height: 6)
                             Text("GPS")
                                 .font(AppTheme.bodySemibold(11))
                         }
-                        .foregroundColor(.black)
+                        .foregroundColor(.white)
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(accentOrange)
-                        .cornerRadius(10)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial, in: Capsule())
                         .padding(.trailing, 16)
                         .padding(.top, 50)
+                    }
+
+                    // Per-cue controls: toggle mile markers and pace updates
+                    // independently, right in the run slide.
+                    if coach.isEnabled {
+                        HStack {
+                            coachCueToggles
+                                .padding(.leading, 16)
+                            Spacer()
+                        }
+                        .padding(.top, 8)
                     }
 
                     // Gaita's most recent spoken cue (visible confirmation of coaching).
@@ -97,31 +177,40 @@ struct ActiveRunView: View {
                             .multilineTextAlignment(.center)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 9)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Capsule())
+                            .background(.ultraThinMaterial, in: Capsule())
                             .padding(.horizontal, 28)
                             .padding(.top, 8)
                             .transition(.opacity)
                     }
 
+                    // "Hey Gaita" hands-free voice coach.
+                    if coach.isEnabled && HeyGaitaListener.isSupported {
+                        heyGaitaView
+                            .padding(.horizontal, 24)
+                            .padding(.top, 8)
+                    }
+
                     Spacer()
                 }
-                .animation(.easeInOut(duration: 0.25), value: coach.lastSpoken)
+                // Overlays float on the dark map — force dark materials so the
+                // blur chips stay legible regardless of the app's color scheme.
+                .environment(\.colorScheme, .dark)
+                .animation(.easeInOut(duration: 0.3), value: coach.lastSpoken)
+                .animation(.spring(duration: 0.35), value: wake.phase)
                 
                 compactStatsBar
             }
         }
     }
     
-    // MARK: - Minimize (keep running, browse other tabs — Strava-style)
+    // MARK: - Minimize (keep running, browse other tabs)
     private var minimizeButton: some View {
         Button(action: { RunSession.shared.minimize() }) {
             Image(systemName: "chevron.down").accessibilityLabel("Minimize run")
                 .font(AppTheme.meta(13))
                 .foregroundColor(.white)
-                .padding(8)
-                .background(Color.black.opacity(0.55))
-                .clipShape(Circle())
+                .padding(9)
+                .background(.ultraThinMaterial, in: Circle())
         }
     }
 
@@ -134,65 +223,138 @@ struct ActiveRunView: View {
                 Text("GAITA")
                     .font(AppTheme.meta(11))
             }
-            .foregroundColor(coach.isEnabled ? .black : .white)
+            .foregroundColor(.white.opacity(coach.isEnabled ? 1 : 0.45))
             .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(coach.isEnabled ? accentOrange : Color.black.opacity(0.55))
-            .cornerRadius(10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
         }
     }
 
-    // MARK: - Compact Stats Bar
-    private var compactStatsBar: some View {
-        VStack(spacing: 0) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(AppTheme.primaryText.opacity(0.4))
-                .frame(width: 40, height: 5)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-            
-            Text(formatTime(elapsedTime))
-                .font(AppTheme.displayTabular(48))
-                .foregroundColor(AppTheme.primaryText)
-            
-            HStack(spacing: 32) {
-                VStack(spacing: 2) {
-                    Text(formatMiles(tracker.liveSummary?.distance ?? 0))
-                        .font(AppTheme.bodyMedium(24))
-                        .foregroundColor(AppTheme.primaryText)
-                    Text("mi")
-                        .font(AppTheme.body(12))
-                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
-                }
-                
-                VStack(spacing: 2) {
-                    Text(formatPacePerMile(tracker.liveSummary?.averageSpeed ?? 0))
-                        .font(AppTheme.bodyMedium(24))
-                        .foregroundColor(AppTheme.primaryText)
-                    Text("/mi")
-                        .font(AppTheme.body(12))
-                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
-                }
-            }
-            .padding(.top, 8)
-            
-            // Pause button
-            Button(action: pauseRun) {
-                Circle()
-                    .fill(accentOrange)
-                    .frame(width: 72, height: 72)
-                    .overlay(
-                        Image(systemName: "pause.fill").accessibilityLabel("Pause run")
-                            .font(AppTheme.display(28))
-                            .foregroundColor(.black)
-                    )
-            }
-            .padding(.top, 16)
-            .padding(.bottom, 30)
+    // MARK: - Per-cue toggles (mile updates / pace updates)
+    private var coachCueToggles: some View {
+        HStack(spacing: 8) {
+            cueChip(label: "Miles", on: coach.mileCuesEnabled) { coach.mileCuesEnabled.toggle() }
+            cueChip(label: "Pace", on: coach.paceCuesEnabled) { coach.paceCuesEnabled.toggle() }
         }
-        .frame(maxWidth: .infinity)
+    }
+
+    private func cueChip(label: String, on: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                    .font(AppTheme.meta(11))
+                Text(label)
+                    .font(AppTheme.meta(11))
+            }
+            .foregroundColor(.white.opacity(on ? 1 : 0.4))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(.ultraThinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Hey Gaita (hands-free voice coach)
+    @ViewBuilder private var heyGaitaView: some View {
+        switch wake.phase {
+        case .off, .listening:
+            // Big, easy push-to-talk target. Mic only turns on while you hold a
+            // conversation, so music keeps playing the rest of the run.
+            Button(action: { wake.tapToTalk() }) {
+                HStack(spacing: 10) {
+                    Image(systemName: "mic.fill")
+                        .font(AppTheme.bodySemibold(18))
+                    Text("Talk to Gaita")
+                        .font(AppTheme.bodySemibold(17))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 58)
+                .background(AppTheme.accentColor, in: Capsule())
+            }
+            .buttonStyle(.plain)
+
+        case .capturing:
+            heyGaitaCard(icon: "waveform",
+                         title: "Listening",
+                         body: wake.heard.isEmpty ? "Go ahead, ask your coach." : wake.heard)
+
+        case .thinking:
+            heyGaitaCard(icon: "ellipsis",
+                         title: "Gaita is thinking", body: wake.heard)
+
+        case .answering:
+            heyGaitaCard(icon: "waveform",
+                         title: "Gaita", body: wake.answer, speaking: true)
+        }
+    }
+
+    private func heyGaitaCard(icon: String, title: String, body: String, speaking: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                // One clean color — a single-weight icon with a simple pulse while
+                // Gaita speaks, so it reads as talking without a tacky rainbow effect.
+                Image(systemName: icon)
+                    .font(AppTheme.meta(10))
+                    .symbolEffect(.pulse, options: speaking ? .repeating : .nonRepeating, isActive: speaking)
+                Text(title.uppercased()).font(AppTheme.meta(10))
+                if speaking { Text("SPEAKING").font(AppTheme.meta(9)).opacity(0.6) }
+            }
+            .foregroundColor(.white)
+            if !body.isEmpty {
+                Text(body)
+                    .font(AppTheme.bodyMedium(13))
+                    .foregroundColor(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 16).padding(.vertical, 13)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .transition(.opacity.combined(with: .move(edge: .top)))
+    }
+
+    // MARK: - Compact Stats Card
+    // A floating rounded card with three equal data columns, the zone gauge, and
+    // a full-width pause pill — deliberately not the attached bottom sheet with a
+    // giant circular button every other run app uses.
+    private var compactStatsBar: some View {
+        VStack(spacing: 16) {
+            Capsule()
+                .fill(AppTheme.primaryText.opacity(0.25))
+                .frame(width: 36, height: 4)
+
+            HStack(spacing: 0) {
+                compactStat(formatTime(elapsedTime), "TIME")
+                compactStat(formatMiles(tracker.liveSummary?.distance ?? 0), "MILES")
+                compactStat(formatPacePerMile(tracker.liveSummary?.averageSpeed ?? 0), "PACE")
+            }
+
+            // Live effort zone — the run screen's signature element.
+            zoneStrip
+                .padding(.horizontal, 6)
+
+            Button(action: pauseRun) {
+                HStack(spacing: 8) {
+                    Image(systemName: "pause.fill").accessibilityLabel("Pause run")
+                        .font(AppTheme.head(16))
+                    Text("Pause")
+                        .font(AppTheme.bodySemibold(17))
+                }
+                .foregroundColor(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(accentOrange)
+                .clipShape(Capsule())
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 14)
+        .padding(.bottom, 18)
         .background(backgroundColor)
-        .cornerRadius(20, corners: [.topLeft, .topRight])
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .padding(.horizontal, 10)
+        .padding(.bottom, 24)
         .offset(y: compactDragOffset)
         .gesture(
             DragGesture()
@@ -214,6 +376,18 @@ struct ActiveRunView: View {
         )
     }
     
+    private func compactStat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 3) {
+            Text(value)
+                .font(AppTheme.displayTabular(30))
+                .foregroundColor(AppTheme.primaryText)
+            Text(label)
+                .font(AppTheme.meta(10))
+                .foregroundColor(AppTheme.primaryText.opacity(0.45))
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     // MARK: - Expanded Stats View
     private var expandedStatsView: some View {
         VStack(spacing: 0) {
@@ -250,27 +424,34 @@ struct ActiveRunView: View {
     }
     
     // MARK: - Header Section
+    // Dark header with a small status dot — not the solid orange banner every
+    // other run app puts here. The accent lives in the dot and the buttons.
     private var headerSection: some View {
         VStack(spacing: 4) {
             if !isPaused {
                 RoundedRectangle(cornerRadius: 3)
-                    .fill(Color.black.opacity(0.3))
+                    .fill(AppTheme.primaryText.opacity(0.25))
                     .frame(width: 40, height: 5)
                     .padding(.top, 8)
             }
-            
-            Text(isPaused ? "Paused" : "Running")
-                .font(AppTheme.bodySemibold(15))
-                .foregroundColor(.black)
-            
+
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(isPaused ? AppTheme.primaryText.opacity(0.4) : accentOrange)
+                    .frame(width: 8, height: 8)
+                Text(isPaused ? "Paused" : "Running")
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
+            }
+
             Text(formatTimeWithHours(elapsedTime))
                 .font(AppTheme.displayTabular(56))
-                .foregroundColor(.black)
+                .foregroundColor(AppTheme.primaryText)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, isPaused ? 60 : 50)
         .padding(.bottom, 20)
-        .background(accentOrange)
+        .background(backgroundColor)
         .overlay(
             Button(action: {
                 if !isPaused {
@@ -279,7 +460,7 @@ struct ActiveRunView: View {
             }) {
                 Image(systemName: "arrow.down.right.and.arrow.up.left").accessibilityLabel("Collapse run")
                     .font(AppTheme.bodyMedium(18))
-                    .foregroundColor(.black.opacity(0.7))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
                     .padding(12)
             }
             .opacity(isPaused ? 0 : 1)
@@ -320,12 +501,15 @@ struct ActiveRunView: View {
                 Text(formatMiles(tracker.liveSummary?.distance ?? 0))
                     .font(AppTheme.displayTabular(96))
                     .foregroundColor(AppTheme.primaryText)
-                
+
                 Text("Distance (mi)")
                     .font(AppTheme.body(17))
                     .foregroundColor(AppTheme.primaryText.opacity(0.4))
             }
-            
+
+            zoneStrip
+                .padding(.horizontal, 56)
+
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -618,16 +802,79 @@ struct ActiveRunView: View {
         }
     }
     
+    // MARK: - Live pace zone
+    //
+    // A distinctive at-a-glance effort read other run apps show (Garmin, Coros,
+    // Polar) but a plain map screen does not. Live heart rate isn't available
+    // mid-run, so the zone comes from current pace against the runner's threshold
+    // pace, set from their fitness level. Uses the app's canonical zone palette.
+
+    /// Threshold pace (sec/mile) that anchors the zone split.
+    private var thresholdPaceSecPerMile: Double {
+        switch HeartRateZonesManager.shared.userProfile?.fitnessLevel {
+        case .elite: return 345          // ~5:45/mi
+        case .advanced: return 420       // ~7:00/mi
+        case .intermediate: return 510   // ~8:30/mi
+        case .beginner: return 630       // ~10:30/mi
+        case .none: return 540           // ~9:00/mi default
+        }
+    }
+
+    /// Current speed (m/s) from the tracker's live Doppler reading — honestly
+    /// zero when the runner stops (the old trackedLocations.last read went stale
+    /// while standing still and kept showing the last moving speed).
+    private var currentSpeedMps: Double {
+        tracker.currentSpeedMps
+    }
+
+    /// The live zone, or nil when basically stopped (warming up / paused).
+    /// A zone needs REAL movement, not GPS noise: a single spurious Doppler
+    /// reading while standing still used to light "Z2 Aerobic" at 0.00 miles.
+    /// Require a jogging-or-faster speed AND actual distance covered before
+    /// any zone shows; below that the gauge honestly says WARMING UP.
+    private var currentZone: RunZone? {
+        let s = currentSpeedMps
+        let distance = tracker.liveSummary?.distance ?? 0
+        guard s >= 1.2, distance >= 30 else { return nil }
+        return RunZone.classify(currentPaceSecPerMile: metersPerMile / s,
+                                thresholdSecPerMile: thresholdPaceSecPerMile)
+    }
+
+    /// Clean five-segment zone gauge: active zone lit in its color, the rest
+    /// dim. One accent lives here (the zone), nowhere else in the chrome.
+    private var zoneStrip: some View {
+        let zone = currentZone
+        return VStack(spacing: 9) {
+            HStack(spacing: 4) {
+                ForEach(RunZone.allCases, id: \.self) { z in
+                    Capsule()
+                        .fill(z == zone ? z.color : AppTheme.primaryText.opacity(0.12))
+                        .frame(height: 5)
+                }
+            }
+            HStack(spacing: 7) {
+                Circle()
+                    .fill(zone?.color ?? AppTheme.primaryText.opacity(0.3))
+                    .frame(width: 7, height: 7)
+                Text(zone.map { "\($0.shortName)   \($0.name.uppercased())" } ?? "WARMING UP")
+                    .font(AppTheme.meta(12))
+                    .foregroundColor(zone?.color ?? AppTheme.primaryText.opacity(0.5))
+            }
+        }
+    }
+
     // MARK: - Actions
     private func pauseRun() {
         isPaused = true
         tracker.pauseTracking()
+        session.noteActivity()
     }
-    
+
     private func resumeRun() {
         isPaused = false
         tracker.resumeTracking()
         isExpanded = false
+        session.noteActivity()
     }
     
     private func finishRun() {
@@ -679,13 +926,54 @@ struct ActiveRunView: View {
 
 struct MileSplit { let time: TimeInterval }
 
+// MARK: - Live pace zone
+// Five effort zones matching the app's HR-zone palette, classified from pace
+// during a run (live heart rate isn't available). Slower pace = lower zone.
+enum RunZone: Int, CaseIterable {
+    case z1 = 1, z2, z3, z4, z5
+
+    var shortName: String { "Z\(rawValue)" }
+    var name: String {
+        switch self {
+        case .z1: return "Recovery"
+        case .z2: return "Aerobic"
+        case .z3: return "Tempo"
+        case .z4: return "Threshold"
+        case .z5: return "Maximum"
+        }
+    }
+    var color: Color {
+        switch self {
+        case .z1: return Color(hex: "#00CED1")
+        case .z2: return Color(hex: "#00FF7F")
+        case .z3: return Color(hex: "#FFD700")
+        case .z4: return Color(hex: "#FF8C00")
+        case .z5: return Color(hex: "#FF0000")
+        }
+    }
+
+    /// Classify current pace against a threshold pace (both sec/mile). Faster
+    /// than threshold is Z4/Z5; each easier zone widens below it.
+    static func classify(currentPaceSecPerMile pace: Double, thresholdSecPerMile t: Double) -> RunZone {
+        if pace <= t - 20 { return .z5 }
+        if pace <= t + 15 { return .z4 }
+        if pace <= t + 55 { return .z3 }
+        if pace <= t + 115 { return .z2 }
+        return .z1
+    }
+}
+
 // Notification posted after a run is saved so other views can refresh
 extension Notification.Name {
     static let runSaved = Notification.Name("runSaved")
+    /// Posted after the form-analysis history changes (a scan added or deleted),
+    /// so the persisted Coach tab refreshes its TODAY insights without being
+    /// rebuilt on every tab switch.
+    static let analysisSaved = Notification.Name("analysisSaved")
 }
 
 // MARK: - Map Views
-struct StravaMapView: UIViewRepresentable {
+struct LiveRunMapView: UIViewRepresentable {
     let coordinates: [CLLocationCoordinate2D]
     let isTracking: Bool
     
@@ -711,14 +999,21 @@ struct StravaMapView: UIViewRepresentable {
                 mapView.addOverlay(polyline)
             }
         }
-        if isTracking && mapView.userTrackingMode != .followWithHeading {
-            mapView.userTrackingMode = .followWithHeading
+        // Re-assert follow mode only when tracking STARTS — never per tick.
+        // MapKit drops follow mode on any user pan/zoom; forcing it back every
+        // 0.5s update re-animated the camera in an endless glitchy zoom fight.
+        if isTracking != context.coordinator.wasTracking {
+            context.coordinator.wasTracking = isTracking
+            if isTracking {
+                mapView.setUserTrackingMode(.followWithHeading, animated: true)
+            }
         }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
     class Coordinator: NSObject, MKMapViewDelegate {
         var renderedCount = -1
+        var wasTracking = true   // makeUIView already starts in follow mode
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let polyline = overlay as? MKPolyline {
                 let renderer = MKPolylineRenderer(polyline: polyline)

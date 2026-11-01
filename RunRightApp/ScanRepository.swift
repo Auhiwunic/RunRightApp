@@ -70,7 +70,11 @@ final class ScanRepository {
             gaitCause: result.gaitCause,
             concern: result.concern,
             severity: result.severity,
-            imageUrl: imageDownloadURL
+            imageUrl: imageDownloadURL,
+            wearPercents: result.wearPercents,
+            estimatedMilesRemaining: result.estimatedMilesRemaining,
+            confidence: result.confidence,
+            treadNote: result.treadNote
         )
 
         let doc = scansCollection(uid: uid).document(scanId)
@@ -162,7 +166,11 @@ final class ScanRepository {
             gaitCause: gaitCause,
             concern: concern,
             severity: severity,
-            imageUrl: imageUrl
+            imageUrl: imageUrl,
+            wearPercents: data["wearPercents"] as? [String: Int],
+            estimatedMilesRemaining: data["estimatedMilesRemaining"] as? Int,
+            confidence: data["confidence"] as? Int,
+            treadNote: data["treadNote"] as? String
         )
     }
 
@@ -175,6 +183,14 @@ final class ScanRepository {
     }
 
     private func shoeDocumentId(from shoeName: String) -> String {
-        shoeName.lowercased().replacingOccurrences(of: " ", with: "_")
+        let lowered = shoeName.lowercased().replacingOccurrences(of: " ", with: "_")
+        // Firestore document IDs cannot contain "/" (it's the path separator) and
+        // cannot be "." or "..". A shoe named e.g. "Nike/Pegasus" used to build an
+        // invalid path and crash the app — sanitize before use.
+        var id = lowered
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: "\u{00}", with: "")
+        if id.isEmpty || id == "." || id == ".." { id = "shoe" }
+        return id
     }
 }

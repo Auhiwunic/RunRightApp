@@ -13,6 +13,11 @@ struct ScanSnapshot {
     let gaitCause: String?
     let concern: String?
     let severity: String?
+    // Detailed fields from the gpt-5.6 scan upgrade — nil on older scans and
+    // on-device snapshots (ScorecardDataStore doesn't persist them).
+    let wearPercents: [String: Int]?
+    let estimatedMilesRemaining: Int?
+    let confidence: Int?
 
     init(result: SingleShoeResponse) {
         zones            = result.wearZones
@@ -22,6 +27,9 @@ struct ScanSnapshot {
         gaitCause        = result.gaitCause
         concern          = result.concern
         severity         = result.severity
+        wearPercents     = result.wearPercents
+        estimatedMilesRemaining = result.estimatedMilesRemaining
+        confidence       = result.confidence
     }
 
     init(dto: ShoeScanDTO) {
@@ -32,6 +40,9 @@ struct ScanSnapshot {
         gaitCause        = dto.gaitCause
         concern          = dto.concern
         severity         = dto.severity
+        wearPercents     = dto.wearPercents
+        estimatedMilesRemaining = dto.estimatedMilesRemaining
+        confidence       = dto.confidence
     }
 
     /// From the on-device store — carries only what ScorecardDataStore persists.
@@ -43,6 +54,9 @@ struct ScanSnapshot {
         gaitCause          = nil
         concern            = nil
         severity           = nil
+        wearPercents       = nil
+        estimatedMilesRemaining = nil
+        confidence         = nil
     }
 }
 
@@ -106,7 +120,7 @@ final class ScanViewModel: ObservableObject {
         if let uid = Auth.auth().currentUser?.uid {
             do {
                 let scans = try await ScanRepository.shared.fetchScans(uid: uid, shoeName: shoeName, limit: 400)
-                buildHistory(from: scans)
+                buildHistory(from: scans, reloadingShoe: shoeName)
                 fetched = true
             } catch {
                 trendError = "Could not load scan history: \(error.localizedDescription)"
@@ -145,7 +159,7 @@ final class ScanViewModel: ObservableObject {
 
     /// Groups scans by calendar day. Scans arrive newest-first, so the first
     /// scan seen for a day+side is the latest one that day — keep it, skip the rest.
-    private func buildHistory(from scans: [ShoeScanDTO]) {
+    private func buildHistory(from scans: [ShoeScanDTO], reloadingShoe shoeName: String) {
         let calendar = Calendar.current
         var byDay: [Date: ScanHistoryPage] = [:]
 
@@ -158,6 +172,22 @@ final class ScanViewModel: ObservableObject {
                 page.right = ScanSnapshot(dto: scan)
             }
             byDay[day] = page
+        }
+
+        // Preserve a live-merged snapshot (mergeLiveScan only ever writes TODAY's
+        // page) that Firestore hasn't indexed yet, so a just-scanned sibling side
+        // isn't wiped when the other side's save triggers this reload (#4).
+        // Scoped to TODAY and to reloading the SAME shoe we already had loaded, so
+        // switching shoes never carries one shoe's scans into another's carousel or
+        // trend. Firestore still wins whenever it already has that side.
+        if loadedShoe == shoeName, !loadedShoe.isEmpty {
+            let today = calendar.startOfDay(for: Date())
+            if let live = historyPages.first(where: { $0.id == today }) {
+                var page = byDay[today] ?? ScanHistoryPage(id: today, date: today, left: nil, right: nil)
+                if page.left == nil, let l = live.left { page.left = l }
+                if page.right == nil, let r = live.right { page.right = r }
+                byDay[today] = page
+            }
         }
 
         historyPages = byDay.values.sorted { $0.date < $1.date }

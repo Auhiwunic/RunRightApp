@@ -107,9 +107,9 @@ struct RunningFormConfig {
     let postureGoodMax: Double = 15
     let postureHardMax: Double = 25
     let cadenceGoodMin: Double = 165
-    let cadenceGoodMax: Double = 190
+    let cadenceGoodMax: Double = 200   // was 190; elites sustain 185-200 at pace
     let cadenceHardMin: Double = 130
-    let cadenceHardMax: Double = 210
+    let cadenceHardMax: Double = 220
     let elbowGoodMin: Double = 80
     let elbowGoodMax: Double = 100
     let elbowHardMin: Double = 70
@@ -371,7 +371,11 @@ enum RunningFormMetrics {
             let kneeAngle = angleDegrees(hip, knee, ankle)       // stance-knee flexion at contact
             let hipAngle = angleDegrees(shoulder, hip, knee)     // trunk-thigh angle at contact
 
-            let hipOsc = std(values: hipSeries.map { Double($0.y) }) / torsoLength
+            // Only frames with a detected front-hip count toward vertical
+            // oscillation; the `.zero` sentinels appended for missing joints would
+            // otherwise inflate the std and wrongly tank the hips score (#8).
+            let hipYs = hipSeries.filter { !($0.x == 0 && $0.y == 0) }.map { Double($0.y) }
+            let hipOsc = (hipYs.count > 1 ? std(values: hipYs) : 0) / torsoLength
             let headForward = (Double(nose.x - shoulder.x)) / torsoLength
             
             let shinScore = scoreLowerBetter(shinAngle, goodMax: config.shinGoodMax, hardMax: config.shinHardMax)

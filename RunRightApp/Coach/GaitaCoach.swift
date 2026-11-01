@@ -22,14 +22,33 @@ final class GaitaCoach: ObservableObject {
             UserDefaults.standard.set(isEnabled, forKey: Self.enabledKey)
             // shutdown (not just stop) so the audio session is deactivated and the
             // user's music/podcast un-ducks the moment they silence the coach.
-            if !isEnabled { speaker.shutdown() }
+            if !isEnabled {
+                speaker.shutdown()
+            } else if isRunning {
+                // Re-arm after a mid-run toggle: shutdown() tore the speaker down,
+                // so without this the coach goes silent (no more mile cues) until
+                // the next run. prepare() brings it back so cues resume.
+                speaker.prepare()
+            }
         }
+    }
+
+    /// Per-cue mutes (persisted) so the runner can keep, say, mile markers but
+    /// drop pace nagging. The engine still advances its state when a cue is muted,
+    /// so mile tracking never desyncs.
+    @Published var mileCuesEnabled: Bool {
+        didSet { UserDefaults.standard.set(mileCuesEnabled, forKey: Self.mileKey) }
+    }
+    @Published var paceCuesEnabled: Bool {
+        didSet { UserDefaults.standard.set(paceCuesEnabled, forKey: Self.paceKey) }
     }
 
     @Published private(set) var isRunning = false
     @Published private(set) var lastSpoken: String?
 
     private static let enabledKey = "corsaCoachEnabled"
+    private static let mileKey = "corsaCoachMileCues"
+    private static let paceKey = "corsaCoachPaceCues"
 
     private let speaker = VoiceAssistantSpeaker()
     private var engine = RunCoachEngine()
@@ -43,6 +62,8 @@ final class GaitaCoach: ObservableObject {
 
     private init() {
         isEnabled = UserDefaults.standard.object(forKey: Self.enabledKey) as? Bool ?? true
+        mileCuesEnabled = UserDefaults.standard.object(forKey: Self.mileKey) as? Bool ?? true
+        paceCuesEnabled = UserDefaults.standard.object(forKey: Self.paceKey) as? Bool ?? true
     }
 
     // MARK: - Lifecycle
@@ -111,6 +132,12 @@ final class GaitaCoach: ObservableObject {
         guard let decision = engine.evaluate(state: state, plannedRun: plannedRun, engineState: &engineState) else {
             return
         }
+
+        // Per-cue mutes. The engine has already advanced (mile marked / prompt
+        // recorded), so returning here just drops the spoken cue — mile tracking
+        // stays in sync. Start / finish / GPS cues are never muted.
+        if case .mileSplit = decision.trigger, !mileCuesEnabled { return }
+        if case .categoryChange = decision.trigger, !paceCuesEnabled { return }
 
         let excluding = Set(recent.suffix(5))
         var text = VoiceAssistantMessageProvider.message(

@@ -11,10 +11,15 @@ import FirebaseAuth
 struct RunView: View {
     // Shared singleton — survives Run-tab teardown so a run keeps tracking after a tab switch.
     @ObservedObject private var tracker = ActivityTracker.shared
+    // Shoe wear history for the selected shoe (heatgrid under the shoe name).
+    @ObservedObject private var scanTrend = ScanViewModel.shared
+    // Voice coach settings — configurable here BEFORE a run, not just mid-run.
+    @ObservedObject private var coach = GaitaCoach.shared
     
     @State private var todaysRunEnabled = true
     @State private var selectedShoe = ""
     @State private var shoes: [String] = []
+    @State private var wearExpanded = false   // shoe-wear heatgrid collapsed by default
     @State private var showAddShoeAlert = false
     @State private var newShoeName = ""
     @State private var showPlanSheet = false
@@ -55,8 +60,17 @@ struct RunView: View {
                     .frame(height: 200)
                     .padding(.horizontal, 20)
 
+                    // Gaita voice coach — set it up before the run starts.
+                    gaitaCoachCard
+                        .padding(.horizontal, 20)
+
                     // Shoe (retro green — swipe to change)
                     shoeCard
+                        .padding(.horizontal, 20)
+
+                    // Wear heatgrid for the selected shoe — updates as you cycle
+                    // shoes, and flags when the tread is worn enough to replace.
+                    shoeWearCard
                         .padding(.horizontal, 20)
 
                     // Today's Run card
@@ -133,6 +147,16 @@ struct RunView: View {
             await loadShoes()
             await loadPastRuns()
         }
+        // The tab persists across switches, so `.task` no longer re-runs on every
+        // return — refresh Past Runs whenever a run is saved.
+        .onReceive(NotificationCenter.default.publisher(for: .runSaved)) { _ in
+            Task { await loadPastRuns() }
+        }
+        // The coach (or a profile rebuild) can change the plan — reload it.
+        .onReceive(NotificationCenter.default.publisher(for: .planUpdated)) { _ in
+            didLoadWeeklyPlans = false
+            Task { await loadWeeklyPlansIfNeeded() }
+        }
         .alert("Add New Shoe", isPresented: $showAddShoeAlert) {
             TextField("e.g. Nike Pegasus 40", text: $newShoeName)
                 .autocorrectionDisabled()
@@ -180,6 +204,14 @@ struct RunView: View {
             if let saved = try await PlanRepository.shared.loadWeeklyPlan(uid: uid, weekId: weekId),
                saved.count == 7 {
                 weeklyPlans = saved
+            } else if let latest = try await PlanRepository.shared.loadLatestPlan(uid: uid),
+                      latest.count == 7 {
+                // No plan saved for THIS week yet (a new week began). Carry the
+                // user's most recent personalized week forward instead of silently
+                // reverting to the hardcoded advanced default, and persist it under
+                // this week's id so it sticks.
+                weeklyPlans = latest
+                try? await PlanRepository.shared.saveWeeklyPlan(uid: uid, weekId: weekId, days: latest)
             }
             planError = nil
         } catch {
@@ -366,6 +398,112 @@ struct RunView: View {
         )
     }
 
+    // MARK: - Shoe wear heatgrid (reacts to the selected shoe)
+
+    private var shoeWearCard: some View {
+        let latest = scanTrend.loadedShoe == selectedShoe ? scanTrend.historyPages.last : nil
+        let rawLeft = latest?.left?.zones
+        let rawRight = latest?.right?.zones
+        let hasScan = rawLeft != nil || rawRight != nil
+        // Display-balanced heatmaps; health % reads the raw zones (honest).
+        let (left, right) = WearSymmetry.balanced(rawLeft, rawRight)
+        let health = shoeHealthPercent([rawLeft, rawRight])
+
+        return VStack(alignment: .leading, spacing: 14) {
+            // Tap the header to expand / collapse — collapsed it's just the name,
+            // saving space; expanded it shows the wear heatgrid.
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) { wearExpanded.toggle() }
+            } label: {
+                HStack {
+                    Text("SHOE WEAR")
+                        .font(AppTheme.sectionTitleFont)
+                        .foregroundColor(AppTheme.primaryText)
+                    Spacer()
+                    if let health, wearExpanded {
+                        Text("\(health)% tread")
+                            .font(AppTheme.meta(11))
+                            .foregroundColor(healthColor(health))
+                    }
+                    Image(systemName: "chevron.down")
+                        .font(AppTheme.meta(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
+                        .rotationEffect(.degrees(wearExpanded ? 0 : -90))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if wearExpanded {
+                if hasScan {
+                    HStack(alignment: .center, spacing: 18) {
+                        FootHeatmapView(isLeft: true, wearZones: left, showLabel: false)
+                        FootHeatmapView(isLeft: false, wearZones: right, showLabel: false)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 2)
+
+                    if let health {
+                        Text(wearAdvice(health))
+                            .font(AppTheme.body(12))
+                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                } else {
+                    Text("Scan \(selectedShoe.isEmpty ? "this shoe" : selectedShoe) on the Analyze tab to see its wear here. Every run adds wear, so rescan now and then to know when to replace it.")
+                        .font(AppTheme.body(13))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .task(id: selectedShoe) {
+            if !selectedShoe.isEmpty { await scanTrend.loadScanData(for: selectedShoe) }
+        }
+    }
+
+    /// Combined tread health 0…100 from the scanned wear zones (both feet).
+    private func shoeHealthPercent(_ sides: [WearZoneData?]) -> Int? {
+        let present = sides.compactMap { $0 }
+        guard !present.isEmpty else { return nil }
+        func wear(_ c: String) -> Double {
+            switch c.lowercased() {
+            case "green": return 1.0
+            case "yellow": return 0.55
+            case "orange": return 0.25
+            case "red": return 0.0
+            default: return 1.0
+            }
+        }
+        func health(_ z: WearZoneData) -> Double {
+            let s = [z.bigToe, z.lesserToes, z.medialBall, z.centralBall, z.lateralBall,
+                     z.medialMidfoot, z.lateralMidfoot, z.medialHeel, z.centralHeel, z.lateralHeel].map(wear)
+            return s.reduce(0, +) / Double(s.count)
+        }
+        let avg = present.map(health).reduce(0, +) / Double(present.count)
+        return Int((avg * 100).rounded())
+    }
+
+    private func healthColor(_ h: Int) -> Color {
+        switch h {
+        case 70...100: return Color(hex: "#00C46A")   // green — fresh
+        case 45..<70:  return Color(hex: "#E89830")   // amber — wearing
+        default:        return Color(hex: "#E83030")   // red — replace
+        }
+    }
+
+    private func wearAdvice(_ h: Int) -> String {
+        switch h {
+        case 70...100: return "Plenty of tread left. Good to run on."
+        case 45..<70:  return "Wearing in. Keep an eye on it over the next few weeks."
+        default:        return "Tread is worn down. Consider replacing this shoe soon to keep your cushioning and grip."
+        }
+    }
+
     /// Cycles selectedShoe through the list. Swipe left = next, swipe right = previous; wraps around.
     private func cycleShoe(forward: Bool) {
         guard !shoes.isEmpty else { return }
@@ -414,6 +552,68 @@ struct RunView: View {
         }
     }
     
+    // MARK: - Gaita coach card (pre-run coach setup)
+    private var gaitaCoachCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ToggleRow(label: "Gaita Coach", isOn: $coach.isEnabled)
+
+            if coach.isEnabled {
+                VStack(alignment: .leading, spacing: 14) {
+                    coachCueRow(label: "Mile updates",
+                                detail: "Mile markers with your pace",
+                                isOn: $coach.mileCuesEnabled)
+                    coachCueRow(label: "Pace updates",
+                                detail: "Speaks up when you drift off target",
+                                isOn: $coach.paceCuesEnabled)
+                    Text("Mic stays off during runs. Tap Talk to Gaita on the run screen to ask a question.")
+                        .font(AppTheme.body(12))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.4))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 16)
+                .transition(.opacity)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .appRaisedSurface(fill: cardBackground, cornerRadius: 20)
+        .animation(.easeInOut(duration: 0.25), value: coach.isEnabled)
+    }
+
+    /// Small toggle row for the coach card — same capsule design as ToggleRow,
+    /// scaled to a secondary row.
+    private func coachCueRow(label: String, detail: String, isOn: Binding<Bool>) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(AppTheme.bodySemibold(14))
+                    .foregroundColor(AppTheme.primaryText)
+                Text(detail)
+                    .font(AppTheme.body(12))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
+            }
+
+            Spacer()
+
+            ZStack {
+                Capsule()
+                    .fill(isOn.wrappedValue ? accentLime : AppTheme.insetFill)
+                    .overlay(Capsule().stroke(AppTheme.subtleBorder, lineWidth: isOn.wrappedValue ? 0 : 1))
+                    .frame(width: 44, height: 25)
+
+                Circle()
+                    .fill(isOn.wrappedValue ? Color.black : AppTheme.raisedFill)
+                    .frame(width: 19, height: 19)
+                    .offset(x: isOn.wrappedValue ? 9.5 : -9.5)
+            }
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    isOn.wrappedValue.toggle()
+                }
+            }
+        }
+    }
+
     private var todaysRunCard: some View {
         let todayPlan = weeklyPlans[todayDayIndex]
         // Run type as the title — no redundant "Today's Run" / doubled "RUN".
@@ -424,6 +624,19 @@ struct RunView: View {
 
             if todaysRunEnabled {
                 VStack(alignment: .leading, spacing: 18) {
+                    // Adaptive plan note — why today's run changed.
+                    if let note = AdaptivePlanEngine.todaysNote {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .font(AppTheme.meta(11))
+                                .padding(.top, 2)
+                            Text(note)
+                                .font(AppTheme.body(12))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .foregroundColor(AppTheme.accentColor)
+                    }
+
                     if todayPlan.isRest {
                         Text("Recovery is part of training.")
                             .font(AppTheme.body(13))
@@ -569,11 +782,12 @@ struct ToggleRow: View {
             
             ZStack {
                 Capsule()
-                    .fill(isOn ? accentLime : Color(hex: "#333333"))
+                    .fill(isOn ? accentLime : AppTheme.insetFill)
+                    .overlay(Capsule().stroke(AppTheme.subtleBorder, lineWidth: isOn ? 0 : 1))
                     .frame(width: 50, height: 28)
-                
+
                 Circle()
-                    .fill(isOn ? Color.black : Color.white)
+                    .fill(isOn ? Color.black : AppTheme.raisedFill)
                     .frame(width: 22, height: 22)
                     .offset(x: isOn ? 11 : -11)
             }

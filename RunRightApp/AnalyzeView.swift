@@ -37,7 +37,7 @@ import QuartzCore
 import Combine
 
 private extension Font {
-    static let analyzeSection: Font = AppTheme.head(14)
+    static let analyzeSection: Font = AppTheme.sectionTitleFont   // one title size everywhere
     static let analyzeButton: Font = AppTheme.bodySemibold(17)
     static let analyzeBody: Font = AppTheme.body(14)
     static let analyzeCaption: Font = AppTheme.body(13)
@@ -70,11 +70,14 @@ struct AnalysisRecord: Codable, Identifiable {
         self.form = form
     }
 
-    /// Average of the present component scores, or nil if none were measured.
+    /// Fault-sensitive blend of the present component scores, or nil if none were
+    /// measured. Matches the scorecard's `overall` (same `faultSensitiveScore`) so
+    /// the number here, on the share card and in the coach all agree — and a single
+    /// weak dial pulls the headline down instead of being averaged away.
     var overall: Int? {
-        let vals = [efficiency, power, impact].compactMap { $0 }
+        let vals = [efficiency, power, impact].compactMap { $0 }.map(Double.init)
         guard !vals.isEmpty else { return nil }
-        return Int((Double(vals.reduce(0, +)) / Double(vals.count)).rounded())
+        return Int(faultSensitiveScore(vals).rounded())
     }
 
     func withForm(_ f: StoredScorecardForm?) -> AnalysisRecord {
@@ -152,6 +155,9 @@ final class AnalysisHistoryStore: ObservableObject {
         } else {
             ScorecardDataStore.shared.clearForm()
         }
+        // The Coach tab persists now (not rebuilt per switch), so tell it the
+        // current analysis changed so its TODAY insights refresh.
+        NotificationCenter.default.post(name: .analysisSaved, object: nil)
     }
 
     /// Wipe history and every raw CSV export (sign out and account deletion).
@@ -197,6 +203,9 @@ struct AnalyzeView: View {
     @ObservedObject private var processor = VideoProcessor.shared
     @ObservedObject private var history = AnalysisHistoryStore.shared
     @State private var selectedItem: PhotosPickerItem?
+    #if DEBUG
+    @State private var showLabelTool = false
+    #endif
     @State private var selectedVideoURL: URL?
     @State private var showingInstructions = false
     @State private var isPreparingVideo = false
@@ -287,6 +296,9 @@ struct AnalyzeView: View {
         .sheet(item: $metricGuide) { entry in
             MetricGuideSheet(entry: entry)
         }
+        #if DEBUG
+        .sheet(isPresented: $showLabelTool) { LabelClipView() }
+        #endif
         .fullScreenCover(isPresented: $showingCamera) {
             VideoCameraPicker(
                 onVideoRecorded: { url in handleRecordedVideo(url) },
@@ -379,11 +391,10 @@ struct AnalyzeView: View {
     /// Opens the analysis history, where past runs can be deleted (which reverts
     /// the dashboard's scores to the most recent remaining analysis).
     private var analyzeHistoryButton: some View {
-        // Full analysis history is a premium perk. This bento entry point must be
-        // gated exactly like the "SEE ALL" row, or free users bypass the paywall.
-        Button(action: { subscriptions.isPremium ? (showAllHistory = true) : (showPaywall = true) }) {
+        // Viewing your own history is free — it costs us nothing. Never paywall it.
+        Button(action: { showAllHistory = true }) {
             HStack(spacing: 5) {
-                Image(systemName: subscriptions.isPremium ? "clock.arrow.circlepath" : "lock.fill")
+                Image(systemName: "clock.arrow.circlepath")
                     .font(AppTheme.meta(11))
                 Text("HISTORY")
                     .font(AppTheme.meta(11))
@@ -553,8 +564,10 @@ struct AnalyzeView: View {
     /// scan sheet, smaller cells, margins hugging the shoes. Tap to scan.
     private var analyzeMiniShoeCard: some View {
         let latest = scanTrend.loadedShoe == shoeForTrend ? scanTrend.historyPages.last : nil
-        let leftZones = latest?.left?.zones ?? ScorecardDataStore.shared.loadWearZones(side: "left")
-        let rightZones = latest?.right?.zones ?? ScorecardDataStore.shared.loadWearZones(side: "right")
+        let rawLeft = latest?.left?.zones ?? ScorecardDataStore.shared.loadWearZones(side: "left")
+        let rawRight = latest?.right?.zones ?? ScorecardDataStore.shared.loadWearZones(side: "right")
+        // Display-balanced so the mini pair reads as one consistent pattern.
+        let (leftZones, rightZones) = WearSymmetry.balanced(rawLeft, rawRight)
         return Button(action: analyzeOpenScan) {
             HStack(spacing: 5) {
                 FootHeatmapView(isLeft: true, wearZones: leftZones, labelDesign: .default,
@@ -592,7 +605,9 @@ struct AnalyzeView: View {
         let delta: Int? = (score != nil && prevScore != nil) ? score! - prevScore! : nil
         let arcColor: Color = {
             guard let d = delta, d != 0 else { return AppTheme.accentColor }
-            return d > 0 ? AppTheme.accentGreen : AppTheme.formRed
+            // Same alarm red the cue tiles use — formRed is reserved for the
+            // skeleton overlay/scorecard, and two different reds sat side by side.
+            return d > 0 ? AppTheme.accentGreen : Color(hex: "#FF3B30")
         }()
         return Button(action: { metricGuide = guide }) {
             VStack(spacing: 8) {
@@ -620,7 +635,7 @@ struct AnalyzeView: View {
                         Text("\(abs(d))")
                             .font(AppTheme.meta(10))
                     }
-                    .foregroundColor(d > 0 ? AppTheme.accentGreen : AppTheme.formRed)
+                    .foregroundColor(d > 0 ? AppTheme.accentGreen : Color(hex: "#FF3B30"))
                 } else {
                     // Reserve the row so tiles stay the same height with/without a trend.
                     Text(" ").font(AppTheme.meta(10))
@@ -1026,17 +1041,11 @@ struct AnalyzeView: View {
                 }
 
                 if history.records.count > recent.count {
-                    Button(action: { subscriptions.isPremium ? (showAllHistory = true) : (showPaywall = true) }) {
-                        HStack(spacing: 6) {
-                            if !subscriptions.isPremium {
-                                Image(systemName: "lock.fill")
-                                    .font(AppTheme.meta(10))
-                            }
-                            Text("SEE ALL")
-                                .font(AppTheme.meta(11))
-                        }
-                        .foregroundColor(AppTheme.accentColor)
-                        .padding(.vertical, 10)
+                    Button(action: { showAllHistory = true }) {
+                        Text("SEE ALL")
+                            .font(AppTheme.meta(11))
+                            .foregroundColor(AppTheme.accentColor)
+                            .padding(.vertical, 10)
                     }
                     .buttonStyle(.plain)
                 }
@@ -1165,14 +1174,20 @@ struct AnalyzeView: View {
         let gaitType = latest?.left?.gaitType ?? latest?.right?.gaitType ?? ScorecardDataStore.shared.loadGaitType()
         let strikePattern = latest?.left?.strikePattern ?? latest?.right?.strikePattern ?? ScorecardDataStore.shared.loadGaitStrike()
         let hasScan = leftZones != nil || rightZones != nil
-        let health = analyzeCombinedShoeHealth(left: leftZones, right: rightZones)
+        let health = analyzeCombinedShoeHealth(
+            leftPercents: latest?.left?.wearPercents, rightPercents: latest?.right?.wearPercents,
+            leftZones: leftZones, rightZones: rightZones)
+        // Replace shoes as a pair, so the more worn side sets the estimate.
+        let milesLeft = [latest?.left?.estimatedMilesRemaining, latest?.right?.estimatedMilesRemaining]
+            .compactMap { $0 }.min()
 
         return VStack(alignment: .leading, spacing: 10) {
             TabView(selection: $shoeCardPage) {
                 analyzeHeatGridPage(leftZones: leftZones, rightZones: rightZones,
                                      gaitType: gaitType, strikePattern: strikePattern, hasScan: hasScan)
                     .tag(0)
-                analyzeShoeMetricsPage(gaitType: gaitType, strikePattern: strikePattern, health: health)
+                analyzeShoeMetricsPage(gaitType: gaitType, strikePattern: strikePattern,
+                                        health: health, milesRemaining: milesLeft)
                     .tag(1)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
@@ -1196,16 +1211,22 @@ struct AnalyzeView: View {
     /// Tap on a heat-grid page body opens the scanner (paywalled). Lives on the
     /// page content, not the TabView, so the header's shoe Menu keeps its tap.
     private func analyzeOpenScan() {
+        // Free tier gets a monthly allowance of scans (real API cost). Premium is
+        // unlimited. The scanner itself records each completed side; we gate on
+        // open, so a session already underway can finish its left+right pair.
         if !RemoteConfigManager.shared.scanEnabled { scanUnavailable = true }
-        else if subscriptions.isPremium { showScan = true }
+        else if UsageLimits.shared.canScan(isPremium: subscriptions.isPremium) { showScan = true }
         else { showPaywall = true }
     }
 
     /// Page 1 — the wear heatmaps. Swipe left for gait metrics + wear trend;
     /// tap the heatmaps to scan.
-    private func analyzeHeatGridPage(leftZones: WearZoneData?, rightZones: WearZoneData?,
+    private func analyzeHeatGridPage(leftZones rawLeft: WearZoneData?, rightZones rawRight: WearZoneData?,
                                       gaitType: String?, strikePattern: String?, hasScan: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        // Balance the two shoes for display so they read as one consistent
+        // pattern (raw zones still drive the metrics/health/FOCUS elsewhere).
+        let (leftZones, rightZones) = WearSymmetry.balanced(rawLeft, rawRight)
+        return VStack(alignment: .leading, spacing: 14) {
             HStack {
                 Text("SHOE HEAT GRID")
                     .font(.analyzeSection)
@@ -1265,12 +1286,21 @@ struct AnalyzeView: View {
     /// Page 2 — boxed GAIT / STRIKE / HEALTH stats + the wear-over-time trend
     /// (was its own SHOE HEALTH card; now lives a swipe away from the heatmaps
     /// instead of duplicating the same read lower on the page).
-    private func analyzeShoeMetricsPage(gaitType: String?, strikePattern: String?, health: Int?) -> some View {
+    private func analyzeShoeMetricsPage(gaitType: String?, strikePattern: String?,
+                                         health: Int?, milesRemaining: Int?) -> some View {
         Button(action: analyzeOpenScan) {
         VStack(alignment: .leading, spacing: 14) {
-            Text("SHOE HEALTH")
-                .font(.analyzeSection)
-                .foregroundColor(AppTheme.primaryText)
+            HStack {
+                Text("SHOE HEALTH")
+                    .font(.analyzeSection)
+                    .foregroundColor(AppTheme.primaryText)
+                Spacer()
+                if let milesRemaining {
+                    Text("~\(milesRemaining) MILES LEFT")
+                        .font(AppTheme.bodyMedium(11))
+                        .foregroundColor(AppTheme.primaryText.opacity(0.75))
+                }
+            }
 
             HStack(spacing: 10) {
                 analyzeShoeStatBox(label: "GAIT", value: gaitType?.uppercased() ?? "--")
@@ -1331,10 +1361,25 @@ struct AnalyzeView: View {
         return "\(gait) · \(strikePattern.uppercased()) STRIKE"
     }
 
-    private func analyzeCombinedShoeHealth(left: WearZoneData?, right: WearZoneData?) -> Int? {
-        let values = [left, right].compactMap(analyzeShoeHealthPercent)
+    private func analyzeCombinedShoeHealth(leftPercents: [String: Int]?, rightPercents: [String: Int]?,
+                                            leftZones: WearZoneData?, rightZones: WearZoneData?) -> Int? {
+        let values = [
+            analyzeShoeHealthPercent(percents: leftPercents, zones: leftZones),
+            analyzeShoeHealthPercent(percents: rightPercents, zones: rightZones)
+        ].compactMap { $0 }
         guard !values.isEmpty else { return nil }
         return Int((Double(values.reduce(0, +)) / Double(values.count)).rounded())
+    }
+
+    /// Health per shoe. Scans from the gpt-5.6 upgrade carry numeric wear depth
+    /// per zone (0 fresh, 100 gone) — average those for a finer read. Older
+    /// scans fall back to the four color buckets.
+    private func analyzeShoeHealthPercent(percents: [String: Int]?, zones: WearZoneData?) -> Int? {
+        if let percents, !percents.isEmpty {
+            let avgWear = Double(percents.values.reduce(0, +)) / Double(percents.count)
+            return Int((100 - avgWear).rounded())
+        }
+        return analyzeShoeHealthPercent(zones: zones)
     }
 
     private func analyzeShoeHealthPercent(zones: WearZoneData?) -> Int? {
@@ -1369,7 +1414,7 @@ struct AnalyzeView: View {
                     Text("Analysis")
                         .foregroundColor(AppTheme.primaryText)
                 }
-                .font(.largeTitle.weight(.bold))
+                .font(AppTheme.display(32))
             }
             Spacer(minLength: 8)
             Button(action: { showingSettings = true }) {
@@ -1387,8 +1432,9 @@ struct AnalyzeView: View {
         .padding(.bottom, 16)
     }
     
-    private func computeEfficiencyScore(series: MetricSeries?) -> Int? {
-        guard let series, let bd = computeEfficiencyBreakdown(series: series) else { return nil }
+    private func computeEfficiencyScore(series: MetricSeries?, metrics: AnalysisMetrics? = nil) -> Int? {
+        let arm = metrics.map { max($0.elbowRangeLeft, $0.elbowRangeRight) }
+        guard let series, let bd = computeEfficiencyBreakdown(series: series, armSwingRangeDeg: arm) else { return nil }
         return bd.composite
     }
     
@@ -1495,10 +1541,13 @@ struct AnalyzeView: View {
         guard
             let series = processor.metricSeries,
             let metrics = processor.analysisMetrics,
-            let efficiency = computeEfficiencyScore(series: series),
+            let efficiency = computeEfficiencyScore(series: series, metrics: metrics),
             let power = computeSprintPowerScore(),
             let impact = impactReading?.score,
-            let breakdown = computeEfficiencyBreakdown(series: series)
+            let breakdown = computeEfficiencyBreakdown(
+                series: series,
+                armSwingRangeDeg: max(metrics.elbowRangeLeft, metrics.elbowRangeRight)
+            )
         else { return nil }
 
         let snapshotPNG = await scorecardSnapshotPNG(from: processedURL, series: series)
@@ -1514,13 +1563,33 @@ struct AnalyzeView: View {
         let windowDuration = series.durationSeconds > 0.1 ? series.durationSeconds : actualDuration
         let fps = windowDuration > 0 && !footHip.isEmpty ? Double(footHip.count) / windowDuration : 30.0
         let peaks = AnalyzeMath.detectLocalMaxima(footHip, frameRate: fps)
-        let canonicalCadence = peaks.count >= 2
-            ? AnalyzeMath.calculateCadenceFromPeaks(peaks, frameRate: fps)
-            : metrics.cadence
-        // Fault-sensitive, not a flat mean: an elite runner is strong on all three
-        // dials, so this barely changes; a clip with a genuinely weak dial has the
-        // headline pulled down instead of the fault being averaged away.
-        let overall = Int(faultSensitiveScore([Double(efficiency), Double(power), Double(impact)]).rounded())
+        let peakCadence = peaks.count >= 2 ? AnalyzeMath.calculateCadenceFromPeaks(peaks, frameRate: fps) : 0
+        // Jitter-robust cadence: autocorrelation of the foot-hip signal. Peak
+        // counting inflates on noisy footage (it once reported 229 spm). Prefer
+        // the autocorrelation period; fall back to the cycle-based measurement
+        // only when there is no clear periodicity to lock onto.
+        let autoCadence = AnalyzeMath.dominantCadence(footHip, frameRate: fps)
+        // Autocorrelation is the trusted read. If it finds no clear periodicity,
+        // fall back to the cycle-based measurement (bounded, plausible) — NEVER to
+        // the peak counter, which is the thing that inflates on jitter.
+        let canonicalCadence = autoCadence > 0 ? autoCadence : metrics.cadence
+        #if DEBUG
+        debugLog("[Cadence] peak=\(Int(peakCadence)) auto=\(Int(autoCadence)) cycleMetrics=\(Int(metrics.cadence)) fps=\(String(format: "%.1f", fps)) n=\(footHip.count) -> canonical=\(Int(canonicalCadence))")
+        #endif
+        // One overall, used everywhere (this card, history, the share card and the
+        // coach): the same fault-sensitive blend of the three dials as
+        // AnalysisRecord.overall, so no surface disagrees. Each fault now lives in
+        // its dial — over-kipped legs pull DRIVE, flailing arms pull SMOOTH — so a
+        // plain blend already reflects them; fault-sensitivity keeps one weak dial
+        // from being averaged away behind two strong ones.
+        let powerRes = powerResult(series: series, metrics: metrics)
+        let overall = overallFormScore(
+            smooth: efficiency, drive: power, impact: impact,
+            driveConfidence: powerRes.confidence,
+            impactConfidence: impactReading?.confidence ?? .low)
+#if DEBUG
+        debugLog("[Overall] eff=\(efficiency) power=\(power) impact=\(impact) -> overall=\(overall)")
+#endif
         let gctValues = [metrics.groundContactLeft, metrics.groundContactRight].filter { $0 > 0 }
         let avgGCT = gctValues.isEmpty ? nil : gctValues.reduce(0, +) / Double(gctValues.count)
 
@@ -1549,12 +1618,12 @@ struct AnalyzeView: View {
         }
 
         let rows: [StoredScorecardMetric] = [
-            scorecardMetric(label: "CAD", value: "\(analyzeSafeInt(canonicalCadence))", optimal: "165-190", score: cadenceScore(canonicalCadence)),
-            scorecardMetric(label: "TORSO", value: degreeText(series.torsoAngleMean), optimal: "3-12°", score: breakdown.torso.score),
+            scorecardMetric(label: "CAD", value: "\(analyzeSafeInt(canonicalCadence))", optimal: "165-200", score: cadenceScore(canonicalCadence)),
+            scorecardMetric(label: "TORSO", value: degreeText(series.torsoAngleMean), optimal: "0-14°", score: breakdown.torso.score),
             scorecardMetric(label: "SHIN", value: degreeText(abs(series.shankAngleAtContactSignedDeg)), optimal: "<12°", score: breakdown.shin.score),
-            scorecardMetric(label: "KNEE", value: degreeText(series.kneeAngleMean), optimal: "128-160", score: kneeScore(series.kneeAngleMean)),
-            scorecardMetric(label: "ELBOW", value: degreeText(series.elbowAngleMean), optimal: "55-105°", score: breakdown.elbow.score),
-            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "<300", score: avgGCT.map(groundContactScore) ?? 0),
+            scorecardMetric(label: "KNEE", value: degreeText(series.kneeAngleMean), optimal: "112-138", score: kneeScore(series.kneeAngleMean)),
+            scorecardMetric(label: "ELBOW", value: degreeText(series.elbowAngleMean), optimal: "70-120°", score: breakdown.elbow.score),
+            scorecardMetric(label: "GCT", value: avgGCT.map { "\(Int($0.rounded()))" } ?? "--", optimal: "<320", score: avgGCT.map(groundContactScore) ?? 0),
             scorecardMetric(label: "STRIKE", value: metrics.footStrikePattern.uppercased().prefix(4).description, optimal: "--", score: 0, neutral: true)
         ]
         // HIP dropped: a side view has no vertical/pelvis reference, so hip angle
@@ -1626,25 +1695,30 @@ struct AnalyzeView: View {
 
     private func cadenceScore(_ cadence: Double) -> Int {
         guard cadence > 0 else { return 0 }
-        if cadence >= 165 && cadence <= 190 { return 92 }
-        let distance = cadence < 165 ? 165 - cadence : cadence - 190
+        // Cadence is pace-dependent and NOT capped near 180: elites sustain
+        // 185-200 spm at race pace (Daniels' treadmill data, Kipchoge ~190). A 190
+        // ceiling wrongly flagged fast runners, so the good band is 165-200.
+        if cadence >= 165 && cadence <= 200 { return 92 }
+        let distance = cadence < 165 ? 165 - cadence : cadence - 200
         return max(40, Int((92 - distance * 1.6).rounded()))
     }
 
     private func groundContactScore(_ milliseconds: Double) -> Int {
         guard milliseconds > 0 else { return 0 }
-        // Easy-pace distance running sits ~250-300 ms; only longer is a real drag.
-        if milliseconds <= 300 { return 90 }
-        return max(40, Int((90 - (milliseconds - 300) * 0.25).rounded()))
+        // Contact time is pace-dependent; easy-pace distance running commonly sits
+        // up to ~320 ms. Only clearly longer is a real drag.
+        if milliseconds <= 320 { return 90 }
+        return max(40, Int((90 - (milliseconds - 320) * 0.25).rounded()))
     }
 
-    // NOTE: the displayed knee/hip value is the full-cycle MEAN interior angle
-    // (swing flexion pulls it well below the stance value), so the "good" window
-    // is a cycle-mean range, not a stance range.
+    // NOTE: the displayed knee value is the full-cycle MEAN interior angle (swing
+    // flexion pulls it well below the stance value). A whole-cycle mean near 160°
+    // is biomechanically unreachable; the population mean sits ~120-125°, so the
+    // good window is 112-138° (research-reconstructed from published waveforms).
     private func kneeScore(_ angle: Double) -> Int {
         guard angle > 0 else { return 0 }
-        if angle >= 128 && angle <= 160 { return 90 }
-        let distance = angle < 128 ? 128 - angle : angle - 160
+        if angle >= 112 && angle <= 138 { return 90 }
+        let distance = angle < 112 ? 112 - angle : angle - 138
         return max(45, Int((90 - distance * 1.4).rounded()))
     }
 
@@ -1664,120 +1738,69 @@ struct AnalyzeView: View {
                     .font(AppTheme.bodySemibold(24))
                     .foregroundColor(AppTheme.primaryText)
                 
-                VStack(alignment: .leading, spacing: 16) {
-                    HStack {
-                        Text("Body Height")
-                            .font(AppTheme.bodyMedium(14))
-                            .foregroundColor(AppTheme.primaryText.opacity(0.9))
-                        
-                        Spacer()
-                        
-                        // Unit toggle
-                        Picker("Unit", selection: $useImperialUnits) {
-                            Text("ft/in").tag(true)
-                            Text("m").tag(false)
-                        }
-                        .pickerStyle(.segmented)
-                        .frame(width: 120)
-                        .onChange(of: useImperialUnits) { newValue in
-                            if newValue {
-                                syncHeightPickersFromMeters()
-                            } else {
-                                // Feet/inches → meters
-                                userBodyHeightMeters = Double(heightFeet * 12 + heightInches) * 0.0254
-                            }
-                        }
+                Text("Gaita reads your form straight from the video. Nothing to set up here.")
+                    .font(AppTheme.body(13))
+                    .foregroundColor(AppTheme.primaryText.opacity(0.5))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                // Premium
+                if subscriptions.isPremium {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.seal.fill")
+                        Text("Premium active")
                     }
-                    
-                    if useImperialUnits {
-                        HStack(spacing: 12) {
-                            HStack(spacing: 4) {
-                                Picker("Feet", selection: $heightFeet) {
-                                    ForEach(3...7, id: \.self) { ft in
-                                        Text("\(ft)").tag(ft)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(width: 60, height: 100)
-                                .clipped()
-                                
-                                Text("ft")
-                                    .font(AppTheme.body(14))
-                                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
-                            }
-                            
-                            HStack(spacing: 4) {
-                                Picker("Inches", selection: $heightInches) {
-                                    ForEach(0...11, id: \.self) { inch in
-                                        Text("\(inch)").tag(inch)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(width: 60, height: 100)
-                                .clipped()
-                                
-                                Text("in")
-                                    .font(AppTheme.body(14))
-                                    .foregroundColor(AppTheme.primaryText.opacity(0.6))
-                            }
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(AppTheme.accentColor)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                } else {
+                    Button(action: {
+                        showingSettings = false
+                        showPaywall = true
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                            Text("Get Premium")
                         }
-                        .onChange(of: heightFeet) { _ in
-                            userBodyHeightMeters = Double(heightFeet * 12 + heightInches) * 0.0254
-                        }
-                        .onChange(of: heightInches) { _ in
-                            userBodyHeightMeters = Double(heightFeet * 12 + heightInches) * 0.0254
-                        }
-                        
-                        Text("\(heightFeet)'\(heightInches)\" = \(String(format: "%.2f", userBodyHeightMeters)) m")
-                            .font(AppTheme.body(12))
-                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
-                    } else {
-                        HStack {
-                            TextField("Height (meters)", value: $userBodyHeightMeters, format: .number)
-                                .keyboardType(.decimalPad)
-                                .textFieldStyle(.roundedBorder)
-                                .frame(maxWidth: .infinity)
-                            
-                            Text("m")
-                                .font(AppTheme.body(14))
-                                .foregroundColor(AppTheme.primaryText.opacity(0.6))
-                                .frame(width: 30)
-                        }
-                        
-                        Text("Enter your height in meters (e.g., 1.75 for 175 cm)")
-                            .font(AppTheme.body(12))
-                            .foregroundColor(AppTheme.primaryText.opacity(0.5))
+                        .font(AppTheme.bodySemibold(16))
+                        .foregroundColor(AppTheme.onAccentPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppTheme.accentColor)
+                        .cornerRadius(12)
                     }
                 }
-                .padding()
-                .background(AppTheme.primaryText.opacity(0.05))
-                .cornerRadius(12)
-                
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Treadmill Distance")
-                        .font(AppTheme.bodyMedium(14))
-                        .foregroundColor(AppTheme.primaryText.opacity(0.9))
-                    
+
+                #if DEBUG
+                // Testing-only: skip the paywall. Persisted, survives relaunch,
+                // compiled out of Release builds. Green when premium is on.
+                Button(action: { subscriptions.debugUnlocked.toggle() }) {
                     HStack {
-                        TextField("Distance (meters)", value: $treadmillDistanceMeters, format: .number)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: .infinity)
-                        
-                        Text("m")
-                            .font(AppTheme.body(14))
-                            .foregroundColor(AppTheme.primaryText.opacity(0.6))
-                            .frame(width: 30)
+                        Image(systemName: subscriptions.isPremium ? "checkmark.seal.fill" : "lock.open")
+                        Text(subscriptions.isPremium ? "Premium ON (testing) — tap to lock" : "Unlock premium (testing)")
                     }
-                    
-                    Text("Distance from camera to treadmill center")
-                        .font(AppTheme.body(12))
-                        .foregroundColor(AppTheme.primaryText.opacity(0.5))
+                    .font(AppTheme.bodySemibold(15))
+                    .foregroundColor(subscriptions.isPremium ? AppTheme.onAccentPrimary : AppTheme.primaryText)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(subscriptions.isPremium ? AppTheme.accentColor : AppTheme.primaryText.opacity(0.08))
+                    .cornerRadius(12)
                 }
-                .padding()
-                .background(AppTheme.primaryText.opacity(0.05))
-                .cornerRadius(12)
-                
+
+                Button(action: {
+                    showingSettings = false
+                    showLabelTool = true
+                }) {
+                    Text("Label clips (dev)")
+                        .font(AppTheme.bodySemibold(16))
+                        .foregroundColor(AppTheme.primaryText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppTheme.primaryText.opacity(0.08))
+                        .cornerRadius(12)
+                }
+                #endif
+
                 Button(action: {
                     // A stray typed height must not persist: it skews every
                     // pixel→real-unit metric and can trap the Int() conversions.
@@ -1786,10 +1809,10 @@ struct AnalyzeView: View {
                 }) {
                     Text("Done")
                         .font(AppTheme.bodySemibold(16))
-                        .foregroundColor(AppTheme.onAccentPrimary)
+                        .foregroundColor(AppTheme.primaryText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(AppTheme.accentColor)
+                        .background(AppTheme.primaryText.opacity(0.08))
                         .cornerRadius(12)
                 }
             }
@@ -1919,6 +1942,9 @@ struct AnalyzeView: View {
 
     private func loadVideo(from item: PhotosPickerItem) async {
         await MainActor.run {
+            // Clear the picker selection now that we've captured the item, so
+            // re-selecting the SAME clip later still fires onChange (#14).
+            selectedItem = nil
             isPreparingVideo = true
         }
         do {
@@ -2231,6 +2257,55 @@ enum AnalyzeMath {
         let intervals = Double(peaks.count - 1)
         let cadence = (intervals / timeElapsed) * 60.0 * 2.0
         return min(300, cadence)
+    }
+
+    /// Jitter-robust cadence via autocorrelation of the single-foot foot-hip
+    /// distance. Peak-counting inflates on noisy footage — a wobble within a
+    /// stride reads as an extra step (that is how a real clip produced an
+    /// impossible 229 spm). Autocorrelation locks onto the fundamental stride
+    /// PERIOD and ignores jitter and spurious wiggles. Returns 0 when there is no
+    /// clear periodicity in the physiological band, so the caller can fall back.
+    static func dominantCadence(_ series: [Double], frameRate: Double) -> Double {
+        let x = series.filter { $0.isFinite }
+        guard x.count >= 12, frameRate > 0 else { return 0 }
+        let mean = x.reduce(0, +) / Double(x.count)
+        let d = x.map { $0 - mean }
+        let energy = d.reduce(0) { $0 + $1 * $1 }
+        guard energy > 1e-9 else { return 0 }
+        // The foot-hip distance cycles ONCE per stride of that foot. The lag (in
+        // frames) for a total cadence C is fps·120/C. Search the physiological
+        // band C ∈ [120, 230] spm; higher cadence = shorter period = smaller lag.
+        let minLag = max(2, Int((frameRate * 120.0 / 230.0).rounded()))
+        let maxLag = min(d.count - 1, Int((frameRate * 120.0 / 120.0).rounded()))
+        guard maxLag > minLag + 1 else { return 0 }
+        var corr = [Double](repeating: 0, count: maxLag + 1)
+        var bestLag = minLag
+        var bestCorr = -Double.greatestFiniteMagnitude
+        var sum = 0.0
+        for lag in minLag...maxLag {
+            var s = 0.0
+            for i in 0..<(d.count - lag) { s += d[i] * d[i + lag] }
+            let c = s / energy
+            corr[lag] = c
+            sum += c
+            if c > bestCorr { bestCorr = c; bestLag = lag }
+        }
+        // Real stride periodicity makes a CLEAR peak that stands above the flat
+        // autocorrelation baseline; noise stays flat. Judge on that prominence,
+        // not a high absolute value — an irregular but real stride can peak at
+        // only ~0.16 yet be unmistakable (2x the band mean). Absolute floor guards
+        // against a fully random signal.
+        let bandMean = sum / Double(maxLag - minLag + 1)
+        guard bestCorr > 0.12, bestCorr > bandMean + 0.05 else { return 0 }
+        // Sub-lag parabolic refinement around the peak for a smoother estimate.
+        var refined = Double(bestLag)
+        if bestLag > minLag, bestLag < maxLag {
+            let denom = corr[bestLag - 1] - 2 * corr[bestLag] + corr[bestLag + 1]
+            if abs(denom) > 1e-12 {
+                refined += max(-0.5, min(0.5, 0.5 * (corr[bestLag - 1] - corr[bestLag + 1]) / denom))
+            }
+        }
+        return frameRate / refined * 120.0
     }
 }
 
@@ -2762,7 +2837,9 @@ struct GaugeDial: View {
             }
             Text("\(score)")
                 .font(AppTheme.head(15))
-                .foregroundColor(AppTheme.primaryText)
+                // The chip is a fixed dark scrim, so its text is fixed white —
+                // primaryText flipped to ink in light mode and went muddy.
+                .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 1)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)

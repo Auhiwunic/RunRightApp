@@ -45,7 +45,7 @@ enum VoiceAssistantMessageProvider {
         if let match = pool.first(where: { !excluding.contains($0.text) }) {
             return match
         }
-        return pool.randomElement() ?? msg(category, "Keep going — you're doing great.")
+        return pool.randomElement() ?? msg(category, "Keep going, you're doing great.")
     }
 
     static func categoryMessages(
@@ -145,7 +145,7 @@ enum VoiceAssistantMessageProvider {
 
     private static func gpsWeakMessages() -> [VoiceCoachMessage] {
         [
-            msg(.gpsWeak, "GPS signal is weak — pace coaching is paused until it stabilizes."),
+            msg(.gpsWeak, "GPS signal is weak, so pace coaching is paused until it steadies."),
             msg(.gpsWeak, "Can't get a reliable pace right now. Keep running; I'll check back soon."),
         ]
     }

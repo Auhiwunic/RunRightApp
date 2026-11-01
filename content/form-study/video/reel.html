@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1080px; height:1920px; overflow:hidden; background:#000; }
+  #stage { width:1080px; height:1920px; position:relative; background:#0d0d0c; overflow:hidden; }
+  .layer { position:absolute; inset:0; width:1080px; height:1920px; will-change:opacity,transform; }
+  .layer img { width:1080px; height:1920px; object-fit:cover; object-position:50% 50%; display:block; transform-origin:50% 50%; }
+  /* progress hairline */
+  #prog { position:absolute; left:0; bottom:0; height:8px; background:#00CED1; width:0; }
+  /* opening/closing black to bookend cleanly */
+  #fade { position:absolute; inset:0; background:#0d0d0c; opacity:0; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="layer" data-i="0"><img id="i0"></div>
+  <div class="layer" data-i="1"><img id="i1"></div>
+  <div class="layer" data-i="2"><img id="i2"></div>
+  <div class="layer" data-i="3"><img id="i3"></div>
+  <div class="layer" data-i="4"><img id="i4"></div>
+  <div class="layer" data-i="5"><img id="i5"></div>
+  <div class="layer" data-i="6"><img id="i6"></div>
+  <div id="prog"></div>
+  <div id="fade"></div>
+</div>
+<script>
+const DIR = "file:///Users/chetanwategaonkar/Corsa/gaita-site/ad-frames/";
+// storyboard: problem -> proof -> aspiration -> CTA
+const FRAMES = [
+  "frame-7-blind.png",
+  "frame-8-injuries.png",
+  "frame-2-analysis-white.png",
+  "frame-3-metrics-black.png",
+  "frame-4-coach-white.png",
+  "frame-9-free-forever.png",
+  "frame-6-cta.png",
+];
+FRAMES.forEach((f,i)=>{ document.getElementById("i"+i).src = DIR+f; });
+
+const P = new URLSearchParams(location.search);
+const total = +(P.get('total')||450), fps = +(P.get('fps')||30);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const easeIO=x=>{x=clamp(x,0,1);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;};
+
+// beat timing (seconds). ~0.5s crossfade overlap between beats.
+const XF = 0.55;
+const beats = [
+  { start:0.0,  dur:2.5 },   // blind
+  { start:2.0,  dur:2.5 },   // injuries
+  { start:4.0,  dur:2.6 },   // analysis
+  { start:6.1,  dur:2.6 },   // metrics
+  { start:8.2,  dur:2.6 },   // coach
+  { start:10.3, dur:2.4 },   // free forever
+  { start:12.3, dur:2.9 },   // cta (holds to end)
+];
+const DURATION = 15.0;
+// alternate ken-burns direction per beat for life
+const kb = [ [1.03,1.10, 0,-26], [1.10,1.03, 18,10], [1.02,1.09, -14,-18],
+             [1.09,1.02, 12,14], [1.03,1.10, -10,-22], [1.08,1.02, 0,16],
+             [1.02,1.08, 0,-14] ];
+
+window.renderFrame = function(f){
+  const t = f / fps;
+  beats.forEach((b,i)=>{
+    const layer = document.querySelector('.layer[data-i="'+i+'"]');
+    const img = document.getElementById("i"+i);
+    const end = b.start + b.dur;
+    const last = i === beats.length-1;
+    // opacity: fade in over XF, hold, fade out over XF (last beat holds)
+    const fin  = easeIO((t - b.start)/XF);
+    const fout = last ? 1 : easeIO((end - t)/XF);
+    let op = clamp(Math.min(fin, fout), 0, 1);
+    if (t < b.start - 0.01) op = 0;
+    layer.style.opacity = op;
+    layer.style.zIndex = i;
+    // ken burns across the beat's visible span
+    const p = clamp((t - b.start)/(b.dur), 0, 1);
+    const [s0,s1,tx,ty] = kb[i];
+    const s = s0 + (s1-s0)*easeIO(p);
+    const x = tx*easeIO(p), y = ty*easeIO(p);
+    img.style.transform = "translate("+x+"px,"+y+"px) scale("+s+")";
+  });
+  // progress hairline
+  document.getElementById("prog").style.width = clamp(t/DURATION,0,1)*1080 + "px";
+  // 0.3s open + 0.4s close black bookends
+  const fadeEl = document.getElementById("fade");
+  const openA = clamp((0.3 - t)/0.3, 0, 1);
+  const closeA = clamp((t - (DURATION-0.4))/0.4, 0, 1);
+  fadeEl.style.opacity = Math.max(openA, closeA);
+};
+window.renderFrame(0);
+</script>
+</body>
+</html>
